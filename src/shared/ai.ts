@@ -5,16 +5,105 @@
  */
 export type ProviderId = 'claude-cli' | 'codex-cli' | 'gemini-cli' | 'anthropic-api' | 'openai-api' | 'gemini-api'
 
+/** Order used when no default is chosen: the first available one wins. */
+export const PROVIDER_ORDER: ProviderId[] = ['claude-cli', 'codex-cli', 'gemini-cli', 'anthropic-api', 'openai-api', 'gemini-api']
+
+export interface ProviderInfo {
+  id: ProviderId
+  label: string
+  /** Who makes it, shown under the label. */
+  vendor: string
+  kind: 'cli' | 'api'
+  /** Model used when the field is left empty. Empty for CLIs: they use their own default. */
+  defaultModel: string
+  modelPlaceholder: string
+  /** CLI: how to install it. API: where to get a key. */
+  hint: string
+  supportsWebSearch: boolean
+}
+
+export const PROVIDERS: Record<ProviderId, ProviderInfo> = {
+  'claude-cli': {
+    id: 'claude-cli',
+    label: 'Claude Code',
+    vendor: 'Anthropic',
+    kind: 'cli',
+    defaultModel: '',
+    modelPlaceholder: 'Claude Code default',
+    hint: 'Install Claude Code from claude.com/claude-code, then run `claude` once to sign in.',
+    supportsWebSearch: true,
+  },
+  'codex-cli': {
+    id: 'codex-cli',
+    label: 'Codex',
+    vendor: 'OpenAI',
+    kind: 'cli',
+    defaultModel: '',
+    modelPlaceholder: 'Codex default',
+    hint: 'Run `npm install -g @openai/codex`, then run `codex` once to sign in.',
+    supportsWebSearch: true,
+  },
+  'gemini-cli': {
+    id: 'gemini-cli',
+    label: 'Gemini CLI',
+    vendor: 'Google',
+    kind: 'cli',
+    defaultModel: '',
+    modelPlaceholder: 'Gemini CLI default',
+    hint: 'Run `npm install -g @google/gemini-cli`, then run `gemini` once to sign in.',
+    supportsWebSearch: true,
+  },
+  'anthropic-api': {
+    id: 'anthropic-api',
+    label: 'Claude API',
+    vendor: 'Anthropic',
+    kind: 'api',
+    defaultModel: 'claude-opus-5-5',
+    modelPlaceholder: 'claude-opus-5-5',
+    hint: 'Create a key at platform.claude.com.',
+    supportsWebSearch: true,
+  },
+  'openai-api': {
+    id: 'openai-api',
+    label: 'OpenAI API',
+    vendor: 'OpenAI',
+    kind: 'api',
+    defaultModel: 'gpt-6.2-astra',
+    modelPlaceholder: 'gpt-6.2-astra',
+    hint: 'Create a key at platform.openai.com.',
+    supportsWebSearch: true,
+  },
+  'gemini-api': {
+    id: 'gemini-api',
+    label: 'Gemini API',
+    vendor: 'Google',
+    kind: 'api',
+    defaultModel: 'gemini-3.8-flash',
+    modelPlaceholder: 'gemini-3.8-flash',
+    hint: 'Create a key at aistudio.google.com.',
+    supportsWebSearch: true,
+  },
+}
+
+export function isProviderId(x: unknown): x is ProviderId {
+  return typeof x === 'string' && (PROVIDER_ORDER as string[]).includes(x)
+}
+
 export interface ProviderStatus {
   id: ProviderId
   label: string
   kind: 'cli' | 'api'
   /** Installed (CLI) or has a key saved (API). */
   available: boolean
-  /** Human-readable state, e.g. "claude 2.1.3 found" or "No key saved". */
+  /** Human-readable state, e.g. "Claude Code 2.1.3" or "No key saved". */
   detail: string
+  /** Model that will be used: the saved one, else the provider default ('' = the CLI's own default). */
   model: string
   supportsWebSearch: boolean
+  /** CLI only: version string reported by `--version`. */
+  version?: string
+  /** API only: a key is saved. */
+  hasKey?: boolean
 }
 
 export interface AiMessage {
@@ -31,6 +120,10 @@ export interface AiRequest {
   json?: boolean
   /** Allow the provider's own web search, where it has one. */
   webSearch?: boolean
+  /** Overrides the model saved in settings for this call. */
+  model?: string
+  /** Give up after this long. Defaults: 3 minutes, 6 with web search. */
+  timeoutMs?: number
 }
 
 export interface AiResult {
