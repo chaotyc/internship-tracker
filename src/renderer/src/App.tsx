@@ -62,6 +62,7 @@ export function App() {
     if (view === 'add') addRole()
     else if (view?.startsWith('settings')) setSettings({ open: true, tab: (view.split('-')[1] as SettingsTab) ?? 'profile' })
     else if (view === 'chat') setChat({ open: true, roleId: null })
+    else if (view === 'suggestions') setTray(true)
   }, [addRole])
   useEffect(() => {
     const view = new URLSearchParams(location.hash.slice(1)).get('view')
@@ -185,7 +186,7 @@ export function App() {
             <Board roles={roles ?? []} query={query} onOpen={openRole} onAdd={addRole} onMove={move} />
           )}
         </main>
-        {chat.open && <ChatPanel roleId={chat.roleId} onClose={() => setChat({ open: false, roleId: null })} />}
+        {chat.open && <ChatPanel roleId={chat.roleId} onClose={() => setChat({ open: false, roleId: null })} onOpenSettings={(tab) => setSettings({ open: true, tab })} />}
       </div>
 
       <input
