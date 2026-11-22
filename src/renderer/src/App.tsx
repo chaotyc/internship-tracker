@@ -82,7 +82,11 @@ export function App() {
       setSettings({ open: true, tab: ((e as CustomEvent).detail as SettingsTab) ?? 'profile' })
     }
     window.addEventListener('app:open-settings', onOpen)
-    return () => window.removeEventListener('app:open-settings', onOpen)
+    const offToday = api.on('today:show', () => setView('today'))
+    return () => {
+      window.removeEventListener('app:open-settings', onOpen)
+      offToday()
+    }
   }, [])
 
   // Keyboard: / filter, N add, ⌘J assistant, ⌘, settings.

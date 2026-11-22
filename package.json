@@ -14,7 +14,9 @@
     "dist": "electron-vite build && electron-builder --mac --dir"
   },
   "dependencies": {
+    "imapflow": "2.11.0",
     "mammoth": "1.13.0",
+    "postal-mime": "4.2.0",
     "react": "19.1.10",
     "react-dom": "19.1.10",
     "sql.js": "1.15.2",

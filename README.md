@@ -8,13 +8,16 @@ Everything is stored on your computer. Nothing is sent anywhere unless you use a
 
 | | |
 | --- | --- |
-| **Board** | Six stages (Saved, Applied, Interviewing, Offer, Rejected, Closed). Drag cards between them, or use <kbd>Shift</kbd>+<kbd>←</kbd>/<kbd>→</kbd>. Import any CSV with Company and Role columns. |
+| **Board** | Six stages (Saved, Applied, Interviewing, Offer, plus Rejected and Closed lanes). Drag cards between them, or use <kbd>Shift</kbd>+<kbd>←</kbd>/<kbd>→</kbd>. Import any CSV with Company and Role columns. |
+| **Today** | Every role can have a dated next step. The Today view lists what's overdue, due today and due this week, next to posting deadlines. |
+| **Email updates** | Paste an email, drop a .eml file, or connect an inbox read-only. Emails that match a role on your board become proposed updates (stage change, next step); nothing changes until you apply it. Unmatched mail never leaves your computer. |
+| **Application tracks** | Keep a resume and profile variant per kind of role (e.g. ML inference vs photonics hardware). Each role picks a track; autofill, ranking and the assistant use that track's resume and answers. |
 | **Add from a link** | Paste a posting link; the app reads the posting and fills in company, role, location, pay and deadline. |
 | **AI connections** | Uses your existing Claude Code, Codex or Gemini CLI sign-in, or an API key you paste in (stored in the OS keychain). |
-| **Autosearch** | Scans the public job boards of companies you choose (Greenhouse, Ashby, Lever) and ranks new postings against your profile. |
-| **Refresh** | Checks every saved role and flags postings that have closed or are about to. |
-| **Assistant** | A chat sidebar that knows your resume, preferences and board. It can add roles, update your preferences and draft application answers, always with your confirmation. |
-| **Autofill** | Opens a Greenhouse application in its own window and fills it from your profile. It never submits; you review and click Submit. |
+| **Find roles** | Scans the public job boards of companies you choose (Greenhouse, Ashby, Lever and Workday), and optionally the community SimplifyJobs internship list, then ranks new postings against each of your tracks. An optional daily scan runs while the app is open. |
+| **Check saved** | Checks every saved role and flags postings that have closed or are about to. |
+| **Assistant** | A chat sidebar that knows your resume, tracks, preferences and board. It can add roles, set next steps, update your preferences and draft application answers, always with your confirmation. |
+| **Autofill** | Opens a Greenhouse, Ashby or Lever application in its own window and fills it from your profile and the role's track resume. It never submits; you review and click Submit. |
 | **Private profile** | Name, contact details, education, work authorization and optional demographic answers, encrypted at rest with the OS keychain. |
 
 ## Run it
@@ -30,7 +33,7 @@ TRACKER_DEMO=1 npm run dev   # sample board in a throwaway database
 node scripts/snapshot.mjs    # screenshots of each view into ./screenshots
 ```
 
-Data lives in the app's user-data folder (`~/Library/Application Support/internship-tracker` on macOS) in `tracker.sqlite`.
+Data lives in the app's user-data folder (`~/Library/Application Support/Internship Tracker` on macOS) in `tracker.sqlite`.
 
 ## How it's built
 

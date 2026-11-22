@@ -138,3 +138,38 @@ describe('applyAction and the chat store', () => {
     expect(chat.list()).toEqual([])
   })
 })
+
+describe('set_next_step', () => {
+  const resolve = roleResolver([{ id: 'abcdef12-0000-4000-8000-000000000001' }])
+
+  it('validates the role, text, date and time', () => {
+    const block = fence('{"kind":"set_next_step","roleId":"abcdef12","text":"  Finish the   take-home ","due":"2026-12-02","time":"14:30"}')
+    expect(parseReply(`Done.\n${block}`, resolve).actions).toEqual([
+      { kind: 'set_next_step', roleId: 'abcdef12-0000-4000-8000-000000000001', text: 'Finish the take-home', due: '2026-12-02', time: '14:30' },
+    ])
+    // Bad date drops the date (and its time) but keeps the step; unknown role or empty text drops the action.
+    expect(validateAction({ kind: 'set_next_step', roleId: 'abcdef12', text: 'Email Sam', due: 'next week', time: '10:00' }, resolve)).toMatchObject({ due: '', time: '' })
+    expect(validateAction({ kind: 'set_next_step', roleId: 'abcdef12', nextStep: { text: 'Prep', due: '2026-02-30' } }, resolve)).toMatchObject({ text: 'Prep', due: '' })
+    expect(validateAction({ kind: 'set_next_step', roleId: 'zzzzzzzz', text: 'x' }, resolve)).toBeNull()
+    expect(validateAction({ kind: 'set_next_step', roleId: 'abcdef12', text: ' ' }, resolve)).toBeNull()
+  })
+
+  it('applies through the roles service and describes itself', async () => {
+    const store = await openStore(null)
+    store.migrate(rolesMigrations)
+    const roles = new RolesService(store, () => {})
+    const role = roles.create({ company: 'Vectorline', title: 'Inference Intern' })
+    const deps = { roles, profile: { get: () => structuredClone(EMPTY_PROFILE), save: (p: Profile) => p } }
+    await applyAction({ kind: 'set_next_step', roleId: role.id, text: 'Prep for the screen', due: '2026-12-01', time: '09:00' }, deps)
+    expect(roles.get(role.id)!.nextStep).toEqual({ text: 'Prep for the screen', due: '2026-12-01', time: '09:00', done: false, source: 'chat' })
+    await expect(applyAction({ kind: 'set_next_step', roleId: 'gone', text: 'x', due: '', time: '' }, deps)).rejects.toThrow(/no longer/)
+    expect(describeAction({ kind: 'set_next_step', roleId: role.id, text: 'Prep', due: '2026-12-01', time: '' }, { roleName: () => 'Vectorline · Intern' })).toEqual({
+      title: 'Set the next step',
+      rows: [
+        { label: 'Role', value: 'Vectorline · Intern' },
+        { label: 'Next step', value: 'Prep' },
+        { label: 'Due', value: '2026-12-01' },
+      ],
+    })
+  })
+})

@@ -95,6 +95,48 @@ describe('buildSystemPrompt', () => {
   })
 })
 
+describe('buildSystemPrompt with application tracks', () => {
+  const tracked: Profile = {
+    ...profile,
+    answers: [
+      { id: '1', question: 'Why are you interested?', answer: 'GENERAL_WHY' },
+      { id: '2', question: 'Earliest start date', answer: 'May 2027' },
+    ],
+    tracks: [
+      { id: 'ml', name: 'ML inference', description: 'Kernels and runtimes', resume: { fileName: 'ml.pdf', storedPath: '/x/ml.pdf', text: 'ML_RESUME_TEXT', updatedAt: '' }, targetRoles: ['Inference intern'], keywords: ['CUDA'], answers: [] },
+      { id: 'hw', name: 'Photonics hardware', description: '', resume: { fileName: 'hw.pdf', storedPath: '/x/hw.pdf', text: 'PHOTONICS_RESUME_TEXT', updatedAt: '' }, targetRoles: [], keywords: [], answers: [{ id: 'o', question: 'Why are you interested', answer: 'PHOTONICS_WHY' }] },
+      { id: 'empty', name: 'Quant', description: '', resume: null, targetRoles: [], keywords: [], answers: [] },
+    ],
+  }
+  const build = (trackId: string | null) => buildSystemPrompt({ profile: tracked, roles: [], openRole: trackId === null ? null : role({ trackId }), now: new Date(2026, 10, 21) })
+
+  it("uses the open role's track resume and answer overrides", () => {
+    const p = build('hw')
+    expect(p).toContain('PHOTONICS_RESUME_TEXT')
+    expect(p).not.toContain('ML_RESUME_TEXT')
+    expect(p).toContain('PHOTONICS_WHY')
+    expect(p).not.toContain('GENERAL_WHY')
+    expect(p).toContain('May 2027')
+    expect(p).toContain('Application track: Photonics hardware')
+    expect(p).toContain('- Photonics hardware (in use below)')
+  })
+
+  it('uses the default track with no role open, or for a role with no or an unknown track', () => {
+    for (const p of [build(null), build(''), build('deleted')]) {
+      expect(p).toContain('ML_RESUME_TEXT')
+      expect(p).not.toContain('PHOTONICS_RESUME_TEXT')
+      expect(p).toContain('GENERAL_WHY')
+      expect(p).toContain('- ML inference (default, in use below): Kernels and runtimes; targets Inference intern; keywords CUDA')
+    }
+  })
+
+  it("falls back to the default track's resume when the role's track has none", () => {
+    const p = build('empty')
+    expect(p).toContain('ML_RESUME_TEXT')
+    expect(p).toContain('"Quant" track, which has no resume of its own')
+  })
+})
+
 describe('historyForModel', () => {
   const msg = (i: number, role: ChatMessage['role'], content = `m${i}`): ChatMessage => ({
     id: String(i),

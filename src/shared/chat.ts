@@ -7,6 +7,8 @@ export type ChatAction =
   | { kind: 'update_preferences'; preferences: Partial<SearchPreferences> }
   | { kind: 'save_answers'; answers: Omit<SavedAnswer, 'id'>[] }
   | { kind: 'move_role'; roleId: string; stage: string }
+  /** `due` is YYYY-MM-DD or ''; `time` is HH:MM (24h) or ''. */
+  | { kind: 'set_next_step'; roleId: string; text: string; due: string; time: string }
 
 export type ChatActionState = 'proposed' | 'applied' | 'dismissed'
 
@@ -109,6 +111,15 @@ export function describeAction(
     case 'move_role': {
       const name = lookup.roleName?.(action.roleId) ?? 'A role on your board'
       return { title: `Move to ${stage(action.stage)}`, rows: [{ label: 'Role', value: name }] }
+    }
+    case 'set_next_step': {
+      const name = lookup.roleName?.(action.roleId) ?? 'A role on your board'
+      const rows = [
+        { label: 'Role', value: name },
+        { label: 'Next step', value: action.text },
+      ]
+      if (action.due) rows.push({ label: 'Due', value: action.time ? `${action.due} ${action.time}` : action.due })
+      return { title: 'Set the next step', rows }
     }
   }
 }

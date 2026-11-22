@@ -423,6 +423,8 @@ function actionVerbs(action: ChatAction): { apply: string; busy: string; done: s
     }
     case 'save_answers':
       return { apply: 'Save answers', busy: 'Saving…', done: 'Answers saved' }
+    case 'set_next_step':
+      return { apply: 'Set next step', busy: 'Saving…', done: 'Next step set' }
   }
 }
 
@@ -431,6 +433,7 @@ const ACTION_ICON: Record<ChatAction['kind'], IconName> = {
   update_preferences: 'sparkle',
   save_answers: 'file',
   move_role: 'arrowRight',
+  set_next_step: 'clock',
 }
 
 function ActionCard({

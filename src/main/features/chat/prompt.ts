@@ -1,6 +1,6 @@
 import type { AiMessage } from '@shared/ai'
 import type { ChatMessage } from '@shared/chat'
-import type { Profile } from '@shared/profile'
+import { answersForTrack, resumeForTrack, trackById, type ApplicationTrack, type Profile } from '@shared/profile'
 import { STAGES, type Role } from '@shared/roles'
 
 export const HISTORY_LIMIT = 30
@@ -26,7 +26,7 @@ const yesNo = (v: boolean | null) => (v == null ? 'not stated' : v ? 'yes' : 'no
  * The parts of the profile the assistant may see. Built field by field from an
  * allowlist: demographics, email and phone are never included.
  */
-export function profileSection(p: Profile): string {
+export function profileSection(p: Profile, track: ApplicationTrack = trackById(p, '')): string {
   const lines: string[] = []
   const name = [p.legalFirstName, p.legalLastName].filter(Boolean).join(' ')
   if (name) lines.push(`Name: ${name}${p.preferredName && p.preferredName !== p.legalFirstName ? ` (goes by ${p.preferredName})` : ''}`)
@@ -63,17 +63,35 @@ export function profileSection(p: Profile): string {
   if (pr.notes) prefs.push(`- Notes: ${oneLine(pr.notes)}`)
 
   const out = [lines.length ? lines.join('\n') : 'The user has not filled in their profile yet.', '', 'What they are looking for (current preferences):', prefs.join('\n')]
-  if (p.answers.length) {
-    out.push('', 'Saved application answers:')
-    for (const a of p.answers.slice(0, 40)) out.push(`- Q: ${oneLine(a.question)}\n  A: ${clip(oneLine(a.answer), 600)}`)
+  const answers = answersForTrack(p, track)
+  if (answers.length) {
+    out.push('', p.tracks.length > 1 ? `Saved application answers (for the "${oneLine(track.name)}" track; its own answers come first and replace the general ones):` : 'Saved application answers:')
+    for (const a of answers.slice(0, 40)) out.push(`- Q: ${oneLine(a.question)}\n  A: ${clip(oneLine(a.answer), 600)}`)
   }
   return out.join('\n')
 }
 
-export function resumeSection(p: Profile): string {
-  const text = p.resume?.text?.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim() ?? ''
+/**
+ * The user's application tracks (a resume and focus per kind of role), and which
+ * one is in use. Empty when they have at most one track.
+ */
+export function tracksSection(p: Profile, active: ApplicationTrack): string {
+  if (p.tracks.length < 2) return ''
+  const lines = p.tracks.map((t, i) => {
+    const bits = [t.description && oneLine(t.description), t.targetRoles.length && `targets ${t.targetRoles.join(', ')}`, t.keywords.length && `keywords ${t.keywords.join(', ')}`]
+    const tags = [i === 0 && 'default', t.id === active.id && 'in use below', !t.resume && 'no resume yet'].filter(Boolean).join(', ')
+    return `- ${oneLine(t.name)}${tags ? ` (${tags})` : ''}${bits.some(Boolean) ? `: ${bits.filter(Boolean).join('; ')}` : ''}`
+  })
+  return `The user keeps a separate resume and focus for each kind of role (application tracks). Each role on the board uses one; roles without one use the default.\n${lines.join('\n')}`
+}
+
+/** The resume text to use: the given track's, else the profile's (the default track's). */
+export function resumeSection(p: Profile, track: ApplicationTrack = trackById(p, '')): string {
+  const resume = resumeForTrack(p, track.id)
+  const text = resume?.text?.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim() ?? ''
   if (!text) return 'No resume on file. If the user asks for anything that depends on it, ask them to add their resume (there is an "Add your resume" button in this sidebar).'
-  return clip(text, RESUME_CHARS)
+  const from = p.tracks.length > 1 ? `(From the "${oneLine(track.name)}" track${track.resume ? `: ${resume!.fileName}` : `, which has no resume of its own, so this is the default track's: ${resume!.fileName}`}.)\n` : ''
+  return from + clip(text, RESUME_CHARS - from.length)
 }
 
 const STAGE_ORDER = new Map(STAGES.map((s, i) => [s.key as string, i]))
@@ -94,7 +112,7 @@ export function boardSection(roles: Role[]): string {
   return lines.join('\n')
 }
 
-export function openRoleSection(r: Role): string {
+export function openRoleSection(r: Role, track?: ApplicationTrack): string {
   const rows: [string, string][] = [
     ['Id', shortId(r.id)],
     ['Company', r.company],
@@ -111,6 +129,7 @@ export function openRoleSection(r: Role): string {
     ['Watch out for', r.watch],
     ['Posting status', r.postingStatus || (r.liveness?.status !== 'unknown' ? `${r.liveness.status}. ${r.liveness.detail}` : '')],
     ['Notes', r.notes],
+    ['Application track', track ? track.name : ''],
   ]
   return rows
     .filter(([, v]) => v && String(v).trim())
@@ -125,11 +144,12 @@ You cannot change anything yourself. To propose a change, end your reply with on
 {"kind": "update_preferences", "preferences": {"targetRoles": ["ML inference intern"], "remoteOk": true}}
 \`\`\`
 
-The four kinds (JSON only, double quotes, no comments):
+The kinds (JSON only, double quotes, no comments):
 - {"kind": "add_role", "role": {"company": "...", "title": "...", "link": "https://...", "location": "...", "pay": "...", "deadline": "YYYY-MM-DD", "fit": "Strong|Good|Moderate|Weak", "why": "one line on why it fits", "stage": "saved"}} — only company and title are required. Leave out anything you don't know; never invent links, pay or deadlines.
 - {"kind": "update_preferences", "preferences": {...}} — fields: targetRoles (string[]), locations (string[]), remoteOk (boolean), term (string), minPay (string), keywords (string[]), excludeKeywords (string[]), notes (string). Only include fields that change. A list you include replaces the old list, so repeat the existing items the user wants to keep.
 - {"kind": "save_answers", "answers": [{"question": "...", "answer": "..."}]} — reusable answers for the user's profile.
 - {"kind": "move_role", "roleId": "<the 8-character id in brackets from the board>", "stage": "saved|applied|interviewing|offer|rejected|closed"}
+- {"kind": "set_next_step", "roleId": "<the 8-character id>", "text": "short imperative, e.g. Finish the take-home", "due": "YYYY-MM-DD or empty", "time": "HH:MM (24h) or empty"} — the one dated thing to do next for a role; it replaces the role's current next step.
 
 The user sees each block as a card with Apply and Dismiss buttons; nothing changes until they click Apply. Never say or imply a change is made, saved or in use ("I'll use this from now on", "I've added it") until the user has applied it; say what you're proposing and that it takes effect once they apply it. The blocks are hidden from the text, so in your prose say briefly what you're proposing ("I've suggested adding it to your board below."). Don't propose a change the user didn't ask for or clearly want, and don't propose adding a role that is already on the board.`
 
@@ -148,6 +168,9 @@ export interface PromptInput {
 }
 
 export function buildSystemPrompt({ profile, roles, openRole, now = new Date() }: PromptInput): string {
+  // The open role's track decides which resume and answers the assistant works from.
+  const track = trackById(profile, openRole?.trackId)
+  const tracks = tracksSection(profile, track)
   const parts = [
     `You are the assistant inside Internship Tracker, a desktop app where a student tracks internship and job applications on a board with the stages Saved, Applied, Interviewing, Offer, Rejected and Closed.`,
     `Today is ${todayLine(now)}.`,
@@ -155,11 +178,15 @@ export function buildSystemPrompt({ profile, roles, openRole, now = new Date() }
 Be warm, direct and brief. Lead with the answer. Use short paragraphs and bullet lists; bold only the few words that matter. Use Markdown (bold, italics, lists, links, code), but no headings or tables. Refer to roles by company and title, never by their bracketed id. You can't browse, submit applications or contact anyone, and you never submit an application for the user.`,
     JOBS,
     ACTION_GUIDE,
-    `## The user\n${profileSection(profile)}`,
-    `## Resume (text)\n${resumeSection(profile)}`,
+    `## The user\n${profileSection(profile, track)}`,
+    ...(tracks ? [`## Application tracks\n${tracks}`] : []),
+    `## Resume (text)\n${resumeSection(profile, track)}`,
     `## Board (${roles.length} role${roles.length === 1 ? '' : 's'})\n${boardSection(roles)}`,
   ]
-  if (openRole) parts.push(`## The role the user has open right now\nWhen they say "this role" or "this job", they mean this one.\n${openRoleSection(openRole)}`)
+  if (openRole)
+    parts.push(
+      `## The role the user has open right now\nWhen they say "this role" or "this job", they mean this one.\n${openRoleSection(openRole, profile.tracks.length > 1 ? track : undefined)}`,
+    )
   return parts.join('\n\n')
 }
 
@@ -174,7 +201,9 @@ function actionNote(m: ChatMessage): string {
           ? `move ${shortId(action.roleId)} to ${action.stage}`
           : action.kind === 'save_answers'
             ? `save ${action.answers.length} answer(s)`
-            : `update preferences (${Object.keys(action.preferences).join(', ')})`
+            : action.kind === 'set_next_step'
+              ? `set next step for ${shortId(action.roleId)}: ${action.text}${action.due ? ` by ${action.due}` : ''}`
+              : `update preferences (${Object.keys(action.preferences).join(', ')})`
     return `${what}: ${state}`
   })
   return `\n\n[Proposed changes — ${items.join('; ')}]`

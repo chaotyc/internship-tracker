@@ -2,7 +2,8 @@ import { randomUUID } from 'node:crypto'
 import { ACTION_FENCE, type ChatAction } from '@shared/chat'
 import { FITS, STAGES, STAGE_KEYS, type Fit, type RoleInput, type StageKey } from '@shared/roles'
 import type { Profile, SavedAnswer, SearchPreferences } from '@shared/profile'
-import type { Role } from '@shared/roles'
+import type { Role, RolePatch } from '@shared/roles'
+import { isIsoDate } from '@shared/today'
 
 /** Turns a short id or full id the model wrote back into a real role id, or null. */
 export type RoleResolver = (ref: string) => string | null
@@ -123,6 +124,18 @@ export function validateAction(raw: unknown, resolveRole?: RoleResolver): ChatAc
       const roleId = resolveRole ? resolveRole(ref) : ref
       return roleId ? { kind, roleId, stage } : null
     }
+    case 'set_next_step': {
+      const ref = str(o['roleId'] ?? o['role_id'] ?? o['id'], 64)
+      const step = (o['nextStep'] && typeof o['nextStep'] === 'object' ? o['nextStep'] : o) as Record<string, unknown>
+      const text = str(step['text'] ?? step['step'], 200).replace(/\s+/g, ' ')
+      if (!ref || !text) return null
+      const roleId = resolveRole ? resolveRole(ref) : ref
+      if (!roleId) return null
+      const due = str(step['due'] ?? step['date'], 10)
+      const time = str(step['time'], 5)
+      const validDue = isIsoDate(due) ? due : ''
+      return { kind, roleId, text, due: validDue, time: validDue && /^([01]\d|2[0-3]):[0-5]\d$/.test(time) ? time : '' }
+    }
     default:
       return null
   }
@@ -171,6 +184,7 @@ export interface ApplyDeps {
     get(id: string): Role | null
     create(input: RoleInput): Role
     move(id: string, stage: StageKey, index: number): Role
+    update(id: string, patch: RolePatch): Role
   }
   profile: { get(): Profile | Promise<Profile>; save(p: Profile): Profile | Promise<Profile> }
 }
@@ -192,6 +206,12 @@ export async function applyAction(action: ChatAction, deps: ApplyDeps): Promise<
       const stage = toStage(action.stage)
       if (!stage) throw new Error(`“${action.stage}” isn't a stage on the board.`)
       deps.roles.move(role.id, stage, 0)
+      return
+    }
+    case 'set_next_step': {
+      const role = deps.roles.get(action.roleId)
+      if (!role) throw new Error('That role is no longer on your board.')
+      deps.roles.update(role.id, { nextStep: { text: action.text, due: action.due, time: action.due ? action.time : '', done: false, source: 'chat' } })
       return
     }
     case 'update_preferences': {
