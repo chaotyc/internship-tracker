@@ -683,7 +683,20 @@ export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<Profile
     return (
       <div className="settings-scroll">
         <PaneHeader title="Profile" />
-        <Note tone="danger">Your profile couldn’t be loaded: {loadError}</Note>
+        <div className="banner error settings-load-error" role="alert">
+          <Icon name="alert" />
+          Couldn't load your profile: {loadError}
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={() => {
+              setLoadError(null)
+              load()
+            }}
+          >
+            Try again
+          </button>
+        </div>
       </div>
     )
   }

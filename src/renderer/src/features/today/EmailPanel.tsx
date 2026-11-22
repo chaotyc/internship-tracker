@@ -54,7 +54,20 @@ export function EmailPanel() {
     return (
       <>
         {header}
-        <p className="settings-empty">Couldn't load email settings: {loadError}</p>
+        <div className="banner error settings-load-error" role="alert">
+          <Icon name="alert" />
+          Couldn't load email settings: {loadError}
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={() => {
+              setLoadError('')
+              load()
+            }}
+          >
+            Try again
+          </button>
+        </div>
       </>
     )
   if (!status)

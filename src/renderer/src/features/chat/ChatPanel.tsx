@@ -29,29 +29,23 @@ const lastUserRoleId = (messages: ChatMessage[] | null) => {
 const stageLabel = (k: string) => STAGES.find((s) => s.key === k)?.label ?? k
 
 interface Props {
-  roleId: string | null
   onClose: () => void
   onOpenSettings?: (tab: SettingsTab) => void
 }
 
-export function ChatPanel({ roleId, onClose, onOpenSettings }: Props) {
+export function ChatPanel({ onClose, onOpenSettings }: Props) {
   const { roles } = useRoles()
   const [messages, setMessages] = useState<ChatMessage[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
-  // The request, live reply and draft outlive the panel, so closing the sidebar mid-reply loses nothing.
-  const { draft, sending, stream, error, settled } = useChatRun()
+  // The request, live reply, draft and context role outlive the panel, so closing the sidebar loses nothing.
+  const { draft, contextId, sending, stream, error, settled } = useChatRun()
   const setDraft = chatRun.setDraft
+  const setContextId = chatRun.setContext
   const setError = chatRun.setError
   const [confirmClear, setConfirmClear] = useState(false)
   const [hasResume, setHasResume] = useState<boolean | null>(null)
   const [resumeNote, setResumeNote] = useState<string | null>(null)
   const [inputFocused, setInputFocused] = useState(false)
-  const [contextId, setContextId] = useState(roleId)
-  const [lastRoleProp, setLastRoleProp] = useState(roleId)
-  if (roleId !== lastRoleProp) {
-    setLastRoleProp(roleId)
-    setContextId(roleId)
-  }
 
   const listRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)

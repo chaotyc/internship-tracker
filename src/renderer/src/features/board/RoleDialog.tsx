@@ -88,7 +88,7 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
   const [moreOpen, setMoreOpen] = useState(false)
   const [errors, setErrors] = useState<{ company?: string; title?: string }>({})
   /** What the user tried to do with unsaved changes; the inline bar asks before doing it. */
-  const [pendingLeave, setPendingLeave] = useState<null | 'close' | 'assistant'>(null)
+  const [pendingLeave, setPendingLeave] = useState<null | 'close' | 'assistant' | 'settings'>(null)
   const [saveError, setSaveError] = useState('')
   const confirmClose = pendingLeave !== null
   /** Bumped whenever the dialog opens, closes or switches role, so a late posting read is dropped. */
@@ -156,10 +156,20 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
     }
     onAskAssistant(role.id)
   }
+  // App closes this dialog and opens Settings on the Profile tab.
+  const openProfileSettings = () => window.dispatchEvent(new CustomEvent('app:open-settings', { detail: 'profile' }))
+  const askSettings = () => {
+    if (dirty) {
+      setPendingLeave('settings')
+      return
+    }
+    openProfileSettings()
+  }
   const leave = () => {
     const action = pendingLeave
     setPendingLeave(null)
     if (action === 'assistant' && role) onAskAssistant(role.id)
+    else if (action === 'settings') openProfileSettings()
     else onClose()
   }
 
@@ -227,6 +237,7 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
         toast(`Added ${form.company} to ${STAGES.find((s) => s.key === form.stage)?.label}.`)
       }
       if (pendingLeave === 'assistant' && role) onAskAssistant(role.id)
+      else if (pendingLeave === 'settings') openProfileSettings()
       else onClose()
     } catch (e) {
       setSaveError((e as Error).message)
@@ -265,6 +276,7 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
         link={role.link}
         ghost={role.stage !== 'saved'}
         blockedReason={linkChanged || trackChanged ? 'Save changes to autofill with the new link/track' : undefined}
+        onOpenSettings={askSettings}
       />
     ) : undefined
 
@@ -437,7 +449,11 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
       footer={
         !showForm && !confirmClose ? undefined : confirmClose ? (
           <div className="discard-bar" role="alert">
-            <span>{pendingLeave === 'assistant' ? 'Save your changes before asking the assistant?' : 'You have unsaved changes.'}</span>
+            <span>{pendingLeave === 'assistant'
+                ? 'Save your changes before asking the assistant?'
+                : pendingLeave === 'settings'
+                  ? 'Save your changes before opening Settings?'
+                  : 'You have unsaved changes.'}</span>
             <span className="spacer" />
             <button type="button" className="btn" onClick={() => setPendingLeave(null)}>
               Keep editing

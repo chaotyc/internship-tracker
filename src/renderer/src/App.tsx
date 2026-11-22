@@ -9,6 +9,7 @@ import { plural } from './lib/format'
 import { Board, byStage, matchesQuery } from './features/board/Board'
 import { RoleDialog } from './features/board/RoleDialog'
 import { ChatPanel } from './features/chat/ChatPanel'
+import { chatRun } from './features/chat/chatStore'
 import { AutosearchButton } from './features/search/AutosearchButton'
 import { RefreshButton } from './features/search/RefreshButton'
 import { SuggestionsTray } from './features/search/SuggestionsTray'
@@ -23,7 +24,7 @@ export function App() {
   const { roles, setRoles, error, reload } = useRoles()
   const [query, setQuery] = useState('')
   const [dialog, setDialog] = useState<{ open: boolean; id: string | null; stage: StageKey }>({ open: false, id: null, stage: 'saved' })
-  const [chat, setChat] = useState<{ open: boolean; roleId: string | null }>({ open: false, roleId: null })
+  const [chat, setChat] = useState<{ open: boolean }>({ open: false })
   const [settings, setSettings] = useState<{ open: boolean; tab: SettingsTab }>({ open: false, tab: 'profile' })
   const [tray, setTray] = useState(false)
   const [view, setView] = useState<'board' | 'today'>('board')
@@ -70,7 +71,7 @@ export function App() {
     const view = new URLSearchParams(location.hash.slice(1)).get('view')
     if (view === 'add') addRole()
     else if (view?.startsWith('settings')) setSettings({ open: true, tab: (view.split('-')[1] as SettingsTab) ?? 'profile' })
-    else if (view === 'chat') setChat({ open: true, roleId: null })
+    else if (view === 'chat') setChat({ open: true })
     else if (view === 'today') setView('today')
     else if (view === 'suggestions') setTray(true)
   }, [addRole])
@@ -282,7 +283,7 @@ export function App() {
             <Board roles={roles} query={query} onOpen={openRole} onAdd={addRole} onMove={move} />
           )}
         </main>
-        {chat.open && <ChatPanel roleId={chat.roleId} onClose={() => setChat({ open: false, roleId: null })} onOpenSettings={(tab) => setSettings({ open: true, tab })} />}
+        {chat.open && <ChatPanel onClose={() => setChat({ open: false })} onOpenSettings={(tab) => setSettings({ open: true, tab })} />}
       </div>
 
       <input
@@ -303,7 +304,9 @@ export function App() {
         onClose={() => setDialog((d) => ({ ...d, open: false }))}
         onAskAssistant={(roleId) => {
           setDialog((d) => ({ ...d, open: false }))
-          setChat({ open: true, roleId })
+          // The chosen role becomes the assistant's context; it stays until the user changes it.
+          chatRun.setContext(roleId)
+          setChat({ open: true })
         }}
       />
       <SettingsDialog open={settings.open} tab={settings.tab} onClose={() => setSettings((s) => ({ ...s, open: false }))} />

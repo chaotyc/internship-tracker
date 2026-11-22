@@ -17,7 +17,8 @@ export function AiPanel() {
   const [tests, setTests] = useState<Partial<Record<ProviderId, TestState>>>(() => ({ ...lastTests }))
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setError(null)
     Promise.all([api.invoke('ai:status'), api.invoke('ai:getSettings')])
       .then(([st, s]) => {
         setStatuses(st)
@@ -25,6 +26,7 @@ export function AiPanel() {
       })
       .catch((e: Error) => setError(e.message))
   }, [])
+  useEffect(load, [load])
 
   const save = useCallback(
     (next: AiSettings) => {
@@ -60,7 +62,13 @@ export function AiPanel() {
     return (
       <div className="ai-panel">
         {header}
-        <p className="settings-empty">Couldn't load AI connections: {error}</p>
+        <div className="banner error settings-load-error" role="alert">
+          <Icon name="alert" />
+          Couldn't load AI connections: {error}
+          <button type="button" className="btn btn-sm" onClick={load}>
+            Try again
+          </button>
+        </div>
       </div>
     )
   if (!statuses || !settings) {

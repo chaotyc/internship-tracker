@@ -154,11 +154,18 @@
   color: var(--ink-3);
 }
 .td-row-sub {
+  display: flex;
+  align-items: center;
+  min-width: 0;
   font-size: var(--fs-meta);
   color: var(--ink-3);
+  white-space: nowrap;
+}
+.td-row-meta {
+  flex: 0 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .td-row-sub strong {
   color: var(--ink-2);
@@ -682,7 +689,8 @@
   flex-direction: column;
   gap: 8px;
   padding: 10px;
-  border: 1px dashed var(--line-strong);
+  /* Drop zones sit a step above --line-strong so the empty target reads as one. */
+  border: 1px dashed color-mix(in srgb, var(--ink-4) 45%, var(--line-strong));
   border-radius: var(--r-lg);
   background: var(--surface);
   transition: border-color 0.12s, background 0.12s;
@@ -696,7 +704,7 @@
   min-height: 92px;
   max-height: 260px;
   padding: 8px 10px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: var(--r-md);
   background: var(--surface);
   resize: vertical;
@@ -708,7 +716,7 @@
   box-shadow: var(--ring);
 }
 .td-drop textarea::placeholder {
-  color: var(--ink-4);
+  color: var(--ink-3);
 }
 .td-drop-foot {
   display: flex;
@@ -798,15 +806,35 @@
 }
 .ns-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 214px 108px;
+  grid-template-columns: minmax(0, 1fr) 214px 136px;
   gap: 8px;
+}
+/* The time input keeps the field look; its clear button sits in the right padding, past the clock icon. */
+.ns-time {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.ns-time input {
+  font-variant-numeric: tabular-nums;
+}
+.ns-time.has-value input {
+  padding-right: 28px;
+}
+.ns-time input::-webkit-calendar-picker-indicator {
+  margin-inline-start: 4px;
+  padding: 0;
+}
+.ns-time input::-webkit-datetime-edit {
+  padding: 0;
+}
+.ns-time input:disabled {
+  background: var(--surface-sunken);
+  cursor: not-allowed;
 }
 /* The date button's "· in 3 days" suffix turns red once the step is overdue. */
 .ns .date-btn small.is-overdue {
   color: var(--danger);
-}
-.ns-row select.is-empty {
-  color: var(--ink-3);
 }
 .ns.is-done .ns-row input:first-child {
   text-decoration: line-through;
@@ -931,7 +959,7 @@
 }
 .ep-drop .td-drop textarea {
   min-height: 104px;
-  border: 1.5px dashed var(--line-strong);
+  border: 1.5px dashed color-mix(in srgb, var(--ink-4) 45%, var(--line-strong));
   background: var(--surface-hover);
   font-size: var(--fs-body);
   transition: border-color 0.12s, background 0.12s, box-shadow 0.12s;
@@ -1008,6 +1036,7 @@
 
 /* A posting deadline folded into its role's step row. */
 .td-row-deadline {
+  flex: none;
   display: inline-flex;
   align-items: center;
   gap: 3px;

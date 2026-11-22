@@ -31,18 +31,6 @@ function relative(iso: string): string {
   return `in ${n} days`
 }
 
-/** "2pm" or "2:30pm" for an HH:MM string. */
-function timeLabel(hhmm: string): string {
-  const [h = 0, m = 0] = hhmm.split(':').map(Number)
-  return `${h % 12 || 12}${m ? ':' + String(m).padStart(2, '0') : ''}${h < 12 ? 'am' : 'pm'}`
-}
-
-/** 7am to 10pm in 30-minute steps, stored as HH:MM. */
-const TIMES = Array.from({ length: 31 }, (_, i) => {
-  const min = 7 * 60 + i * 30
-  return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`
-})
-
 const SOURCE_NOTE: Record<NextStep['source'], string> = { manual: '', email: 'From an email', chat: 'Suggested by the assistant' }
 
 /** The role's one next step: what, when, quick dates and done. */
@@ -101,16 +89,23 @@ export function NextStepField({ value, onChange }: { value: NextStep | null; onC
           )}
           <input ref={picker} type="date" className="date-native" value={v.due} onChange={(e) => set({ due: e.target.value })} tabIndex={-1} aria-hidden="true" />
         </div>
-        <select className={v.time ? undefined : 'is-empty'} value={v.time} disabled={!v.due} onChange={(e) => set({ time: e.target.value })} aria-label="Next step time">
-          <option value="">No time</option>
-          {/* Keep an off-grid time (e.g. 9:15) that came from an email or the assistant. */}
-          {v.time && !TIMES.includes(v.time) && <option value={v.time}>{timeLabel(v.time)}</option>}
-          {TIMES.map((t) => (
-            <option key={t} value={t}>
-              {timeLabel(t)}
-            </option>
-          ))}
-        </select>
+        {/* Any minute, stored as HH:MM; empty means no time. Needs a date first. */}
+        <div className={`ns-time${v.time ? ' has-value' : ''}`}>
+          <input
+            type="time"
+            className={v.time ? undefined : 'is-empty'}
+            value={v.time}
+            disabled={!v.due}
+            onChange={(e) => set({ time: e.target.value })}
+            aria-label="Next step time"
+            title={v.due ? undefined : 'Add a date first'}
+          />
+          {v.time && (
+            <button type="button" className="date-clear" onClick={() => set({ time: '' })} aria-label="Clear next step time" title="No time">
+              <Icon name="close" />
+            </button>
+          )}
+        </div>
       </div>
       <div className="ns-tools">
         {has && (

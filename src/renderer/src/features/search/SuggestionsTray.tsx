@@ -80,6 +80,10 @@ function SuggestionCard({ s, busy, act }: { s: Suggestion; busy: boolean; act: (
   const vendor = sourceName(s)
   const openLabel = vendor ? `Open on ${vendor}` : 'Open posting'
   const title = useFitText<HTMLAnchorElement>(wordCandidates(displayTitle(s.title)))
+  const reasonForms = wordCandidates(s.reason)
+  const reason = useFitText<HTMLParagraphElement>(reasonForms)
+  // A cut reason can take keyboard focus, which shows the whole text over the rows below.
+  const reasonCut = reason.text !== reasonForms[0]
   return (
     <article className="sugg" aria-label={`${s.company}, ${s.title}`}>
       <div className="sugg-top">
@@ -113,7 +117,22 @@ function SuggestionCard({ s, busy, act }: { s: Suggestion; busy: boolean; act: (
           '\u00a0'
         )}
       </div>
-      <FitText as="p" className="sugg-reason" candidates={wordCandidates(s.reason)} title={s.reason} />
+      <div className="sugg-reason-box">
+        <p
+          ref={reason.ref}
+          className="sugg-reason"
+          title={s.reason}
+          tabIndex={reasonCut ? 0 : undefined}
+          aria-description={reasonCut ? s.reason : undefined}
+        >
+          {reason.text}
+        </p>
+        {reasonCut && (
+          <p className="sugg-reason-full" aria-hidden="true">
+            {s.reason}
+          </p>
+        )}
+      </div>
       {track ? <FitText as="div" className="sugg-source" candidates={wordCandidates(track)} title={track} /> : <div className="sugg-source">{'\u00a0'}</div>}
       <div className="sugg-actions">
         <button type="button" className="btn btn-sm sugg-add" disabled={busy} onClick={() => act(s, 'add')}>

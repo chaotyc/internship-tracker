@@ -2,11 +2,13 @@ import { useSyncExternalStore } from 'react'
 import { api } from '@renderer/lib/api'
 
 /**
- * The assistant's in-flight request, live reply and draft. Lives outside ChatPanel so closing the
- * sidebar mid-reply doesn't lose them: reopening shows the streaming reply, Stop and then the answer.
+ * The assistant's in-flight request, live reply, draft and context role. Lives outside ChatPanel so
+ * closing the sidebar mid-reply doesn't lose them: reopening shows the streaming reply, Stop and then the answer.
  */
 export interface ChatRun {
   draft: string
+  /** The role the next message is about (the Context picker); null for all roles. */
+  contextId: string | null
   sending: boolean
   stream: string
   error: string | null
@@ -14,7 +16,7 @@ export interface ChatRun {
   settled: number
 }
 
-let state: ChatRun = { draft: '', sending: false, stream: '', error: null, settled: 0 }
+let state: ChatRun = { draft: '', contextId: null, sending: false, stream: '', error: null, settled: 0 }
 const listeners = new Set<() => void>()
 
 function update(patch: Partial<ChatRun>) {
@@ -41,6 +43,7 @@ export function useChatRun(): ChatRun {
 
 export const chatRun = {
   setDraft: (draft: string) => update({ draft }),
+  setContext: (contextId: string | null) => update({ contextId }),
   setError: (error: string | null) => update({ error }),
   /** Sends a message (or retries the last one) and keeps the reply here until it settles. */
   async send(text: string, roleId: string | null, retry: boolean) {

@@ -136,7 +136,7 @@
 }
 .trk-name::placeholder,
 .trk-desc::placeholder {
-  color: var(--ink-4);
+  color: var(--ink-3);
 }
 .trk-name,
 .trk-desc {

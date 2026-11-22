@@ -161,6 +161,10 @@
   color: var(--ink-3);
   text-align: center;
 }
+/* A pane that failed to load: the board's error banner, aligned to the pane instead of the board. */
+.banner.settings-load-error {
+  margin: 0;
+}
 /* Shared building blocks for settings panels. */
 
 /* Every pane starts with this (PaneHeader): tab name, one-line description, optional action. */

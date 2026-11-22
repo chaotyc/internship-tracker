@@ -26,11 +26,14 @@ export function AutofillButton({
   link,
   blockedReason,
   ghost,
+  onOpenSettings,
 }: {
   roleId: string
   link: string
   blockedReason?: string
   ghost?: boolean
+  /** Lets the host (the role dialog) guard unsaved changes before Settings opens. */
+  onOpenSettings?: () => void
 }) {
   // null until the first check answers: the slot is reserved so the header doesn't shift.
   const [board, setBoard] = useState<AutofillBoard | '' | null>(null)
@@ -114,6 +117,7 @@ export function AutofillButton({
 
   const openSettings = () => {
     popRef.current?.hidePopover()
+    if (onOpenSettings) return onOpenSettings()
     // App closes the role dialog and opens Settings on the Profile tab.
     window.dispatchEvent(new CustomEvent('app:open-settings', { detail: 'profile' }))
   }
@@ -141,7 +145,7 @@ export function AutofillButton({
           }
         >
           {running ? <span className="af-spinner" aria-hidden="true" /> : <Icon name="wand" />}
-          {running ? STEP_LABEL[state.step] ?? 'Working…' : 'Autofill application'}
+          {running ? STEP_LABEL[state.step] ?? 'Working…' : ghost ? 'Autofill' : 'Autofill application'}
         </button>
       </span>
       <div ref={popRef} popover="auto" className="af-pop" role="dialog" aria-label="Autofill result">

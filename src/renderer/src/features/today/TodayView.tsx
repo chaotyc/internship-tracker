@@ -404,7 +404,8 @@ function Row({
             ? ' is-none'
             : ''
   const due = item.due ? dueLabel(item.due, item.time) : 'No date'
-  const label = `${item.text}, ${item.company}, ${item.title}, ${item.kind === 'deadline' ? 'deadline ' : ''}${due}, ${stageLabel(item.stage)}`
+  const folded = item.deadline ? dueLabel(item.deadline, '') : ''
+  const label = `${item.text}, ${item.company}, ${item.title}, ${item.kind === 'deadline' ? 'deadline ' : ''}${due}, ${folded ? `posting due ${folded}, ` : ''}${stageLabel(item.stage)}`
   // Overdue and today rows always show their actions; later rows show them on hover or focus.
   const pinned = section === 'overdue' || section === 'today'
   return (
@@ -414,12 +415,15 @@ function Row({
         <div className="td-row-step">
           <span>{item.text}</span>
         </div>
+        {/* Company and title truncate first; the folded deadline keeps its own slot after them. */}
         <div className="td-row-sub">
-          <strong>{item.company}</strong> · {item.title}
+          <span className="td-row-meta">
+            <strong>{item.company}</strong> · {item.title}
+          </span>
           {item.deadline && (
             <span className={`td-row-deadline ${deadlineTone(item.deadline)}`}>
               <Icon name="flag" />
-              Due {dueLabel(item.deadline, '')}
+              Due {folded}
             </span>
           )}
         </div>

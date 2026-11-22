@@ -145,7 +145,7 @@
   box-shadow: none;
 }
 .chat-picker-search input::placeholder {
-  color: var(--ink-4);
+  color: var(--ink-3);
 }
 .chat-picker-list {
   flex: 1;
@@ -535,11 +535,8 @@
   font-weight: 600;
   color: var(--ink-2);
 }
+/* The whole answer shows, so what gets saved is what was reviewed; the conversation scrolls. */
 .chat-action dl.is-stacked dd {
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
   white-space: pre-wrap;
 }
 .chat-action-actions {

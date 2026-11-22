@@ -97,20 +97,25 @@ a:hover {
 .btn-ghost:disabled {
   opacity: 0.45;
 }
-input[type='date'].is-empty {
+input[type='date'].is-empty,
+input[type='time'].is-empty {
   color: var(--ink-3);
 }
-/* Empty selects ("No time") read as readable text too; the second selector outranks feature rules. */
-select.is-empty,
-.ns-row > select.is-empty:not([multiple]) {
+/* Empty selects read as readable text too. */
+select.is-empty {
   color: var(--ink-3);
 }
-input[type='date']::-webkit-calendar-picker-indicator {
+input[type='date']::-webkit-calendar-picker-indicator,
+input[type='time']::-webkit-calendar-picker-indicator {
   opacity: 0.55;
   cursor: pointer;
 }
+input[type='time']:disabled::-webkit-calendar-picker-indicator {
+  cursor: not-allowed;
+}
 @media (prefers-color-scheme: dark) {
-  input[type='date']::-webkit-calendar-picker-indicator {
+  input[type='date']::-webkit-calendar-picker-indicator,
+  input[type='time']::-webkit-calendar-picker-indicator {
     filter: invert(1);
   }
 }
@@ -211,7 +216,8 @@ select.input {
 }
 .field input::placeholder,
 .field textarea::placeholder {
-  color: var(--ink-4);
+  /* --ink-3, not --ink-4: placeholders carry examples people need to read (4.5:1+). */
+  color: var(--ink-3);
 }
 .field textarea {
   height: auto;

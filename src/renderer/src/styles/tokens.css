@@ -12,7 +12,7 @@
   --ink: #15171c;
   --ink-2: #4b5260;
   --ink-3: #5f6675;
-  /* Decorative only (icons, rules, placeholders); never body text. */
+  /* Decorative only (icons, rules); never body text or placeholders. */
   --ink-4: #949aa7;
   --accent: #3554e8;
   --accent-hover: #2943cc;

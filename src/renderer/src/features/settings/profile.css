@@ -58,7 +58,7 @@
 }
 .pf .field input::placeholder,
 .pf .field textarea::placeholder {
-  color: var(--ink-4);
+  color: var(--ink-3);
 }
 .pf .field.has-error input,
 .pf .field.has-error select,
