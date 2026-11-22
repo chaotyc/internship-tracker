@@ -12,6 +12,7 @@ import { AutosearchButton } from './features/search/AutosearchButton'
 import { RefreshButton } from './features/search/RefreshButton'
 import { SuggestionsTray } from './features/search/SuggestionsTray'
 import { SettingsDialog, type SettingsTab } from './features/settings/SettingsDialog'
+import { TodayView } from './features/today/TodayView'
 import './app.css'
 
 const MOD = navigator.userAgent.includes('Mac') ? '⌘' : 'Ctrl+'
@@ -24,6 +25,7 @@ export function App() {
   const [chat, setChat] = useState<{ open: boolean; roleId: string | null }>({ open: false, roleId: null })
   const [settings, setSettings] = useState<{ open: boolean; tab: SettingsTab }>({ open: false, tab: 'profile' })
   const [tray, setTray] = useState(false)
+  const [view, setView] = useState<'board' | 'today'>('board')
   const searchRef = useRef<HTMLInputElement>(null)
   const csvRef = useRef<HTMLInputElement>(null)
 
@@ -65,6 +67,7 @@ export function App() {
     if (view === 'add') addRole()
     else if (view?.startsWith('settings')) setSettings({ open: true, tab: (view.split('-')[1] as SettingsTab) ?? 'profile' })
     else if (view === 'chat') setChat({ open: true, roleId: null })
+    else if (view === 'today') setView('today')
     else if (view === 'suggestions') setTray(true)
   }, [addRole])
   useEffect(() => {
@@ -135,6 +138,16 @@ export function App() {
             </p>
           </div>
         </div>
+        <div className="view-switch" role="tablist" aria-label="View">
+          <button type="button" role="tab" aria-selected={view === 'board'} className={view === 'board' ? 'is-on' : ''} onClick={() => setView('board')}>
+            <Icon name="board" />
+            Board
+          </button>
+          <button type="button" role="tab" aria-selected={view === 'today'} className={view === 'today' ? 'is-on' : ''} onClick={() => setView('today')}>
+            <Icon name="clock" />
+            Today
+          </button>
+        </div>
         <div className="topbar-actions">
           <label className="search">
             <Icon name="search" />
@@ -198,7 +211,9 @@ export function App() {
               </button>
             </div>
           )}
-          {roles && roles.length === 0 ? (
+          {view === 'today' ? (
+            <TodayView onOpenRole={openRole} />
+          ) : roles && roles.length === 0 ? (
             <EmptyState
               onAdd={() => addRole()}
               onImport={() => csvRef.current?.click()}

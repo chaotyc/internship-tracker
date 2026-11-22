@@ -20,6 +20,17 @@ export interface Liveness {
   detail: string
 }
 
+/** The one thing to do next for a role, with a date. Written by the user, the assistant or the email hook. */
+export interface NextStep {
+  text: string
+  /** YYYY-MM-DD, or '' when undated. */
+  due: string
+  /** HH:MM (24h, local), or ''. */
+  time: string
+  done: boolean
+  source: 'manual' | 'email' | 'chat'
+}
+
 export interface Role {
   id: string
   company: string
@@ -38,7 +49,10 @@ export interface Role {
   postingStatus: string
   /** ISO date the application went in, or ''. */
   appliedOn: string
-  source: 'manual' | 'autosearch' | 'import' | 'chat'
+  source: 'manual' | 'autosearch' | 'import' | 'chat' | 'email'
+  /** Application track (resume + profile variant) used for this role; '' means the default track. */
+  trackId: string
+  nextStep: NextStep | null
   liveness: Liveness
   /** Sort key inside a column; lower comes first. */
   order: number

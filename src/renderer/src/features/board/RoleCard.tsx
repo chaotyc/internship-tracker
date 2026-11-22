@@ -59,6 +59,30 @@ function DeadlineChip({ deadline }: { deadline: string }) {
   )
 }
 
+function nextTone(due: string): string {
+  const d = daysUntil(due)
+  if (d == null) return ''
+  return d < 0 ? ' is-overdue' : d === 0 ? ' is-today' : ''
+}
+
+/** "today 2pm", "tomorrow", "Thu", "Dec 11", "3 days overdue". */
+export function dueLabel(due: string, time: string): string {
+  const d = daysUntil(due)
+  if (d == null) return due
+  const t = time ? ` ${formatTime(time)}` : ''
+  if (d < 0) return d === -1 ? 'overdue since yesterday' : `${-d} days overdue`
+  if (d === 0) return `today${t}`
+  if (d === 1) return `tomorrow${t}`
+  if (d < 7) return `${new Date(due + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short' })}${t}`
+  return `${shortDate(due)}${t}`
+}
+
+function formatTime(hhmm: string): string {
+  const [h = 0, m = 0] = hhmm.split(':').map(Number)
+  const d = new Date(2000, 0, 1, h, m)
+  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: m ? '2-digit' : undefined }).replace(':00', '').toLowerCase().replace(' ', '')
+}
+
 export function RoleCard({ role, ghost, ...rest }: Props) {
   const meta = [role.location, role.pay].filter(Boolean).join(' · ')
   const live = role.liveness?.status
@@ -110,11 +134,22 @@ export function RoleCard({ role, ghost, ...rest }: Props) {
           </button>
         </div>
       </div>
-      {active && role.notes && (
-        <div className="card-next">
+      {role.nextStep && !role.nextStep.done && !finished ? (
+        <div className={`card-next${nextTone(role.nextStep.due)}`}>
           <Icon name="arrowRight" />
-          <span>{role.notes}</span>
+          <span>
+            {role.nextStep.text || 'Next step'}
+            {role.nextStep.due && <em> · {dueLabel(role.nextStep.due, role.nextStep.time)}</em>}
+          </span>
         </div>
+      ) : (
+        active &&
+        role.notes && (
+          <div className="card-next">
+            <Icon name="arrowRight" />
+            <span>{role.notes}</span>
+          </div>
+        )
       )}
       {meta && <div className="card-meta">{meta}</div>}
       {alerts && (
@@ -146,7 +181,7 @@ export function RoleCard({ role, ghost, ...rest }: Props) {
           {!saved && role.appliedOn && role.stage !== 'closed' && <span className="card-age">Applied {ago(role.appliedOn)}</span>}
         </div>
       )}
-      {!active && !finished && role.notes && <div className="card-note">{role.notes}</div>}
+      {(!active || (role.nextStep && !role.nextStep.done)) && !finished && role.notes && <div className="card-note">{role.notes}</div>}
     </article>
   )
 }

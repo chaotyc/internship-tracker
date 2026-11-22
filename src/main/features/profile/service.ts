@@ -7,6 +7,8 @@ import {
   type Profile,
   type ProfileErrors,
   type StoredResume,
+  type ApplicationTrack,
+  defaultTrack,
 } from '@shared/profile'
 import type { Store } from '../../db/store'
 import type { Secrets } from '../../secrets'
@@ -16,6 +18,12 @@ import type { Settings } from '../../settings'
 export interface ProfileService {
   get(): Profile
   save(profile: Profile): Profile
+  /** Always at least one track: the user's tracks, or the implicit default built from the profile. */
+  tracks(): ApplicationTrack[]
+  /** The track for a role's trackId, falling back to the first track. */
+  trackFor(trackId: string): ApplicationTrack
+  /** The resume to use for a role: its track's resume, else the profile's resume. */
+  resumeFor(trackId: string): StoredResume | null
 }
 
 /** Thrown by save() when a field is clearly wrong. `message` is ready to show. */
@@ -58,6 +66,20 @@ interface Deps {
  */
 export class EncryptedProfileService implements ProfileService {
   constructor(private readonly deps: Deps) {}
+
+  tracks(): ApplicationTrack[] {
+    const p = this.get()
+    return p.tracks.length ? p.tracks : [defaultTrack(p)]
+  }
+
+  trackFor(trackId: string): ApplicationTrack {
+    const all = this.tracks()
+    return all.find((t) => t.id === trackId) ?? all[0]!
+  }
+
+  resumeFor(trackId: string): StoredResume | null {
+    return this.trackFor(trackId).resume ?? this.get().resume
+  }
 
   /** True when the profile is encrypted at rest. */
   get encrypted(): boolean {

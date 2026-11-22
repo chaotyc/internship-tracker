@@ -2,17 +2,21 @@ import { useEffect, useRef, useState } from 'react'
 import { Dialog } from '@renderer/components/Dialog'
 import { Icon, type IconName } from '@renderer/components/Icon'
 import { WatchlistPanel } from '@renderer/features/search/WatchlistPanel'
+import { EmailPanel } from '@renderer/features/today/EmailPanel'
+import { TracksPanel } from '@renderer/features/tracks/TracksPanel'
 import { AiPanel } from './AiPanel'
 import { DataPanel } from './DataPanel'
 import { ProfilePanel, type ProfileActions } from './ProfilePanel'
 import './settings.css'
 
-export type SettingsTab = 'profile' | 'ai' | 'boards' | 'data'
+export type SettingsTab = 'profile' | 'tracks' | 'ai' | 'boards' | 'email' | 'data'
 
 const TABS: { key: SettingsTab; label: string; icon: IconName; hint: string }[] = [
   { key: 'profile', label: 'Profile', icon: 'user', hint: 'Fills applications and judges fit' },
+  { key: 'tracks', label: 'Application tracks', icon: 'file', hint: 'A resume per kind of role' },
   { key: 'ai', label: 'AI connections', icon: 'sparkle', hint: 'Claude, OpenAI or Gemini' },
   { key: 'boards', label: 'Job boards', icon: 'list', hint: 'Companies to watch' },
+  { key: 'email', label: 'Email updates', icon: 'send', hint: 'Turn emails into next steps' },
   { key: 'data', label: 'Data & privacy', icon: 'database', hint: 'Export or erase' },
 ]
 
@@ -128,8 +132,10 @@ export function SettingsDialog({ open, tab, onClose }: { open: boolean; tab: Set
             <ProfilePanel actions={profile} onDirtyChange={setDirty} />
           ) : (
             <div key={active} className="settings-scroll">
+              {active === 'tracks' && <TracksPanel />}
               {active === 'ai' && <AiPanel />}
               {active === 'boards' && <WatchlistPanel />}
+              {active === 'email' && <EmailPanel />}
               {active === 'data' && <DataPanel />}
             </div>
           )}

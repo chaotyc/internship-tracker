@@ -4,6 +4,7 @@ import type { AiChannels, AiEvents } from './ai'
 import type { SearchChannels, SearchEvents } from './search'
 import type { ChatChannels, ChatEvents } from './chat'
 import type { AutofillChannels, AutofillEvents } from './autofill'
+import type { TodayChannels, TodayEvents } from './today'
 
 /** Every renderer -> main request, keyed by channel. Each feature owns its own map. */
 export interface IpcChannels
@@ -12,10 +13,18 @@ export interface IpcChannels
     AiChannels,
     SearchChannels,
     ChatChannels,
-    AutofillChannels {}
+    AutofillChannels,
+    TodayChannels {}
 
 /** Every main -> renderer push event. */
-export interface IpcEvents extends RolesEvents, ProfileEvents, AiEvents, SearchEvents, ChatEvents, AutofillEvents {}
+export interface IpcEvents
+  extends RolesEvents,
+    ProfileEvents,
+    AiEvents,
+    SearchEvents,
+    ChatEvents,
+    AutofillEvents,
+    TodayEvents {}
 
 export type Channel = keyof IpcChannels
 export type Req<C extends Channel> = IpcChannels[C]['req']

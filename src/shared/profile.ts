@@ -48,6 +48,37 @@ export interface StoredResume {
   updatedAt: string
 }
 
+/**
+ * An application track: a resume plus the profile variations for one kind of role
+ * (e.g. "ML inference" vs "Photonics hardware"). Roles point at a track by id.
+ */
+export interface ApplicationTrack {
+  id: string
+  name: string
+  description: string
+  resume: StoredResume | null
+  /** What this track looks for; autosearch ranks against the best-matching track. */
+  targetRoles: string[]
+  keywords: string[]
+  /** Answers that differ for this track; they take precedence over the profile's saved answers. */
+  answers: SavedAnswer[]
+}
+
+export const DEFAULT_TRACK_ID = 'default'
+
+/** The implicit track used when the user has not created any: the profile's own resume and preferences. */
+export function defaultTrack(p: Profile): ApplicationTrack {
+  return {
+    id: DEFAULT_TRACK_ID,
+    name: 'General',
+    description: '',
+    resume: p.resume,
+    targetRoles: p.preferences.targetRoles,
+    keywords: p.preferences.keywords,
+    answers: [],
+  }
+}
+
 export interface Profile {
   legalFirstName: string
   legalLastName: string
@@ -69,6 +100,8 @@ export interface Profile {
   /** Reusable answers: SAT score, "how did you hear about us", start date, etc. */
   answers: SavedAnswer[]
   resume: StoredResume | null
+  /** Empty means a single implicit default track (see defaultTrack). */
+  tracks: ApplicationTrack[]
 }
 
 export const EMPTY_EDUCATION: Education = { school: '', degree: '', field: '', startDate: '', endDate: '', gpa: '' }
@@ -102,6 +135,7 @@ export const EMPTY_PROFILE: Profile = {
   },
   answers: [],
   resume: null,
+  tracks: [],
 }
 
 /** Where things live and whether the keychain is protecting them. */
@@ -221,6 +255,10 @@ export function mergeWithDefaults(raw: unknown): Profile {
           updatedAt: str(resume['updatedAt']),
         }
       : null,
+    // The tracks feature owns full normalization of tracks; keep well-formed entries as-is.
+    tracks: (Array.isArray(r['tracks']) ? r['tracks'] : []).filter(
+      (t): t is ApplicationTrack => isObj(t) && typeof t['id'] === 'string' && typeof t['name'] === 'string',
+    ),
   }
 }
 

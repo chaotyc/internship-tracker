@@ -32,6 +32,8 @@ const role = (over: Partial<Role>): Role => ({
   company: 'Vectorline',
   title: 'Inference Intern',
   stage: 'saved',
+  trackId: '',
+  nextStep: null,
   link: 'https://jobs.example/1',
   location: 'San Jose',
   pay: '',

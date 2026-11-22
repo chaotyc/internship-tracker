@@ -35,6 +35,8 @@ const BLANK: Omit<Role, 'id' | 'company' | 'title' | 'createdAt' | 'updatedAt' |
   postingStatus: '',
   appliedOn: '',
   source: 'manual',
+  trackId: '',
+  nextStep: null,
   liveness: { status: 'unknown', checkedAt: null, detail: '' },
 }
 

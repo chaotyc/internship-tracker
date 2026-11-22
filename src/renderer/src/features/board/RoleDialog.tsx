@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FITS, STAGES, type Role, type RoleInput, type StageKey } from '@shared/roles'
+import { FITS, STAGES, type NextStep, type Role, type RoleInput, type StageKey } from '@shared/roles'
+import { NextStepField } from '@renderer/features/today/NextStepField'
+import { TrackSelect } from '@renderer/features/tracks/TrackSelect'
 import { Dialog } from '@renderer/components/Dialog'
 import { Icon } from '@renderer/components/Icon'
 import { useToast } from '@renderer/components/Toast'
@@ -11,9 +13,23 @@ import { Monogram } from './RoleCard'
 type Form = Required<
   Pick<
     RoleInput,
-    'company' | 'title' | 'stage' | 'fit' | 'location' | 'pay' | 'deadline' | 'priority' | 'appliedOn' | 'link' | 'postingStatus' | 'why' | 'watch' | 'notes'
+    | 'company'
+    | 'title'
+    | 'stage'
+    | 'fit'
+    | 'location'
+    | 'pay'
+    | 'deadline'
+    | 'priority'
+    | 'appliedOn'
+    | 'link'
+    | 'postingStatus'
+    | 'why'
+    | 'watch'
+    | 'notes'
+    | 'trackId'
   >
->
+> & { nextStep: NextStep | null }
 
 const EMPTY: Form = {
   company: '',
@@ -30,6 +46,8 @@ const EMPTY: Form = {
   why: '',
   watch: '',
   notes: '',
+  trackId: '',
+  nextStep: null,
 }
 
 const DETAIL_KEYS: (keyof Form)[] = ['why', 'watch', 'priority', 'postingStatus']
@@ -77,7 +95,10 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, role?.id, initialStage])
 
-  const dirty = useMemo(() => (Object.keys(form) as (keyof Form)[]).some((k) => form[k] !== initial[k]), [form, initial])
+  const dirty = useMemo(
+    () => (Object.keys(form) as (keyof Form)[]).some((k) => JSON.stringify(form[k]) !== JSON.stringify(initial[k])),
+    [form, initial],
+  )
   // In Add mode the form appears once the link has been read or the user chooses to type.
   const showForm = !!role || manual || filled.size > 0
 
@@ -132,7 +153,7 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
         const next = { ...f }
         for (const k of draft.filled) {
           const v = (draft.role as Record<string, unknown>)[k]
-          if (typeof v === 'string' && v && k in next) (next as Record<string, string>)[k] = v
+          if (typeof v === 'string' && v && k in next) (next as unknown as Record<string, unknown>)[k] = v
         }
         return next
       })
@@ -375,6 +396,8 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
                 <span>Applied on</span>
                 <input className={form.appliedOn ? undefined : 'is-empty'} type="date" value={form.appliedOn} onChange={(e) => set('appliedOn', e.target.value)} />
               </label>
+              <TrackSelect value={form.trackId} onChange={(id) => set('trackId', id)} />
+              <NextStepField value={form.nextStep} onChange={(v) => set('nextStep', v)} />
               <label className="field wide">
                 <span>Notes</span>
                 <textarea
@@ -434,5 +457,7 @@ function pick(r: Role): Form {
     why: r.why,
     watch: r.watch,
     notes: r.notes,
+    trackId: r.trackId ?? '',
+    nextStep: r.nextStep ?? null,
   }
 }

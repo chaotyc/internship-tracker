@@ -5,6 +5,7 @@ import type { EncryptedProfileService } from './service'
 
 /** A clearly fictional applicant for screenshots. Only used with TRACKER_DEMO=1. */
 export const DEMO_PROFILE: Profile = {
+  tracks: [],
   legalFirstName: 'Alexandra',
   legalLastName: 'Rivera',
   preferredName: 'Alex',

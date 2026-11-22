@@ -308,6 +308,27 @@ body.is-dragging * {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.card-next em {
+  font-style: normal;
+  color: var(--ink-2);
+  font-weight: 400;
+}
+.card-next.is-today {
+  border-color: color-mix(in srgb, var(--warn) 45%, var(--line));
+  background: var(--warn-soft);
+}
+.card-next.is-today svg,
+.card-next.is-today em {
+  color: var(--warn);
+}
+.card-next.is-overdue {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
+  background: var(--danger-soft);
+}
+.card-next.is-overdue svg,
+.card-next.is-overdue em {
+  color: var(--danger);
+}
 .card-next svg {
   width: 12px;
   height: 12px;

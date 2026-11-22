@@ -62,6 +62,8 @@ describe('checkLink', () => {
 function role(p: Partial<Role>): Role {
   return {
     id: 'r',
+    trackId: '',
+    nextStep: null,
     company: 'Acme',
     title: 'Intern',
     stage: 'saved',
