@@ -147,10 +147,13 @@ export function EmailDrop({
           </button>
         </div>
       )}
-      <p className="td-privacy">
-        <ShieldIcon />
-        Read on this computer. Only an email that matches a role on your board goes to your AI provider, and only that email.
-      </p>
+      {/* Settings keeps privacy claims in Data & privacy. */}
+      {where === 'today' && (
+        <p className="td-privacy">
+          <ShieldIcon />
+          Read on this computer. Only an email that matches a role on your board goes to your AI provider, and only that email.
+        </p>
+      )}
     </div>
   )
 }

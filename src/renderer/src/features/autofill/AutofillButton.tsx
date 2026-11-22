@@ -19,8 +19,19 @@ const STEP_LABEL: Partial<Record<AutofillStep, string>> = {
 /**
  * Shown in the role dialog when the posting is a Greenhouse, Ashby or Lever application. Fills it in its own window; never submits.
  * `blockedReason` keeps it in place but disabled (e.g. unsaved link or track changes), with the reason as its tooltip.
+ * `ghost` is the quiet footer variant, used once the role is past Saved.
  */
-export function AutofillButton({ roleId, link, blockedReason }: { roleId: string; link: string; blockedReason?: string }) {
+export function AutofillButton({
+  roleId,
+  link,
+  blockedReason,
+  ghost,
+}: {
+  roleId: string
+  link: string
+  blockedReason?: string
+  ghost?: boolean
+}) {
   // null until the first check answers: the slot is reserved so the header doesn't shift.
   const [board, setBoard] = useState<AutofillBoard | '' | null>(null)
   const supported = !!board
@@ -66,7 +77,10 @@ export function AutofillButton({ roleId, link, blockedReason }: { roleId: string
     const width = pop.offsetWidth
     const left = Math.max(12, Math.min(r.right - width, window.innerWidth - width - 12))
     pop.style.left = `${left}px`
-    pop.style.top = `${r.bottom + 8}px`
+    // Below the button when it fits (header); above it otherwise (footer).
+    const below = r.bottom + 8
+    const fitsBelow = below + pop.offsetHeight <= window.innerHeight - 12
+    pop.style.top = `${fitsBelow ? below : Math.max(12, r.top - 8 - pop.offsetHeight)}px`
   }, [])
 
   const showPop = useCallback(() => {
@@ -115,7 +129,7 @@ export function AutofillButton({ roleId, link, blockedReason }: { roleId: string
         <button
           ref={btnRef}
           type="button"
-          className={`btn af-btn${running ? ' is-running' : ''}`}
+          className={`btn af-btn${ghost ? ' btn-ghost is-ghost' : ''}${running ? ' is-running' : ''}`}
           onClick={() => void run()}
           disabled={running || blocked || !supported}
           aria-busy={running}

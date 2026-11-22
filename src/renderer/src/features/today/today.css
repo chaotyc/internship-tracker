@@ -893,26 +893,6 @@
   grid-template-columns: minmax(0, 1fr) 100px;
   gap: 12px 14px;
 }
-/* One line of privacy, the rest behind "What’s sent to your AI provider". */
-.ep-privacy {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.ep-privacy-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 2px 8px;
-}
-.ep-privacy-detail {
-  margin: 0;
-  padding-left: 19px;
-  font-size: var(--fs-meta);
-  line-height: 1.45;
-  color: var(--ink-3);
-  text-wrap: pretty;
-}
 .ep-form-foot {
   grid-column: 1 / -1;
   display: flex;

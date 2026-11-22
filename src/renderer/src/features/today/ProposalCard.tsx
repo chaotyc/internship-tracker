@@ -166,7 +166,7 @@ function ProposalFull({ p, role, onOpenRole, onDone, onCollapse }: { p: EmailPro
         <button type="button" className="btn" onClick={() => void dismiss()} disabled={!!busy}>
           {busy === 'dismiss' ? 'Dismissing…' : 'Dismiss'}
         </button>
-        {!applyDisabled && <span className="td-prop-hint">Nothing changes until you click Update role</span>}
+        {!applyDisabled && <span className="td-prop-hint">Review, then apply.</span>}
         {role && (
           <button type="button" className="btn btn-ghost td-prop-open" onClick={() => onOpenRole(role.id)}>
             Open role

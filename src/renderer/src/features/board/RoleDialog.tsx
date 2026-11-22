@@ -257,6 +257,16 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
   const linkChanged = !!role && (linkUrl || form.link.trim()) !== (webLink(role.link) || role.link)
   // Autofill reads the saved role, so a changed link or track must be saved first.
   const trackChanged = !!role && form.trackId !== (role.trackId ?? '')
+  // Autofill is the main action only while the role is Saved; later it's a quiet footer button, and gone once finished.
+  const autofill =
+    role && role.link && role.stage !== 'rejected' && role.stage !== 'closed' ? (
+      <AutofillButton
+        roleId={role.id}
+        link={role.link}
+        ghost={role.stage !== 'saved'}
+        blockedReason={linkChanged || trackChanged ? 'Save changes to autofill with the new link/track' : undefined}
+      />
+    ) : undefined
 
   // Editing opens on Progress (what changes most); adding stays link-first with Posting on top.
   const postingGroup = (
@@ -423,15 +433,7 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
         )
       }
       subtitle={role ? undefined : 'Paste the posting link and the details fill in for you.'}
-      headerExtra={
-        role && role.link ? (
-          <AutofillButton
-            roleId={role.id}
-            link={role.link}
-            blockedReason={linkChanged || trackChanged ? 'Save changes to autofill with the new link/track' : undefined}
-          />
-        ) : undefined
-      }
+      headerExtra={role?.stage === 'saved' ? autofill : undefined}
       footer={
         !showForm && !confirmClose ? undefined : confirmClose ? (
           <div className="discard-bar" role="alert">
@@ -462,6 +464,7 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
                 Ask the assistant
               </button>
             )}
+            {role && role.stage !== 'saved' && autofill}
             <span className="spacer" />
             {saveError ? (
               <span className="foot-error" role="alert">

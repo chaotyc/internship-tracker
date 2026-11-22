@@ -6,7 +6,7 @@ import { useToast } from '@renderer/components/Toast'
 import { api, useRoles } from '@renderer/lib/api'
 import { PaneHeader } from '@renderer/features/settings/PaneHeader'
 import { EmailDrop } from './EmailDrop'
-import { ShieldIcon, sinceLabel } from './parts'
+import { sinceLabel } from './parts'
 import '@renderer/features/settings/profile.css'
 import './today.css'
 
@@ -49,7 +49,7 @@ export function EmailPanel() {
     }
   }
 
-  const header = <PaneHeader title="Email updates" description="Recruiter emails become proposed updates in Today, for you to review." />
+  const header = <PaneHeader title="Email updates" description="Proposed updates show up in Today for you to review." />
   if (loadError)
     return (
       <>
@@ -73,7 +73,6 @@ export function EmailPanel() {
       <section className="settings-section">
         <h3>Inbox</h3>
         <p>Connect read-only to pick up new recruiter emails automatically.</p>
-        <p>Outlook.com doesn't allow app passwords. Paste or drop Outlook emails instead.</p>
         {status.connected ? <Connected status={status} onStatus={setStatus} onSettings={saveSettings} /> : <ConnectForm onConnected={setStatus} canStore={status.canStoreSecrets} />}
       </section>
 
@@ -168,7 +167,6 @@ function Connected({ status, onStatus, onSettings }: { status: EmailStatus; onSt
         label="Check automatically"
         hint="When the app opens, then every 30 minutes while it’s running. Never more often."
       />
-      <PrivacyNote />
     </>
   )
 }
@@ -238,6 +236,8 @@ function ConnectForm({ onConnected, canStore }: { onConnected: (s: EmailStatus) 
             </button>
           ))}
         </div>
+        {/* Outlook.com no longer accepts app passwords over IMAP. */}
+        <small className="hint">Using Outlook? Paste or drop emails instead.</small>
       </div>
       <form
         className="ep-form"
@@ -324,31 +324,6 @@ function ConnectForm({ onConnected, canStore }: { onConnected: (s: EmailStatus) 
           {!canStore && <p className="ep-error">This computer has no keychain available, so an app password can’t be stored safely.</p>}
         </div>
       </form>
-      <PrivacyNote />
     </>
-  )
-}
-
-function PrivacyNote() {
-  const [open, setOpen] = useState(false)
-  const id = useId()
-  return (
-    <div className="ep-privacy">
-      <div className="ep-privacy-line">
-        <p className="td-privacy">
-          <ShieldIcon />
-          Read-only over TLS. Only emails from companies on your board go to your AI provider.
-        </p>
-        <button type="button" className="settings-disclosure" aria-expanded={open} aria-controls={id} onClick={() => setOpen((o) => !o)}>
-          <Icon name="chevronDown" />
-          What’s sent to your AI provider
-        </button>
-      </div>
-      {open && (
-        <p id={id} className="ep-privacy-detail">
-          The app never marks, moves, deletes or sends mail. It looks at the sender and subject of new emails on this computer and opens only the ones from companies on your board.
-        </p>
-      )}
-    </div>
   )
 }

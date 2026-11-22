@@ -84,7 +84,8 @@ export function AutosearchButton({ onResults }: { onResults: () => void }) {
             aria-label={label}
             title={label}
           >
-            {`${waiting} new`}
+            {/* Same soft-accent pill as the Today count; nothing waiting stays plain grey text. */}
+            {waiting > 0 ? <span className="view-count autosearch-pill">{`${waiting} new`}</span> : `${waiting} new`}
           </button>
         )}
       </div>

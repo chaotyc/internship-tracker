@@ -603,7 +603,7 @@ export function TracksPanel() {
   const onProfile = useCallback((p: Profile) => setProfile(p), [])
 
   const header = (action?: ReactNode) => (
-    <PaneHeader title="Application tracks" description="A resume, target roles and answers for each kind of role you apply to." action={action} />
+    <PaneHeader title="Application tracks" action={action} />
   )
   if (loadError)
     return (

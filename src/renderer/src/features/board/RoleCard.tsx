@@ -216,7 +216,12 @@ export function RoleCard({ role, ghost, ...rest }: Props) {
           )}
         </div>
       )}
-      {!finished && role.notes && !(hasNext && similar(role.notes, role.nextStep!.text)) && <div className="card-note">{role.notes}</div>}
+      {!finished && role.notes && !(hasNext && similar(role.notes, role.nextStep!.text)) && (
+        <div className="card-note" title={role.notes}>
+          <Icon name="note" />
+          <span className="card-note-text">{role.notes}</span>
+        </div>
+      )}
     </article>
   )
 }

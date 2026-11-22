@@ -13,10 +13,9 @@ import './search.css'
 
 const RANKED_BY: Record<NonNullable<Suggestion['rankedBy']>, string> = { ai: 'AI', keywords: 'keywords' }
 
-/** "<Source> · <Track> track", e.g. "SimplifyJobs · Photonics hardware track" or "Greenhouse · ML inference track". */
-export function sourceLine(s: Pick<Suggestion, 'source' | 'board' | 'trackName'>): string {
-  const from = s.source === 'simplify' ? 'SimplifyJobs' : s.board ? BOARD_LABELS[s.board] : ''
-  return [from, s.trackName && `${s.trackName} track`].filter(Boolean).join(' · ')
+/** Where the posting was found, e.g. "SimplifyJobs" or "Greenhouse"; shown in the open button's tooltip. */
+export function sourceName(s: Pick<Suggestion, 'source' | 'board'>): string {
+  return s.source === 'simplify' ? 'SimplifyJobs' : s.board ? BOARD_LABELS[s.board] : ''
 }
 
 const SEASON = '(?:summer|fall|autumn|winter|spring)'
@@ -77,7 +76,9 @@ function FitText({ as: Tag = 'span', className, candidates, title }: { as?: 'spa
 function SuggestionCard({ s, busy, act }: { s: Suggestion; busy: boolean; act: (s: Suggestion, kind: 'add' | 'dismiss') => void }) {
   const term = titleTerm(s.title)
   const place = [term, s.location, s.pay].filter(Boolean)
-  const from = sourceLine(s)
+  const track = s.trackName ? `${s.trackName} track` : ''
+  const vendor = sourceName(s)
+  const openLabel = vendor ? `Open on ${vendor}` : 'Open posting'
   const title = useFitText<HTMLAnchorElement>(wordCandidates(displayTitle(s.title)))
   return (
     <article className="sugg" aria-label={`${s.company}, ${s.title}`}>
@@ -113,7 +114,7 @@ function SuggestionCard({ s, busy, act }: { s: Suggestion; busy: boolean; act: (
         )}
       </div>
       <FitText as="p" className="sugg-reason" candidates={wordCandidates(s.reason)} title={s.reason} />
-      {from ? <FitText as="div" className="sugg-source" candidates={wordCandidates(from)} title={from} /> : <div className="sugg-source">{'\u00a0'}</div>}
+      {track ? <FitText as="div" className="sugg-source" candidates={wordCandidates(track)} title={track} /> : <div className="sugg-source">{'\u00a0'}</div>}
       <div className="sugg-actions">
         <button type="button" className="btn btn-sm sugg-add" disabled={busy} onClick={() => act(s, 'add')}>
           <Icon name="plus" />
@@ -122,7 +123,7 @@ function SuggestionCard({ s, busy, act }: { s: Suggestion; busy: boolean; act: (
         <button type="button" className="btn btn-sm btn-ghost" disabled={busy} onClick={() => act(s, 'dismiss')}>
           Dismiss
         </button>
-        <a className="icon-btn sugg-open" href={s.link} target="_blank" rel="noreferrer" aria-label="Open posting" title="Open posting">
+        <a className="icon-btn sugg-open" href={s.link} target="_blank" rel="noreferrer" aria-label={openLabel} title={openLabel}>
           <Icon name="external" />
         </a>
       </div>

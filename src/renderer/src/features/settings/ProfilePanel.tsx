@@ -3,7 +3,6 @@ import { Icon } from '@renderer/components/Icon'
 import { Switch } from '@renderer/components/Switch'
 import { api } from '@renderer/lib/api'
 import {
-  displayName,
   EMPTY_EDUCATION,
   EMPTY_PROFILE,
   RESUME_EXTENSIONS,
@@ -535,11 +534,6 @@ const comparable = (p: Profile) => JSON.stringify({ ...p, resume: null, tracks: 
 let localId = 0
 const newAnswerId = () => `new-${Date.now().toString(36)}-${localId++}`
 
-function initials(p: Profile): string {
-  const first = (p.preferredName || p.legalFirstName).trim()
-  const last = p.legalLastName.trim()
-  return ((first[0] ?? '') + (last[0] ?? '')).toUpperCase()
-}
 
 function completion(p: Profile): { done: number; total: number } {
   const checks = [
@@ -688,7 +682,7 @@ export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<Profile
   if (loadError) {
     return (
       <div className="settings-scroll">
-        <PaneHeader title="Profile" description="Used by autofill on applications, and by the assistant to judge fit." />
+        <PaneHeader title="Profile" />
         <Note tone="danger">Your profile couldn’t be loaded: {loadError}</Note>
       </div>
     )
@@ -696,7 +690,7 @@ export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<Profile
   if (!base) {
     return (
       <div className="settings-scroll">
-        <PaneHeader title="Profile" description="Used by autofill on applications, and by the assistant to judge fit." />
+        <PaneHeader title="Profile" />
         <div className="pf-loading" aria-busy="true" />
       </div>
     )
@@ -704,9 +698,7 @@ export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<Profile
 
   const encrypted = status?.encrypted ?? true
   const { done, total } = completion(draft)
-  const name = displayName(draft)
   const demoAnswered = Object.values(draft.demographics).filter(Boolean).length
-  const where = [draft.city, draft.region, draft.country].filter(Boolean).join(', ')
 
   const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
@@ -718,28 +710,22 @@ export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<Profile
   return (
     <>
       <div className="settings-scroll pf" ref={rootRef} onKeyDown={onKeyDown}>
-        <PaneHeader title="Profile" description="Used by autofill on applications, and by the assistant to judge fit." />
+        <PaneHeader title="Profile" />
+        {/* One status line; the fields below already show name, email and city. */}
         <div className="pf-hero">
-          <div className="pf-avatar" aria-hidden="true">
-            {initials(draft) || <Icon name="user" />}
-          </div>
-          <div className="pf-hero-text">
-            <strong>{name || 'Your profile'}</strong>
-            <span>{[draft.email, where].filter(Boolean).join(' · ') || 'Fill in what you’d put on an application. Every field is optional.'}</span>
-            {done === total ? (
-              <div className="pf-progress is-ready">
-                <Icon name="check" />
-                <small>Ready for autofill</small>
+          {done === total ? (
+            <div className="pf-progress is-ready">
+              <Icon name="check" />
+              <small>Ready for autofill</small>
+            </div>
+          ) : (
+            <div className="pf-progress" title="Every field is optional. These are the ones autofill uses most.">
+              <div className="pf-progress-bar" aria-hidden="true">
+                <i style={{ width: `${(done / total) * 100}%` }} />
               </div>
-            ) : (
-              <div className="pf-progress" title={`${done} of ${total} essentials filled in`}>
-                <div className="pf-progress-bar" aria-hidden="true">
-                  <i style={{ width: `${(done / total) * 100}%` }} />
-                </div>
-                <small>{`${done} of ${total} essentials`}</small>
-              </div>
-            )}
-          </div>
+              <small>{`${done} of ${total} essentials for autofill`}</small>
+            </div>
+          )}
           {status && (
             <span className={`chip ${encrypted ? 'ok' : 'warn'} pf-lock-chip`}>
               <Icon name={encrypted ? 'lock' : 'unlock'} />

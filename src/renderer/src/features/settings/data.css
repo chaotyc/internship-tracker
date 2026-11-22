@@ -151,6 +151,9 @@
   align-items: flex-start;
   gap: 8px;
 }
+.dp-facts strong {
+  font-weight: 600;
+}
 .dp-facts svg {
   flex: none;
   width: 14px;

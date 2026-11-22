@@ -219,7 +219,11 @@
   font-weight: 600;
 }
 .autosearch-sugg.has-items {
-  color: var(--accent);
+  padding: 0 6px;
+}
+/* The "N new" count uses the Today tab's .view-count pill. */
+.autosearch-pill {
+  margin-right: 0;
 }
 /* Keep the hovered or focused half's full border on top of the shared seam. */
 .autosearch .btn:hover,

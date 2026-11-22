@@ -187,6 +187,12 @@
   font-size: var(--fs-meta);
   text-wrap: pretty;
 }
+/* Feature and button names mid-sentence ("When you click Find roles…"). */
+.settings-pane-head p strong,
+.settings-section > p strong {
+  font-weight: 600;
+  color: var(--ink-2);
+}
 .settings-pane-head > .btn {
   flex: none;
 }

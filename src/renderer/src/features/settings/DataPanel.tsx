@@ -98,7 +98,7 @@ export function DataPanel() {
 
   return (
     <div className="dp">
-      <PaneHeader title="Data & privacy" description="No account, no cloud copy. Export or erase it any time." />
+      <PaneHeader title="Data & privacy" description="No account, no cloud copy." />
       <section className="settings-section" aria-labelledby="dp-where">
         <h3 id="dp-where">Where your data lives</h3>
         <p>This folder holds your board, profile, chats and resumes.</p>
@@ -114,14 +114,13 @@ export function DataPanel() {
             </span>
             <div className="dp-path-text">
               {status ? (
-                <code className="dp-path-name" title={status.dataDir}>
+                <code className="dp-path-name" title={`${status.dataDir}\ntracker.sqlite holds your board and profile; resumes/ holds your resume.`}>
                   <span className="dp-path-start">{splitPath(tildePath(status.dataDir))[0]}</span>
                   <span className="dp-path-end">{splitPath(tildePath(status.dataDir))[1]}</span>
                 </code>
               ) : (
                 <code className="dp-path-name">…</code>
               )}
-              <small>tracker.sqlite holds your board and profile; resumes/ holds the copy of your resume.</small>
             </div>
             <button type="button" className="btn btn-sm" onClick={reveal} disabled={!status}>
               Show in {fileManager(platform)}
@@ -164,18 +163,17 @@ export function DataPanel() {
         <ul className="dp-facts">
           <li>
             <Icon name="check" />
+            <span>AI features send only what they need, and only to the provider you connected.</span>
+          </li>
+          <li>
+            <Icon name="check" />
             <span>
-              AI features (the assistant, Fill in from link, Find roles ranking and email matching) send the profile and resume excerpts they need, plus the posting text, to the AI
-              provider you connected. Nothing goes to any other provider.
+              <strong>Find roles</strong> and <strong>Recheck postings</strong> read public job pages. No analytics or tracking.
             </span>
           </li>
-          <li>
+          <li title="The app never marks, moves, deletes or sends mail. Only emails from companies on your board go to your AI provider.">
             <Icon name="check" />
-            <span>Find roles and Recheck postings read public job-board pages. No analytics, no tracking.</span>
-          </li>
-          <li>
-            <Icon name="check" />
-            <span>If you connect email, the app signs in to your mailbox read-only to fetch recent mail and matches it to your board on this computer first.</span>
+            <span>Email is read-only and matched to your board on this computer.</span>
           </li>
         </ul>
       </section>

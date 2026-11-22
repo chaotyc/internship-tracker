@@ -25,6 +25,7 @@ const PATHS = {
   stop: 'M7 7h10v10H7z',
   panel: 'M4 4h16v16H4zM15 4v16',
   file: 'M14 3H6v18h12V7zM14 3v4h4',
+  note: 'M5 4h14v11l-5 5H5zM14 20v-5h5M9 9h6M9 13h3',
   user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0',
   key: 'M14 10a4 4 0 1 0-1.2 2.8L20 20M17 17l2-2',
   list: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01',

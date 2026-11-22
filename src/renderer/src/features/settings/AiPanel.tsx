@@ -50,7 +50,11 @@ export function AiPanel() {
       .catch((e: Error) => finish({ ok: false, detail: e.message }))
   }
 
-  const description = 'Choose the AI behind the assistant, Fill in from link, Find roles and email matching. Nothing goes to any other provider.'
+  const description = (
+    <>
+      Pick the AI used by the assistant, <strong>Fill in from link</strong>, <strong>Find roles</strong> and email matching.
+    </>
+  )
   const header = <PaneHeader title="AI connections" description={description} />
   if (error && !statuses)
     return (

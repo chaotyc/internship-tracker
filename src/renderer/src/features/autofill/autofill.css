@@ -24,6 +24,10 @@
   min-width: 172px;
   justify-content: center;
 }
+/* Footer variant (Applied and later): a plain ghost button beside "Ask the assistant". */
+.af-btn.is-ghost {
+  min-width: 0;
+}
 /* Blocked (unsaved link or track) or still checking: the flat neutral disabled look. */
 .af-slot .af-btn:disabled:not(.is-running) {
   opacity: 1;

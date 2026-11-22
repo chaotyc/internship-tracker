@@ -461,15 +461,30 @@ body.is-dragging * {
   flex-wrap: wrap;
   gap: 5px;
 }
+/* A note, not a second next step: one quiet line with a note glyph; the full text is the tooltip. */
 .card-note {
-  padding-top: 7px;
-  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
   color: var(--ink-3);
   font-size: var(--fs-meta);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+}
+.card-note svg {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--ink-4);
+}
+.card-note-text {
+  min-width: 0;
   overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* Beside the assistant the lanes are narrow; the note stays in the dialog. */
+.app.has-panel .card-note {
+  display: none;
 }
 
 /* The fit row is one line; the applied age gives way with an ellipsis. */

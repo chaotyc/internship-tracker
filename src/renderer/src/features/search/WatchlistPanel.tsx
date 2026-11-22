@@ -199,10 +199,17 @@ export function WatchlistPanel() {
 
   return (
     <div className="watch">
-      <PaneHeader title="Job boards" description="Find roles checks these companies for new postings." />
+      <PaneHeader
+        title="Job boards"
+        description={
+          <>
+            When you click <strong>Find roles</strong>, the app checks these companies for new postings.
+          </>
+        }
+      />
       <section className="settings-section">
         <h3>Add a company</h3>
-        <p>Paste a careers page or job board link. Find roles reads public Greenhouse, Ashby, Lever and Workday boards.</p>
+        <p>Paste a careers page or job board link. The app reads public Greenhouse, Ashby, Lever and Workday boards.</p>
         <form
           className="watch-add"
           onSubmit={(e) => {
@@ -314,7 +321,9 @@ export function WatchlistPanel() {
       {status && sources && (
         <section className="settings-section">
           <h3>Where to look</h3>
-          <p>Find roles reads the sources that are on, both when you click it and in the daily scan.</p>
+          <p>
+            The app checks the sources that are on, when you click <strong>Find roles</strong> and in the daily scan.
+          </p>
           <ul className="src-list">
             <SourceSwitch checked={sources.boards} onChange={(v) => setSource('boards', v)} label="Greenhouse, Ashby & Lever" hint="The Greenhouse, Ashby and Lever boards on your list." />
             <SourceSwitch
