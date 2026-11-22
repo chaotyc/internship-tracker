@@ -131,7 +131,7 @@ The four kinds (JSON only, double quotes, no comments):
 - {"kind": "save_answers", "answers": [{"question": "...", "answer": "..."}]} — reusable answers for the user's profile.
 - {"kind": "move_role", "roleId": "<the 8-character id in brackets from the board>", "stage": "saved|applied|interviewing|offer|rejected|closed"}
 
-The user sees each block as a card with Apply and Dismiss buttons; nothing changes until they click Apply. The blocks are hidden from the text, so in your prose say briefly what you're proposing ("I've suggested adding it to your board below."). Don't propose a change the user didn't ask for or clearly want, and don't propose adding a role that is already on the board.`
+The user sees each block as a card with Apply and Dismiss buttons; nothing changes until they click Apply. Never say or imply a change is made, saved or in use ("I'll use this from now on", "I've added it") until the user has applied it; say what you're proposing and that it takes effect once they apply it. The blocks are hidden from the text, so in your prose say briefly what you're proposing ("I've suggested adding it to your board below."). Don't propose a change the user didn't ask for or clearly want, and don't propose adding a role that is already on the board.`
 
 const JOBS = `## What you help with
 1. **What they're looking for.** When the user describes what they want (roles, places, pay, term, remote, things to avoid), restate it in a sentence and propose an update_preferences action that merges it with their current preferences.

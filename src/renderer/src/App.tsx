@@ -23,7 +23,6 @@ export function App() {
   const [chat, setChat] = useState<{ open: boolean; roleId: string | null }>({ open: false, roleId: null })
   const [settings, setSettings] = useState<{ open: boolean; tab: SettingsTab }>({ open: false, tab: 'profile' })
   const [tray, setTray] = useState(false)
-  const [focusStage, setFocusStage] = useState<{ stage: StageKey; n: number } | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const csvRef = useRef<HTMLInputElement>(null)
 
@@ -125,21 +124,6 @@ export function App() {
             </p>
           </div>
         </div>
-        <ol className="pipeline" aria-label="Jump to a stage">
-          {counts.slice(0, 4).map((c) => (
-            <li key={c.key}>
-              <button
-                type="button"
-                style={{ ['--stage' as string]: `var(--stage-${c.key})` }}
-                onClick={() => setFocusStage((f) => ({ stage: c.key, n: (f?.n ?? 0) + 1 }))}
-                title={`Show ${c.label}`}
-              >
-                <span className="pipeline-n tabular">{c.n}</span>
-                <span className="pipeline-l">{c.label}</span>
-              </button>
-            </li>
-          ))}
-        </ol>
         <div className="topbar-actions">
           <label className="search">
             <Icon name="search" />
@@ -218,7 +202,7 @@ export function App() {
                 Clear filter
               </button>
             </div>
-          ) : !roles ? (
+          ) : !roles && error ? null : !roles ? (
             <div className="board-loading" aria-busy="true">
               {[0, 1, 2, 3].map((i) => (
                 <div key={i} className="skeleton-col">
@@ -229,7 +213,7 @@ export function App() {
               ))}
             </div>
           ) : (
-            <Board roles={roles} query={query} onOpen={openRole} onAdd={addRole} onMove={move} focusStage={focusStage} />
+            <Board roles={roles} query={query} onOpen={openRole} onAdd={addRole} onMove={move} />
           )}
         </main>
         {chat.open && <ChatPanel roleId={chat.roleId} onClose={() => setChat({ open: false, roleId: null })} onOpenSettings={(tab) => setSettings({ open: true, tab })} />}
@@ -268,7 +252,7 @@ function EmptyState({ onAdd, onImport, onProfile }: { onAdd: () => void; onImpor
         <h2>Start your board</h2>
         <p>Track every application from first look to offer. Your data stays on this computer.</p>
         <div className="empty-steps">
-          <button type="button" className="empty-step" onClick={onAdd}>
+          <button type="button" className="empty-step is-primary" onClick={onAdd}>
             <span className="empty-icon">
               <Icon name="link" />
             </span>

@@ -666,7 +666,7 @@ export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<Profile
           {status && (
             <span className={`chip ${encrypted ? 'ok' : 'warn'} pf-lock-chip`}>
               <Icon name={encrypted ? 'lock' : 'unlock'} />
-              {encrypted ? 'Encrypted on this computer' : 'Not encrypted'}
+              {encrypted ? 'Encrypted' : 'Not encrypted'}
             </span>
           )}
         </header>

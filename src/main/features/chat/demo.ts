@@ -26,7 +26,7 @@ export function seedDemoChat(chat: ChatStore): void {
     role: 'assistant',
     roleId: null,
     content:
-      'Got it: **inference and ML compiler** internships for **Summer 2027**, in the Bay Area or remote, paying at least **$45/hr**. I’ll use this when judging fit and ranking autosearch results.\n\nI’ve suggested the update below.',
+      'Got it: **inference and ML compiler** internships for **Summer 2027**, in the Bay Area or remote, paying at least **$45/hr**.\n\nSave these preferences to use them in future searches.',
     actions: [
       {
         kind: 'update_preferences',

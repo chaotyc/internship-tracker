@@ -55,7 +55,10 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
   const [manual, setManual] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [errors, setErrors] = useState<{ company?: string; title?: string }>({})
-  const [confirmClose, setConfirmClose] = useState(false)
+  /** What the user tried to do with unsaved changes; the inline bar asks before doing it. */
+  const [pendingLeave, setPendingLeave] = useState<null | 'close' | 'assistant'>(null)
+  const [saveError, setSaveError] = useState('')
+  const confirmClose = pendingLeave !== null
 
   useEffect(() => {
     if (!open) return
@@ -68,8 +71,11 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
     setManual(!!role)
     setMoreOpen(!!role && DETAIL_KEYS.some((k) => !!role[k as keyof Role]))
     setErrors({})
-    setConfirmClose(false)
-  }, [open, role, initialStage])
+    setPendingLeave(null)
+    setSaveError('')
+    // Keyed on the role's id, not the object: a background board refresh must not reset the draft.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, role?.id, initialStage])
 
   const dirty = useMemo(() => (Object.keys(form) as (keyof Form)[]).some((k) => form[k] !== initial[k]), [form, initial])
   // In Add mode the form appears once the link has been read or the user chooses to type.
@@ -77,7 +83,8 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => {
     setForm((f) => ({ ...f, [k]: v }))
-    setConfirmClose(false)
+    setPendingLeave(null)
+    setSaveError('')
     if (k === 'company' || k === 'title') setErrors((e) => ({ ...e, [k]: undefined }))
     setFilled((s) => {
       if (!s.has(k)) return s
@@ -88,11 +95,27 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
   }
 
   const requestClose = () => {
-    if (dirty && !confirmClose) {
-      setConfirmClose(true)
+    // Once the bar is showing, only an explicit Discard or Save leaves; Escape again does nothing.
+    if (confirmClose) return
+    if (dirty) {
+      setPendingLeave('close')
       return
     }
     onClose()
+  }
+  const askAssistant = () => {
+    if (!role) return
+    if (dirty) {
+      setPendingLeave('assistant')
+      return
+    }
+    onAskAssistant(role.id)
+  }
+  const leave = () => {
+    const action = pendingLeave
+    setPendingLeave(null)
+    if (action === 'assistant' && role) onAskAssistant(role.id)
+    else onClose()
   }
 
   const readLink = async () => {
@@ -136,6 +159,7 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
     if (errs.company || errs.title) {
       setErrors(errs)
       setManual(true)
+      requestAnimationFrame(() => document.getElementById(errs.company ? 'rd-company' : 'rd-title')?.focus())
       return
     }
     setSaving(true)
@@ -147,9 +171,10 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
         await api.invoke('roles:create', { ...form, source: 'manual' })
         toast(`Added ${form.company} to ${STAGES.find((s) => s.key === form.stage)?.label}.`)
       }
-      onClose()
+      if (pendingLeave === 'assistant' && role) onAskAssistant(role.id)
+      else onClose()
     } catch (e) {
-      setReadNote({ text: (e as Error).message, tone: 'error' })
+      setSaveError((e as Error).message)
     } finally {
       setSaving(false)
     }
@@ -195,14 +220,14 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
       subtitle={role ? undefined : 'Paste the posting link and the details fill in for you.'}
       headerExtra={role && role.link && !linkChanged ? <AutofillButton roleId={role.id} link={role.link} /> : undefined}
       footer={
-        confirmClose ? (
+        !showForm && !confirmClose ? undefined : confirmClose ? (
           <div className="discard-bar" role="alert">
-            <span>You have unsaved changes.</span>
+            <span>{pendingLeave === 'assistant' ? 'Save your changes before asking the assistant?' : 'You have unsaved changes.'}</span>
             <span className="spacer" />
-            <button type="button" className="btn" onClick={() => setConfirmClose(false)}>
+            <button type="button" className="btn" onClick={() => setPendingLeave(null)}>
               Keep editing
             </button>
-            <button type="button" className="btn btn-danger" onClick={onClose}>
+            <button type="button" className="btn btn-danger" onClick={leave}>
               Discard
             </button>
             <button type="button" className="btn btn-primary" onClick={save} disabled={saving}>
@@ -218,18 +243,24 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
               </button>
             )}
             {role && (
-              <button type="button" className="btn btn-ghost" onClick={() => onAskAssistant(role.id)}>
+              <button type="button" className="btn btn-ghost" onClick={askAssistant}>
                 <Icon name="chat" />
                 Ask the assistant
               </button>
             )}
             <span className="spacer" />
-            {showForm && <span className="foot-hint">{MOD}Enter to save</span>}
+            {saveError ? (
+              <span className="foot-error" role="alert">
+                {saveError}
+              </span>
+            ) : (
+              showForm && <span className="foot-hint">{MOD}Enter to save</span>
+            )}
             <button type="button" className="btn" onClick={requestClose}>
               Cancel
             </button>
             {showForm && (
-              <button type="button" className="btn btn-primary" onClick={save} disabled={saving}>
+              <button type="button" className="btn btn-primary" onClick={save} disabled={saving || (!!role && !dirty)}>
                 {role ? 'Save changes' : 'Add to board'}
               </button>
             )}
@@ -273,7 +304,7 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
           </label>
           <button
             type="button"
-            className={`btn${!role && !showForm ? ' btn-primary' : ''}`}
+            className={`btn${role ? ' btn-ghost' : !showForm ? ' btn-primary' : ''}`}
             onClick={readLink}
             disabled={reading || !form.link.trim()}
           >
@@ -292,20 +323,30 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
         {showForm && (
           <>
             <div className="grid-2">
+              <h3 className="form-group wide">Posting</h3>
               <label className="field">
                 <span>
                   Company<span className="req">*</span>
                 </span>
-                <input className={cls('company')} value={form.company} onChange={(e) => set('company', e.target.value)} aria-invalid={!!errors.company} />
+                <input id="rd-company" className={cls('company')} value={form.company} onChange={(e) => set('company', e.target.value)} aria-invalid={!!errors.company} />
                 {errors.company && <span className="field-error">{errors.company}</span>}
               </label>
               <label className="field">
                 <span>
                   Role<span className="req">*</span>
                 </span>
-                <input className={cls('title')} value={form.title} onChange={(e) => set('title', e.target.value)} aria-invalid={!!errors.title} />
+                <input id="rd-title" className={cls('title')} value={form.title} onChange={(e) => set('title', e.target.value)} aria-invalid={!!errors.title} />
                 {errors.title && <span className="field-error">{errors.title}</span>}
               </label>
+              <label className="field">
+                <span>Location</span>
+                <input className={cls('location')} value={form.location} onChange={(e) => set('location', e.target.value)} />
+              </label>
+              <label className="field">
+                <span>Pay</span>
+                <input className={cls('pay')} value={form.pay} placeholder="$45–60/hr" onChange={(e) => set('pay', e.target.value)} />
+              </label>
+              <h3 className="form-group wide">Progress</h3>
               <label className="field">
                 <span>Stage</span>
                 <select value={form.stage} onChange={(e) => set('stage', e.target.value as StageKey)}>
@@ -326,20 +367,12 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
                 </select>
               </label>
               <label className="field">
-                <span>Location</span>
-                <input className={cls('location')} value={form.location} onChange={(e) => set('location', e.target.value)} />
-              </label>
-              <label className="field">
-                <span>Pay</span>
-                <input className={cls('pay')} value={form.pay} placeholder="$45–60/hr" onChange={(e) => set('pay', e.target.value)} />
-              </label>
-              <label className="field">
                 <span>Deadline</span>
-                <input className={cls('deadline')} type="date" value={form.deadline} onChange={(e) => set('deadline', e.target.value)} />
+                <input className={[cls('deadline'), form.deadline ? '' : 'is-empty'].filter(Boolean).join(' ')} type="date" value={form.deadline} onChange={(e) => set('deadline', e.target.value)} />
               </label>
               <label className="field">
                 <span>Applied on</span>
-                <input type="date" value={form.appliedOn} onChange={(e) => set('appliedOn', e.target.value)} />
+                <input className={form.appliedOn ? undefined : 'is-empty'} type="date" value={form.appliedOn} onChange={(e) => set('appliedOn', e.target.value)} />
               </label>
               <label className="field wide">
                 <span>Notes</span>

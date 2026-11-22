@@ -208,6 +208,14 @@
   outline: none;
   box-shadow: var(--ring);
 }
+/* While the tray is open the pill stays put and reads as pressed; clicking it closes the tray. */
+.sugg-count.is-pressed {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.sugg-count.is-pressed:focus-visible {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), var(--ring);
+}
 
 /* ---------- Autosearch progress ---------- */
 .autosearch-run {
@@ -338,10 +346,27 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.tray-close {
+.tray-nav {
+  display: inline-flex;
+  gap: 2px;
   margin-left: auto;
+}
+.tray-nav .icon-btn,
+.tray-close {
   width: 26px;
   height: 26px;
+}
+.tray-nav .icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+  background: transparent;
+  color: var(--ink-3);
+}
+.tray-nav + .tray-close {
+  margin-left: 4px;
+}
+.tray-close {
+  margin-left: auto;
 }
 .tray-scroll {
   --fade-start: 0px;
@@ -407,12 +432,12 @@
   box-shadow: var(--shadow-2);
 }
 .sugg.is-skeleton {
-  height: 146px;
+  height: 168px;
   background: linear-gradient(90deg, var(--surface) 0%, var(--surface-hover) 50%, var(--surface) 100%);
 }
 .sugg-top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 9px;
 }
 .sugg-heading {
@@ -420,33 +445,25 @@
   min-width: 0;
 }
 .sugg-company {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 17px;
   font-weight: 600;
   font-size: 13px;
   line-height: 1.25;
-}
-.sugg-company-name {
-  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.sugg-company .meter {
-  margin-left: auto;
-}
+/* Titles may wrap to two lines. */
 .sugg-title {
-  display: block;
   margin-top: 1px;
   color: var(--ink-2);
   font-size: 12.5px;
   line-height: 1.35;
   text-decoration: none;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 .sugg-title:hover {
   color: var(--accent);
@@ -454,15 +471,29 @@
   text-underline-offset: 2px;
 }
 .sugg-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
   color: var(--ink-3);
   font-size: 12px;
   line-height: 1.35;
+}
+.sugg-meta-text {
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.sugg-meta-text::before {
+  content: '·';
+  margin-right: 8px;
+  color: var(--ink-4);
+}
+/* Reason always gets two full lines, so cards line up. */
 .sugg-reason {
   flex: 1;
+  min-height: calc(2 * 1.4em);
   margin: 0;
   color: var(--ink-2);
   font-size: 12px;
@@ -488,37 +519,29 @@
   height: 14px;
 }
 
-/* Estimated-match meter: one neutral scale; the bar length carries the value, not a hue. */
-.meter {
+/* Estimated match: the board's four-bar fit meter, then the number in muted text. */
+.sugg-fit {
   flex: none;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  white-space: nowrap;
   cursor: help;
 }
-.meter-track {
-  position: relative;
-  width: 32px;
-  height: 5px;
-  border-radius: 99px;
-  background: var(--surface-sunken);
-  box-shadow: inset 0 0 0 1px var(--line);
-  overflow: hidden;
+.sugg-fit .fit-bars {
+  display: inline-flex;
+  gap: 2px;
 }
-.meter-track > span {
-  position: absolute;
-  inset: 0 auto 0 0;
-  border-radius: inherit;
-  background: var(--ink-3);
+.sugg-fit .fit-bars i {
+  width: 4px;
+  height: 9px;
+  border-radius: 1px;
+  background: var(--line-strong);
 }
-.meter-n {
-  font-size: 12px;
-  font-weight: 650;
-  color: var(--ink-2);
-  white-space: nowrap;
+.sugg-fit .fit-bars i.on {
+  background: var(--ink-2);
 }
-.meter-l {
-  font-weight: 500;
+.sugg-fit-n {
   color: var(--ink-3);
 }
 

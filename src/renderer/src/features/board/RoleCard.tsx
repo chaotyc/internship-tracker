@@ -48,7 +48,7 @@ function DeadlineChip({ deadline }: { deadline: string }) {
   const d = daysUntil(deadline)
   if (d == null) return null
   if (d < 0) return <span className="chip danger">Deadline passed</span>
-  const label = d === 0 ? 'Due today' : d === 1 ? 'Due tomorrow' : d <= 14 ? `Due in ${d}d` : `Due ${shortDate(deadline)}`
+  const label = d === 0 ? 'Due today' : d === 1 ? 'Due tomorrow' : d <= 14 ? `Due in ${d} days` : `Due ${shortDate(deadline)}`
   // Only near deadlines get a color; distant ones are plain facts.
   const tone = d <= 3 ? 'danger' : d <= 10 ? 'warn' : ''
   return (
@@ -65,7 +65,8 @@ export function RoleCard({ role, ghost, ...rest }: Props) {
   const saved = role.stage === 'saved'
   const active = role.stage === 'interviewing' || role.stage === 'offer'
   const finished = role.stage === 'rejected' || role.stage === 'closed'
-  const alerts = saved && (live === 'closed' || live === 'expiring' || role.deadline)
+  // Deadlines matter in every open stage (offer and interview deadlines most of all).
+  const alerts = (saved && (live === 'closed' || live === 'expiring')) || (!finished && !!role.deadline)
   const showFit = !finished && !!role.fit
   return (
     <article
@@ -118,19 +119,19 @@ export function RoleCard({ role, ghost, ...rest }: Props) {
       {meta && <div className="card-meta">{meta}</div>}
       {alerts && (
         <div className="card-chips">
-          {live === 'closed' && (
+          {saved && live === 'closed' && (
             <span className="chip danger" title={role.liveness.detail}>
               <Icon name="alert" />
               Posting closed
             </span>
           )}
-          {live === 'expiring' && !role.deadline && (
+          {saved && live === 'expiring' && !role.deadline && (
             <span className="chip warn" title={role.liveness.detail}>
               <Icon name="clock" />
               Closing soon
             </span>
           )}
-          {role.deadline && live !== 'closed' && <DeadlineChip deadline={role.deadline} />}
+          {role.deadline && !(saved && live === 'closed') && <DeadlineChip deadline={role.deadline} />}
         </div>
       )}
       {(showFit || role.appliedOn || (saved && role.source === 'autosearch')) && (

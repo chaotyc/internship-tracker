@@ -98,6 +98,10 @@
   font-size: 12px;
   white-space: nowrap;
 }
+.ai-card-name .ai-version {
+  color: var(--ink-3);
+  font: 11.5px var(--font-mono);
+}
 .ai-card.is-missing .ai-card-name strong {
   color: var(--ink-2);
 }
@@ -122,8 +126,13 @@
   accent-color: var(--accent);
   cursor: inherit;
 }
-.ai-in-use {
+.ai-pill {
   flex: none;
+}
+.ai-pill.is-muted {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--ink-3);
 }
 
 /* Connection controls first, then the test result, then the model. */
@@ -196,19 +205,25 @@
   white-space: nowrap;
 }
 
+/* Result of the last Test, one short line under the row. */
 .ai-test {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 6px;
-  margin: 0;
+  min-width: 0;
+  margin: -4px 0 0;
   font-size: 12.5px;
-  overflow-wrap: anywhere;
 }
 .ai-test svg {
   width: 14px;
   height: 14px;
   flex: none;
-  margin-top: 2px;
+}
+.ai-test-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .ai-test.is-ok {
   color: var(--ok);

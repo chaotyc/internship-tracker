@@ -3,7 +3,7 @@ import type { AutosearchProgress } from '@shared/search'
 import { Icon } from '@renderer/components/Icon'
 import { useToast } from '@renderer/components/Toast'
 import { api } from '@renderer/lib/api'
-import { loadSuggestionCount, useSuggestionState } from './useSuggestionState'
+import { loadSuggestionCount, requestTrayClose, useSuggestionState } from './useSuggestionState'
 import './search.css'
 
 const PHASE: Record<AutosearchProgress['phase'], string> = {
@@ -73,8 +73,14 @@ export function AutosearchButton({ onResults }: { onResults: () => void }) {
           <Icon name="sparkle" />
           Find roles
         </button>
-        {waiting > 0 && !trayOpen && (
-          <button type="button" className="chip accent sugg-count tabular" onClick={onResults} title="Show suggested roles">
+        {(waiting > 0 || trayOpen) && (
+          <button
+            type="button"
+            className={`chip accent sugg-count tabular${trayOpen ? ' is-pressed' : ''}`}
+            onClick={trayOpen ? requestTrayClose : onResults}
+            aria-pressed={trayOpen}
+            title={trayOpen ? 'Hide suggested roles' : 'Show suggested roles'}
+          >
             {waiting} suggestion{waiting === 1 ? '' : 's'}
           </button>
         )}

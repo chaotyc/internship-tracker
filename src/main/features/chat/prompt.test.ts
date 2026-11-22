@@ -73,6 +73,7 @@ describe('buildSystemPrompt', () => {
     expect(prompt).toContain('[abcdef12] Vectorline — Inference Intern | Saved | fit Strong | deadline 2026-12-01')
     expect(prompt).toContain('Notes: Referral from a TA')
     expect(prompt).toContain('```action')
+    expect(prompt).toMatch(/Never say or imply a change is made.*until the user has applied it/)
   })
 
   it('trims a long resume', () => {

@@ -68,7 +68,6 @@ export function AiPanel() {
       status={byId.get(id)!}
       isDefault={settings.defaultProvider === id}
       isActive={active === id}
-      isAutomatic={active === id && !chosen}
       model={settings.models[id] ?? ''}
       test={tests[id]}
       onTest={() => test(id)}
@@ -91,15 +90,19 @@ export function AiPanel() {
           <Icon name={active ? 'sparkle' : 'alert'} />
         </span>
         <p>
-          {active && chosen ? (
+          {chosen ? (
             <>
-              AI features use <strong>{PROVIDERS[active].label}</strong>
-              <span className="ai-summary-why"> · your default</span>
+              Using <strong>{PROVIDERS[chosen].label}</strong>
             </>
+          ) : settings.defaultProvider && active ? (
+            <>
+              {PROVIDERS[settings.defaultProvider].label} isn’t available, so <strong>{PROVIDERS[active].label}</strong> is used
+            </>
+          ) : settings.defaultProvider ? (
+            `${PROVIDERS[settings.defaultProvider].label} isn’t available. Install a CLI below or paste an API key.`
           ) : active ? (
             <>
-              Automatic · using <strong>{PROVIDERS[active].label}</strong>
-              <span className="ai-summary-why"> · no default chosen</span>
+              Using <strong>{PROVIDERS[active].label}</strong> <span className="ai-summary-why">(chosen automatically)</span>
             </>
           ) : (
             'No connection yet. Install a CLI below or paste an API key.'
@@ -136,8 +139,6 @@ function ProviderCard(props: {
   status: ProviderStatus
   isDefault: boolean
   isActive: boolean
-  /** In use because no default is chosen and it's the first available one. */
-  isAutomatic: boolean
   model: string
   test: TestState | undefined
   onTest: () => void
@@ -146,7 +147,7 @@ function ProviderCard(props: {
   onStatuses: (s: ProviderStatus[]) => void
   onError: (e: string | null) => void
 }) {
-  const { status, isDefault, isActive, isAutomatic, model, test } = props
+  const { status, isDefault, isActive, model, test } = props
   const info = PROVIDERS[status.id]
   const [draft, setDraft] = useState(model)
   const [lastModel, setLastModel] = useState(model)
@@ -174,11 +175,11 @@ function ProviderCard(props: {
   }
 
   const testLine = status.available && test?.state === 'done' && (
-    <p className={`ai-test ${test.ok ? 'is-ok' : 'is-err'}`} role="status">
+    <p className={`ai-test ${test.ok ? 'is-ok' : 'is-err'}`} role="status" title={test.detail}>
       <Icon name={test.ok ? 'check' : 'alert'} />
-      <span>
-        <span className="ai-test-when">Last test, {timeOf(test.at)}: </span>
-        {test.detail}
+      <span className="ai-test-text">
+        {test.ok ? 'Test passed' : 'Test failed'}: {test.detail}
+        <span className="ai-test-when"> · {timeOf(test.at)}</span>
       </span>
     </p>
   )
@@ -189,15 +190,10 @@ function ProviderCard(props: {
         <div className="ai-card-name">
           <strong>{info.label}</strong>
           <span>{info.vendor}</span>
+          {status.kind === 'cli' && status.available && status.version && <span className="ai-version">v{status.version}</span>}
         </div>
-        <StatusChip status={status} test={test} />
+        <StatusPill status={status} isActive={isActive} />
         <span className="ai-spacer" />
-        {isActive && (
-          <span className="chip accent ai-in-use">
-            <Icon name="check" />
-            {isAutomatic ? 'In use · automatic' : 'In use'}
-          </span>
-        )}
         {status.available && (
           <>
             <label className="ai-default" title="Always use this for AI features">
@@ -210,6 +206,7 @@ function ProviderCard(props: {
           </>
         )}
       </div>
+      {testLine}
 
       {missing ? (
         <p className="ai-hint">{withCode(info.hint)}</p>
@@ -246,7 +243,6 @@ function ProviderCard(props: {
               {!status.hasKey && <span className="hint">{info.hint}</span>}
             </div>
           )}
-          {testLine}
           <div className="field ai-model">
             <label htmlFor={modelId}>Model</label>
             <input
@@ -266,43 +262,18 @@ function ProviderCard(props: {
   )
 }
 
-/** Installed / key saved is only half the story: a passing test is shown separately. */
-function StatusChip({ status, test }: { status: ProviderStatus; test: TestState | undefined }) {
-  const setup =
-    status.kind === 'cli' ? (
-      status.available ? (
-        <span className="chip">{status.version ? `Installed · v${status.version}` : 'Installed'}</span>
-      ) : (
-        <span className="chip">Not installed</span>
-      )
-    ) : status.hasKey ? (
-      <span className="chip">
-        <Icon name="key" />
-        Key saved
+/** One pill per row: in use, ready, or what's missing. */
+function StatusPill({ status, isActive }: { status: ProviderStatus; isActive: boolean }) {
+  if (isActive) {
+    return (
+      <span className="chip accent ai-pill">
+        <Icon name="check" />
+        In use
       </span>
-    ) : (
-      <span className="chip">No key</span>
     )
-  const result =
-    status.available && test?.state === 'done' ? (
-      test.ok ? (
-        <span className="chip ok">
-          <Icon name="check" />
-          Tested OK
-        </span>
-      ) : (
-        <span className="chip danger">
-          <Icon name="alert" />
-          Test failed
-        </span>
-      )
-    ) : null
-  return (
-    <>
-      {setup}
-      {result}
-    </>
-  )
+  }
+  if (status.available) return <span className="chip ai-pill">Ready</span>
+  return <span className="chip ai-pill is-muted">{status.kind === 'cli' ? 'Not installed' : 'No key'}</span>
 }
 
 function timeOf(at: number): string {

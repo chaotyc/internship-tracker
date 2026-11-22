@@ -18,6 +18,11 @@ const NO_AI = /no ai connection/i
 /** Errors from the ai feature that are fixed in Settings > AI connections. */
 const SETTINGS_HINT = /no ai connection|AI connections/i
 const roleLabel = (r: Role) => `${r.company} · ${r.title}`
+/** The role the most recent user message was about (what a retry must reuse). */
+const lastUserRoleId = (messages: ChatMessage[] | null) => {
+  for (let i = (messages?.length ?? 0) - 1; i >= 0; i--) if (messages![i]!.role === 'user') return messages![i]!.roleId
+  return null
+}
 const stageLabel = (k: string) => STAGES.find((s) => s.key === k)?.label ?? k
 
 interface Props {
@@ -37,6 +42,7 @@ export function ChatPanel({ roleId, onClose, onOpenSettings }: Props) {
   const [confirmClear, setConfirmClear] = useState(false)
   const [hasResume, setHasResume] = useState<boolean | null>(null)
   const [resumeNote, setResumeNote] = useState<string | null>(null)
+  const [inputFocused, setInputFocused] = useState(false)
   const [contextId, setContextId] = useState(roleId)
   const [lastRoleProp, setLastRoleProp] = useState(roleId)
   if (roleId !== lastRoleProp) {
@@ -106,7 +112,9 @@ export function ChatPanel({ roleId, onClose, onOpenSettings }: Props) {
   }
   useLayoutEffect(autosize, [draft])
 
+  /** Sends `text`, or with `retry` re-answers the last stored user message using the role it was about. */
   const run = async (text: string, retry = false) => {
+    const roleIdForSend = retry ? lastUserRoleId(messages) : (contextRole?.id ?? null)
     setError(null)
     setSending(true)
     setStream('')
@@ -117,13 +125,13 @@ export function ChatPanel({ roleId, onClose, onOpenSettings }: Props) {
         role: 'user',
         content: text,
         createdAt: new Date().toISOString(),
-        roleId: contextRole?.id ?? null,
+        roleId: roleIdForSend,
         actions: [],
       }
       setMessages((m) => [...(m ?? []), optimistic])
     }
     try {
-      await api.invoke('chat:send', { text, roleId: contextRole?.id ?? null, retry })
+      await api.invoke('chat:send', { text, roleId: roleIdForSend, retry })
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -203,7 +211,6 @@ export function ChatPanel({ roleId, onClose, onOpenSettings }: Props) {
     <aside className="side-panel chat" aria-label="Assistant">
       <header className="side-head chat-head">
         <h2>Assistant</h2>
-        <ContextPicker roles={roles} current={contextRole} onChange={setContextId} />
         {list.length > 0 && (
           <button
             ref={clearBtnRef}
@@ -294,12 +301,13 @@ export function ChatPanel({ roleId, onClose, onOpenSettings }: Props) {
       </div>
 
       <form
-        className="chat-composer"
+        className={`chat-composer${inputFocused && !draft ? ' show-hint' : ''}`}
         onSubmit={(e) => {
           e.preventDefault()
           send()
         }}
       >
+        <ScopePicker roles={roles} current={contextRole} onChange={setContextId} />
         <div className="chat-input">
           <textarea
             ref={inputRef}
@@ -307,6 +315,8 @@ export function ChatPanel({ roleId, onClose, onOpenSettings }: Props) {
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={onKeyDown}
+            onFocus={() => setInputFocused(true)}
+            onBlur={() => setInputFocused(false)}
             placeholder={contextRole ? `Ask about ${contextRole.company}…` : 'Ask anything, or paste a job description'}
             aria-label="Message the assistant"
           />
@@ -550,10 +560,11 @@ function ChatSkeleton() {
 }
 
 /**
- * Header control for which role the conversation is about. Shows "About: all roles"
- * when nothing is attached, or the attached role as a removable chip.
+ * Composer control for which role the next message is about. It steers only what is
+ * sent next; earlier messages keep the role they were sent with. Shows
+ * "Next message about: All roles" when nothing is attached, or the role as a removable chip.
  */
-function ContextPicker({ roles, current, onChange }: { roles: Role[] | null; current: Role | null; onChange: (id: string | null) => void }) {
+function ScopePicker({ roles, current, onChange }: { roles: Role[] | null; current: Role | null; onChange: (id: string | null) => void }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
@@ -619,8 +630,11 @@ function ContextPicker({ roles, current, onChange }: { roles: Role[] | null; cur
 
   return (
     <div className="chat-context" ref={rootRef}>
+      <span className="chat-context-label" aria-hidden="true">
+        Next message about:
+      </span>
       {current ? (
-        <span className="chip chat-context-chip" title={`Asking about ${roleLabel(current)}`}>
+        <span className="chip chat-context-chip" title={`Next message is about ${roleLabel(current)}`}>
           <button
             ref={triggerRef}
             type="button"
@@ -628,11 +642,11 @@ function ContextPicker({ roles, current, onChange }: { roles: Role[] | null; cur
             onClick={() => (open ? close(false) : show())}
             aria-haspopup="listbox"
             aria-expanded={open}
-            aria-label={`About ${roleLabel(current)}. Change role`}
+            aria-label={`Next message about ${roleLabel(current)}. Change role`}
           >
             {roleLabel(current)}
           </button>
-          <button type="button" className="chat-context-remove" onClick={() => onChange(null)} aria-label="Stop asking about this role">
+          <button type="button" className="chat-context-remove" onClick={() => onChange(null)} aria-label="Remove role from next message">
             <Icon name="close" />
           </button>
         </span>
@@ -645,8 +659,9 @@ function ContextPicker({ roles, current, onChange }: { roles: Role[] | null; cur
           aria-haspopup="listbox"
           aria-expanded={open}
           title="Ask about a specific role"
+          aria-label="Next message about all roles. Change role"
         >
-          <span className="chat-context-label">About:</span> all roles
+          All roles
           <Icon name="chevronDown" />
         </button>
       )}

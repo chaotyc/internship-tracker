@@ -6,24 +6,38 @@ import { api } from '@renderer/lib/api'
 import { ago } from '@renderer/lib/format'
 import { Monogram } from '@renderer/features/board/RoleCard'
 import { useEdgeFade } from './useEdgeFade'
-import { setSuggestionState } from './useSuggestionState'
+import { setSuggestionState, useSuggestionState } from './useSuggestionState'
 import './search.css'
 
-const RANKED_BY: Record<NonNullable<Suggestion['rankedBy']>, string> = { ai: 'by AI', keywords: 'by keyword match' }
+const RANKED_BY: Record<NonNullable<Suggestion['rankedBy']>, string> = { ai: 'AI', keywords: 'keywords' }
 
-/** Estimated match, 0-100. One neutral scale: the bar length carries the value, not a hue. */
-function Meter({ score, rankedBy }: { score: number; rankedBy?: Suggestion['rankedBy'] }) {
-  const how = rankedBy ? `, estimated ${RANKED_BY[rankedBy]}` : ''
+/** Same four-step scale as the board's fit meter. */
+export function fitLevel(score: number): number {
+  return score >= 85 ? 4 : score >= 70 ? 3 : score >= 50 ? 2 : 1
+}
+
+/** Estimated match, 0-100, drawn as the board's four-bar fit meter plus the number. */
+function MatchMeter({ score, rankedBy }: { score: number; rankedBy?: Suggestion['rankedBy'] }) {
+  const level = fitLevel(score)
+  const pct = Math.round(Math.max(0, Math.min(100, score)))
   return (
-    <span className="meter" title={`Estimated match: ${score} out of 100${how}`}>
-      <span className="meter-track" aria-hidden="true">
-        <span style={{ width: `${Math.max(4, Math.min(100, score))}%` }} />
+    <span className="sugg-fit" title={rankedBy ? `Estimated match, ranked by ${RANKED_BY[rankedBy]}` : 'Estimated match'}>
+      <span className="fit-bars" aria-hidden="true">
+        {[1, 2, 3, 4].map((i) => (
+          <i key={i} className={i <= level ? 'on' : ''} />
+        ))}
       </span>
-      <span className="meter-n tabular" aria-hidden="true">
-        {score} <span className="meter-l">match</span>
-      </span>
-      <span className="visually-hidden">Estimated match {score} out of 100</span>
+      <span className="sugg-fit-n tabular">{pct}% match</span>
     </span>
+  )
+}
+
+/** Chevron drawn on the Icon grid; the shared set has no left/right chevrons. */
+function Chevron({ dir }: { dir: 'left' | 'right' }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={dir === 'left' ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6'} />
+    </svg>
   )
 }
 
@@ -45,6 +59,26 @@ export function SuggestionsTray({ open, onClose }: { open: boolean; onClose: () 
   const [busy, setBusy] = useState<Set<string>>(new Set())
   const scroller = useRef<HTMLDivElement>(null)
   const fade = useEdgeFade(scroller, [items, open, error])
+  const { closeRequests } = useSuggestionState()
+  const seenClose = useRef(closeRequests)
+
+  // The top-bar pill asks to close through the shared store; App owns `open`, so close via onClose.
+  useEffect(() => {
+    if (closeRequests === seenClose.current) return
+    seenClose.current = closeRequests
+    if (open) onClose()
+  }, [closeRequests, open, onClose])
+
+  /** Scrolls the strip by about one card. */
+  const page = (dir: 1 | -1) => {
+    const el = scroller.current
+    if (!el) return
+    const card = el.querySelector<HTMLElement>('.sugg')
+    const gap = parseFloat(getComputedStyle(el).columnGap) || 0
+    const step = card ? card.offsetWidth + gap : el.clientWidth * 0.8
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    el.scrollBy({ left: dir * step, behavior: reduce ? 'auto' : 'smooth' })
+  }
 
   const load = useCallback(() => {
     api
@@ -109,6 +143,16 @@ export function SuggestionsTray({ open, onClose }: { open: boolean; onClose: () 
         {keywordOnly && (
           <span className="tray-note">Connect an AI provider in Settings to rank against your resume.</span>
         )}
+        {items && items.length > 0 && (fade.start || fade.end) && (
+          <span className="tray-nav">
+            <button type="button" className="icon-btn" onClick={() => page(-1)} disabled={!fade.start} aria-label="Previous suggestions" title="Previous">
+              <Chevron dir="left" />
+            </button>
+            <button type="button" className="icon-btn" onClick={() => page(1)} disabled={!fade.end} aria-label="More suggestions" title="Next">
+              <Chevron dir="right" />
+            </button>
+          </span>
+        )}
         <button type="button" className="icon-btn tray-close" onClick={onClose} aria-label="Close suggestions" title="Close">
           <Icon name="close" />
         </button>
@@ -147,20 +191,22 @@ export function SuggestionsTray({ open, onClose }: { open: boolean; onClose: () 
                 <div className="sugg-top">
                   <Monogram name={s.company} size={26} />
                   <div className="sugg-heading">
-                    <div className="sugg-company">
-                      <span className="sugg-company-name">{s.company}</span>
-                      <Meter score={s.score} rankedBy={s.rankedBy} />
+                    <div className="sugg-company" title={s.company}>
+                      {s.company}
                     </div>
                     <a className="sugg-title" href={s.link} target="_blank" rel="noreferrer" title={`${s.title} — open posting`}>
                       {s.title}
                     </a>
                   </div>
                 </div>
-                {meta && (
-                  <div className="sugg-meta" title={meta}>
-                    {meta}
-                  </div>
-                )}
+                <div className="sugg-meta">
+                  <MatchMeter score={s.score} rankedBy={s.rankedBy} />
+                  {meta && (
+                    <span className="sugg-meta-text" title={meta}>
+                      {meta}
+                    </span>
+                  )}
+                </div>
                 <p className="sugg-reason" title={s.reason}>
                   {s.reason}
                 </p>

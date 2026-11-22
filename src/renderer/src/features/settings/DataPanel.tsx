@@ -16,6 +16,13 @@ function keychainName(platform: string | undefined): string {
   return 'system keyring'
 }
 
+/** Splits a path so the end (separator + last folder) stays visible while the start truncates. */
+function splitPath(path: string): [string, string] {
+  const trimmed = path.replace(/[\\/]+$/, '')
+  const i = Math.max(trimmed.lastIndexOf('/'), trimmed.lastIndexOf('\\'))
+  return i <= 0 ? ['', trimmed] : [trimmed.slice(0, i), trimmed.slice(i)]
+}
+
 type Msg = { tone: 'ok' | 'error'; text: string } | null
 
 export function DataPanel() {
@@ -99,7 +106,14 @@ export function DataPanel() {
               <Icon name="folder" />
             </span>
             <div className="dp-path-text">
-              <code title={status?.dataDir}>{status?.dataDir ?? '…'}</code>
+              {status ? (
+                <code className="dp-path-name" title={status.dataDir}>
+                  <span className="dp-path-start">{splitPath(status.dataDir)[0]}</span>
+                  <span className="dp-path-end">{splitPath(status.dataDir)[1]}</span>
+                </code>
+              ) : (
+                <code className="dp-path-name">…</code>
+              )}
               <small>
                 {status?.demo
                   ? 'Demo mode: this session uses a temporary database and nothing is written here.'
@@ -149,12 +163,12 @@ export function DataPanel() {
       </section>
 
       <section className="settings-section" aria-labelledby="dp-export">
-        <h3 id="dp-export">Export everything</h3>
+        <h3 id="dp-export">Export data</h3>
         <p>One JSON file with your roles, profile, saved answers, settings and chats. API keys are never included.</p>
         <div className="dp-row">
           <button type="button" className="btn" onClick={() => void exportAll()} disabled={exporting}>
             <Icon name="download" />
-            {exporting ? 'Exporting…' : 'Export everything…'}
+            {exporting ? 'Exporting…' : 'Export data…'}
           </button>
           {exportMsg && (
             <span className={`dp-msg ${exportMsg.tone === 'ok' ? 'is-ok' : 'is-error'}`} role="status">

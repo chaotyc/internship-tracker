@@ -4,7 +4,7 @@
  */
 .settings {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-columns: 240px minmax(0, 1fr);
   gap: 0;
   height: min(720px, calc(100vh - 170px));
   min-height: 0;
@@ -38,9 +38,14 @@
 .settings-tab span {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   font-weight: 550;
 }
+/* One line each; the copy is written to fit the nav width. */
 .settings-tab small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-weight: 400;
   font-size: 11.5px;
   color: var(--ink-3);
@@ -70,7 +75,13 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 3px 14px 20px 20px;
+  padding: 3px 14px 24px 20px;
+}
+/* Set by SettingsDialog while content continues below the fold. The mask only
+   uses alpha, so the colour is irrelevant. */
+.settings-scroll.has-more {
+  -webkit-mask-image: linear-gradient(to bottom, var(--ink) calc(100% - 40px), transparent);
+  mask-image: linear-gradient(to bottom, var(--ink) calc(100% - 40px), transparent);
 }
 /* Optional footer pinned under the scrolling part (e.g. Profile's save bar). */
 .settings-pane-foot {

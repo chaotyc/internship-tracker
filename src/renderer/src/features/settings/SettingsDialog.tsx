@@ -10,9 +10,9 @@ import './settings.css'
 export type SettingsTab = 'profile' | 'ai' | 'boards' | 'data'
 
 const TABS: { key: SettingsTab; label: string; icon: IconName; hint: string }[] = [
-  { key: 'profile', label: 'Profile', icon: 'user', hint: 'Used to fill applications and judge fit' },
-  { key: 'ai', label: 'AI connections', icon: 'sparkle', hint: 'Claude, ChatGPT or Gemini' },
-  { key: 'boards', label: 'Job boards', icon: 'list', hint: 'Companies autosearch checks' },
+  { key: 'profile', label: 'Profile', icon: 'user', hint: 'Fills applications and judges fit' },
+  { key: 'ai', label: 'AI connections', icon: 'sparkle', hint: 'Claude, OpenAI or Gemini' },
+  { key: 'boards', label: 'Job boards', icon: 'list', hint: 'Companies to watch' },
   { key: 'data', label: 'Data & privacy', icon: 'database', hint: 'Export or erase' },
 ]
 
@@ -31,7 +31,38 @@ export function SettingsDialog({ open, tab, onClose }: { open: boolean; tab: Set
   const [saving, setSaving] = useState(false)
   const profile = useRef<ProfileActions>(null)
   const keepRef = useRef<HTMLButtonElement>(null)
+  const paneRef = useRef<HTMLElement>(null)
   const current = TABS.find((t) => t.key === active)!
+
+  // Fade the bottom of the scrolling part only while there's more below. Panels
+  // swap their .settings-scroll (loading -> loaded, tab changes), so watch the pane.
+  useEffect(() => {
+    const pane = paneRef.current
+    if (!open || !pane) return
+    let frame = 0
+    const update = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        for (const el of pane.querySelectorAll<HTMLElement>('.settings-scroll')) {
+          el.classList.toggle('has-more', el.scrollHeight - el.scrollTop - el.clientHeight > 2)
+        }
+      })
+    }
+    update()
+    pane.addEventListener('scroll', update, true)
+    window.addEventListener('resize', update)
+    const resize = new ResizeObserver(update)
+    resize.observe(pane)
+    const mutation = new MutationObserver(update)
+    mutation.observe(pane, { childList: true, subtree: true })
+    return () => {
+      cancelAnimationFrame(frame)
+      pane.removeEventListener('scroll', update, true)
+      window.removeEventListener('resize', update)
+      resize.disconnect()
+      mutation.disconnect()
+    }
+  }, [open])
 
   useEffect(() => {
     if (pending) keepRef.current?.focus()
@@ -92,7 +123,7 @@ export function SettingsDialog({ open, tab, onClose }: { open: boolean; tab: Set
             </button>
           ))}
         </nav>
-        <section className={`settings-pane${pending ? ' is-confirming' : ''}`} aria-label={current.label}>
+        <section ref={paneRef} className={`settings-pane${pending ? ' is-confirming' : ''}`} aria-label={current.label}>
           {active === 'profile' ? (
             <ProfilePanel actions={profile} onDirtyChange={setDirty} />
           ) : (

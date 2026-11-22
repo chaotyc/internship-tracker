@@ -24,9 +24,12 @@ function register(ctx: FeatureContext): void {
     const controller = new AbortController()
     current = controller
 
-    const openRole = roleId ? rolesSvc.get(roleId) : null
     const last = chat.last()
-    if (retry && last?.role === 'user') {
+    const retrying = retry && last?.role === 'user'
+    // A retry answers the stored message about the role it was sent with, not the current picker.
+    const aboutId = retrying ? last.roleId : roleId
+    const openRole = aboutId ? rolesSvc.get(aboutId) : null
+    if (retrying) {
       // Re-answer the message that failed; don't store it twice.
     } else {
       const body = text.trim()

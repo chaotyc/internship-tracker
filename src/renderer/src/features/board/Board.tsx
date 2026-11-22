@@ -11,8 +11,8 @@ interface Props {
   onOpen: (id: string) => void
   onAdd: (stage: StageKey) => void
   onMove: (id: string, stage: StageKey, index: number) => void
-  /** Stage the top bar asked to show; the board scrolls to it and expands it if collapsed. */
-  focusStage: { stage: StageKey; n: number } | null
+  /** A stage to scroll to (and expand if collapsed); bump `n` to repeat the same stage. */
+  focusStage?: { stage: StageKey; n: number } | null
 }
 
 /** Terminal stages start as narrow lanes so the four active stages get the room. */
@@ -91,7 +91,9 @@ export function Board({ roles, query, onOpen, onAdd, onMove, focusStage }: Props
   const locate = useCallback((x: number, y: number) => {
     const d = dragRef.current
     if (!d) return
-    const body = (document.elementFromPoint(x, y) as HTMLElement | null)?.closest<HTMLElement>('[data-stage-body]')
+    // The whole visible column (header included) accepts a drop.
+    const col = (document.elementFromPoint(x, y) as HTMLElement | null)?.closest<HTMLElement>('[data-col]')
+    const body = col?.querySelector<HTMLElement>('[data-stage-body]')
     if (!body) return
     const stage = body.dataset['stageBody'] as StageKey
     const cards = [...body.querySelectorAll<HTMLElement>('[data-card]')]
@@ -176,7 +178,7 @@ export function Board({ roles, query, onOpen, onAdd, onMove, focusStage }: Props
     const onUp = (e: PointerEvent) => {
       if (!pending.current || e.pointerId !== pending.current.pid) return
       // Only commit when released over a column; letting go anywhere else cancels.
-      const over = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest('[data-stage-body]')
+      const over = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest('[data-col]')
       finish(!dragRef.current || !!over)
     }
     const onCancel = (e: PointerEvent) => {
@@ -242,6 +244,26 @@ export function Board({ roles, query, onOpen, onAdd, onMove, focusStage }: Props
     }
   }, [collapsed])
 
+  // Vertical fades on columns whose cards continue above or below.
+  useEffect(() => {
+    const bodies = [...(boardRef.current?.querySelectorAll<HTMLElement>('.col-body') ?? [])]
+    const update = (el: HTMLElement) => {
+      el.classList.toggle('more-above', el.scrollTop > 2)
+      el.classList.toggle('more-below', el.scrollTop + el.clientHeight < el.scrollHeight - 2)
+    }
+    const ro = new ResizeObserver((entries) => entries.forEach((en) => update(en.target as HTMLElement)))
+    const onScroll = (e: Event) => update(e.currentTarget as HTMLElement)
+    for (const b of bodies) {
+      update(b)
+      ro.observe(b)
+      b.addEventListener('scroll', onScroll, { passive: true })
+    }
+    return () => {
+      ro.disconnect()
+      for (const b of bodies) b.removeEventListener('scroll', onScroll)
+    }
+  }, [roles, query, collapsed])
+
   useEffect(() => {
     if (!focusStage) return
     if (collapsed.has(focusStage.stage)) toggleCollapsed(focusStage.stage, true)
@@ -273,7 +295,8 @@ export function Board({ roles, query, onOpen, onAdd, onMove, focusStage }: Props
         const all = grouped[s.key]
         const visible = all.filter((r) => matchesQuery(r, query) && r.id !== drag?.id)
         const isTarget = drag?.stage === s.key
-        if (collapsed.has(s.key)) {
+        // While filtering, a collapsed lane with matches opens so its results are visible.
+        if (collapsed.has(s.key) && !(query && visible.length)) {
           return (
             <section
               key={s.key}
@@ -291,7 +314,7 @@ export function Board({ roles, query, onOpen, onAdd, onMove, focusStage }: Props
                 title={`Show ${s.label}`}
               >
                 <span className="col-dot" />
-                <span className="lane-count tabular">{all.length}</span>
+                <span className="lane-count tabular">{query ? `${visible.length}/${all.length}` : all.length}</span>
                 <span className="lane-label">{s.label}</span>
               </button>
             </section>
