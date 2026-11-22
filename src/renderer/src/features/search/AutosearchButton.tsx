@@ -82,7 +82,7 @@ export function AutosearchButton({ onResults }: { onResults: () => void }) {
           aria-label={label}
           title={label}
         >
-          {count ?? ''}
+          {count == null ? '' : `${count} new`}
         </button>
       </div>
     )

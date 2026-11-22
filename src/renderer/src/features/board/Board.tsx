@@ -281,7 +281,7 @@ export function Board({ roles, query, onOpen, onAdd, onMove, focusStage }: Props
 
   return (
     <div
-      className={`board${edges.left ? ' fade-left' : ''}${edges.right ? ' fade-right' : ''}`}
+      className={`board${edges.left ? ' fade-left' : ''}${edges.right ? ' fade-right' : ''}${collapsed.has('closed') && !(query && grouped.closed.some((r) => matchesQuery(r, query))) ? ' has-rails' : ''}`}
       ref={boardRef}
       role="list"
       aria-label="Application stages"

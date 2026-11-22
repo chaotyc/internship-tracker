@@ -41,18 +41,53 @@ export function since(iso: string, now = Date.now()): string {
   return new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
-/** One board's last check, as a short muted line (or the error in danger text). */
-function CheckLine({ st, off }: { st?: BoardStatus; off: boolean }) {
+/** A board counts as stale when its last good check is older than this. */
+const STALE_MS = 2 * 24 * 60 * 60 * 1000
+
+/** Whether a board's last check worked and is recent; those rows don't repeat the time the header already gives. */
+export function isFresh(st: BoardStatus | undefined, now = Date.now()): st is BoardStatus & { lastOk: string } {
+  if (!st || st.error || !st.lastOk) return false
+  const t = Date.parse(st.lastOk)
+  return Number.isFinite(t) && now - t <= STALE_MS
+}
+
+/** When a board was last checked, whether or not that check worked. */
+/**
+ * "all checked 3h ago", "7 checked 3h ago · 1 failed" or "not checked yet", for the boards whose
+ * source is on. A failed attempt does not count as checked. Failed and stale boards also say so on their rows.
+ */
+export function watchSummary(statuses: Array<BoardStatus | undefined>, now = Date.now()): string {
+  if (!statuses.length) return ''
+  const failed = statuses.filter((st) => !!st?.error).length
+  const okTimes = statuses
+    .filter((st) => !st?.error)
+    .map((st) => (st?.lastOk ? Date.parse(st.lastOk) : NaN))
+    .filter(Number.isFinite)
+  const failNote = failed ? ` · ${failed} failed` : ''
+  if (!okTimes.length) return failed ? `${failed} failed` : 'not checked yet'
+  // Stale boards say so on their own rows, so the shared time covers only recent checks.
+  const recent = okTimes.filter((t) => now - t <= STALE_MS)
+  if (!recent.length) return failNote.slice(3)
+  const all = recent.length === statuses.length
+  return `${all ? 'all' : recent.length} checked ${since(new Date(Math.min(...recent)).toISOString(), now)}${failNote}`
+}
+
+/**
+ * One board's last check. With `always`, says when it last worked; otherwise only speaks up when the
+ * board failed or is stale, since the list header already gives the shared check time.
+ */
+function CheckLine({ st, off, always = false }: { st?: BoardStatus; off: boolean; always?: boolean }) {
   if (off) return <span className="watch-check">Source turned off</span>
-  if (!st) return <span className="watch-check">Not checked yet</span>
-  if (st.error)
+  if (st?.error)
     return (
       <span className="watch-check error" title={st.error}>
         Failed {st.errorAt ? since(st.errorAt) : ''}: {st.error}
         {st.lastOk ? ` Last worked ${since(st.lastOk)}.` : ''}
       </span>
     )
-  return <span className="watch-check">{st.lastOk ? `Checked ${since(st.lastOk)}` : 'Not checked yet'}</span>
+  if (isFresh(st)) return always ? <span className="watch-check">Checked {since(st.lastOk)}</span> : null
+  if (st?.lastOk) return <span className="watch-check stale">Last checked {since(st.lastOk)}</span>
+  return always ? <span className="watch-check">Not checked yet</span> : null
 }
 
 /** A switch row. `children` sit under the hint, outside the label, so links and buttons there don't flip the switch. */
@@ -168,6 +203,8 @@ export function WatchlistPanel() {
   }
 
   const watched = new Set((list ?? []).map(key))
+  const summary =
+    status && list?.length ? watchSummary(list.filter((c) => !sources || sources[sourceOf(c)]).map((c) => status.boards[key(c)])) : ''
   const remaining = SUGGESTED_COMPANIES.filter((c) => !watched.has(key(c)))
   const addSuggested = (items: typeof SUGGESTED_COMPANIES) =>
     save([...(list ?? []), ...items.map(({ group: _g, ...c }) => ({ ...c, id: crypto.randomUUID() }))])
@@ -193,7 +230,7 @@ export function WatchlistPanel() {
                 setUrl(e.target.value)
                 if (note.tone === 'error') setNote({ text: '', tone: '' })
               }}
-              placeholder="jobs.ashbyhq.com/etched, a myworkdayjobs.com link or a careers page"
+              placeholder="Careers page or job board link"
               aria-label="Careers page or job board link"
               spellCheck={false}
             />
@@ -208,8 +245,11 @@ export function WatchlistPanel() {
 
       <section className="settings-section">
         <div className="watch-head">
-          <h3>Watching</h3>
-          {list && list.length > 0 && <span className="chip tabular">{list.length}</span>}
+          <h3>
+            Watching
+            {list && list.length > 0 && <span className="watch-count tabular">{list.length}</span>}
+          </h3>
+          {summary && <span className="watch-summary">{summary}</span>}
         </div>
         {list == null ? null : list.length === 0 ? (
           <p className="watch-empty">No companies yet. Add one above, or pick from the suggestions below.</p>
@@ -225,7 +265,7 @@ export function WatchlistPanel() {
                   </a>
                   {status && <CheckLine st={status.boards[key(c)]} off={!!sources && !sources[sourceOf(c)]} />}
                 </span>
-                <span className={`board-badge board-${c.board}`}>{BOARD_LABELS[c.board]}</span>
+                <span className="board-badge">{BOARD_LABELS[c.board]}</span>
                 <button
                   type="button"
                   className="icon-btn"
@@ -290,7 +330,7 @@ export function WatchlistPanel() {
               hint={SIMPLIFY_LEAD}
             >
               <SimplifyDetails />
-              {sources.simplify && <CheckLine st={status.boards['simplify']} off={false} />}
+              {sources.simplify && <CheckLine st={status.boards['simplify']} off={false} always />}
             </SourceSwitch>
           </ul>
         </section>

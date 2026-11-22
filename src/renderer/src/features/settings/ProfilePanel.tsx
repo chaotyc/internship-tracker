@@ -1024,12 +1024,16 @@ export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<Profile
             </span>
           )}
         </span>
-        <button type="button" className="btn btn-ghost" onClick={discard} disabled={!dirty || saving}>
-          Discard
-        </button>
-        <button type="button" className="btn btn-primary" onClick={() => void save()} disabled={!dirty || saving}>
-          {saving ? 'Saving…' : 'Save changes'}
-        </button>
+        {(dirty || saving) && (
+          <>
+            <button type="button" className="btn btn-ghost" onClick={discard} disabled={saving}>
+              Discard
+            </button>
+            <button type="button" className="btn btn-primary" onClick={() => void save()} disabled={saving}>
+              {saving ? 'Saving…' : 'Save changes'}
+            </button>
+          </>
+        )}
       </footer>
     </>
   )

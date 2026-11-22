@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type Ref } from 'react'
 import { BOARD_LABELS, type Suggestion } from '@shared/search'
 import { Icon } from '@renderer/components/Icon'
 import { useToast } from '@renderer/components/Toast'
@@ -6,14 +6,15 @@ import { api } from '@renderer/lib/api'
 import { ago } from '@renderer/lib/format'
 import { Monogram } from '@renderer/features/board/RoleCard'
 import { useEdgeFade } from './useEdgeFade'
+import { partCandidates, useFitText, wordCandidates } from './useFitText'
 import { setSuggestionState, useSuggestionState } from './useSuggestionState'
 import './search.css'
 
 const RANKED_BY: Record<NonNullable<Suggestion['rankedBy']>, string> = { ai: 'AI', keywords: 'keywords' }
 
-/** "Greenhouse", "Workday" or "via SimplifyJobs list", plus the track it fits. */
+/** "<Source> · <Track> track", e.g. "SimplifyJobs · Photonics hardware track" or "Greenhouse · ML inference track". */
 export function sourceLine(s: Pick<Suggestion, 'source' | 'board' | 'trackName'>): string {
-  const from = s.source === 'simplify' ? 'via SimplifyJobs list' : s.board ? BOARD_LABELS[s.board] : ''
+  const from = s.source === 'simplify' ? 'SimplifyJobs' : s.board ? BOARD_LABELS[s.board] : ''
   return [from, s.trackName && `${s.trackName} track`].filter(Boolean).join(' · ')
 }
 
@@ -27,22 +28,74 @@ export function displayTitle(title: string): string {
   return short || title
 }
 
-/** Posted age first so freshness survives truncation, then location and pay: "2d ago · San Jose, CA · $50–60/hr". */
-export function metaLine(s: Pick<Suggestion, 'postedAt' | 'location' | 'pay'>): string {
-  return [s.postedAt && ago(s.postedAt), s.location, s.pay].filter(Boolean).join(' · ')
+/** Posted age first so freshness survives, then location, then pay: ["2d ago", "San Jose, CA", "$50–60/hr"]. */
+export function metaParts(s: Pick<Suggestion, 'postedAt' | 'location' | 'pay'>): string[] {
+  return [s.postedAt && ago(s.postedAt), s.location, s.pay].filter((p): p is string => !!p)
 }
 
-/** Estimated match, 0-100, drawn as a small progress ring plus the number. The board's bar meter is reserved for the user's own fit rating. */
+/** The full meta line, "2d ago · San Jose, CA · $50–60/hr". */
+export function metaLine(s: Pick<Suggestion, 'postedAt' | 'location' | 'pay'>): string {
+  return metaParts(s).join(' · ')
+}
+
+/** Estimated match, 0-100, as plain text. The board's bar meter is reserved for the user's own fit rating. */
 function MatchMeter({ score, rankedBy }: { score: number; rankedBy?: Suggestion['rankedBy'] }) {
   const pct = Math.round(Math.max(0, Math.min(100, score)))
   return (
-    <span className="sugg-fit" title={rankedBy ? `Estimated match, ranked by ${RANKED_BY[rankedBy]}` : 'Estimated match'}>
-      <svg className="match-ring" viewBox="0 0 14 14" aria-hidden="true">
-        <circle className="match-ring-track" cx="7" cy="7" r="5.5" />
-        {pct > 0 && <circle className="match-ring-value" cx="7" cy="7" r="5.5" pathLength={100} strokeDasharray={`${pct} 100`} />}
-      </svg>
-      <span className="sugg-fit-n tabular">{pct}% match</span>
+    <span className="sugg-fit tabular" title={rankedBy ? `Estimated match, ranked by ${RANKED_BY[rankedBy]}` : 'Estimated match'}>
+      {pct}% match
     </span>
+  )
+}
+
+/** Text that shows as much as fits without cutting a word or part; the full text stays in the tooltip. */
+function FitText({ as: Tag = 'span', className, candidates, title }: { as?: 'span' | 'p' | 'div'; className: string; candidates: string[]; title?: string }) {
+  const { ref, text } = useFitText<HTMLElement>(candidates)
+  return (
+    <Tag ref={ref as Ref<never>} className={className} title={title}>
+      {text}
+    </Tag>
+  )
+}
+
+/** One suggestion card. */
+function SuggestionCard({ s, busy, act }: { s: Suggestion; busy: boolean; act: (s: Suggestion, kind: 'add' | 'dismiss') => void }) {
+  const meta = metaParts(s)
+  const metaTitle = [s.postedAt && `Posted ${ago(s.postedAt)}`, s.location, s.pay].filter(Boolean).join(' · ')
+  const from = sourceLine(s)
+  const title = useFitText<HTMLAnchorElement>(wordCandidates(displayTitle(s.title)))
+  return (
+    <article className="sugg" aria-label={`${s.company}, ${s.title}`}>
+      <div className="sugg-top">
+        <Monogram name={s.company} size={26} />
+        <div className="sugg-heading">
+          <div className="sugg-company" title={s.company}>
+            {s.company}
+          </div>
+          <a ref={title.ref} className="sugg-title" href={s.link} target="_blank" rel="noreferrer" title={`${s.title} — open posting`}>
+            {title.text}
+          </a>
+        </div>
+      </div>
+      <div className="sugg-meta">
+        <MatchMeter score={s.score} rankedBy={s.rankedBy} />
+        {meta.length > 0 && <FitText className="sugg-meta-text" candidates={partCandidates(meta)} title={metaTitle} />}
+      </div>
+      <FitText as="p" className="sugg-reason" candidates={wordCandidates(s.reason)} title={s.reason} />
+      {from ? <FitText as="div" className="sugg-source" candidates={wordCandidates(from)} title={from} /> : <div className="sugg-source">{'\u00a0'}</div>}
+      <div className="sugg-actions">
+        <button type="button" className="btn btn-sm" disabled={busy} onClick={() => act(s, 'add')}>
+          <Icon name="plus" />
+          Add to Saved
+        </button>
+        <button type="button" className="btn btn-sm btn-ghost" disabled={busy} onClick={() => act(s, 'dismiss')}>
+          Dismiss
+        </button>
+        <a className="icon-btn sugg-open" href={s.link} target="_blank" rel="noreferrer" aria-label="Open posting" title="Open posting">
+          <Icon name="external" />
+        </a>
+      </div>
+    </article>
   )
 }
 
@@ -196,52 +249,9 @@ export function SuggestionsTray({ open, onClose }: { open: boolean; onClose: () 
           ref={scroller}
           className={`tray-scroll${fade.start ? ' fade-start' : ''}${fade.end ? ' fade-end' : ''}`}
         >
-          {items.map((s) => {
-            const meta = metaLine(s)
-            const metaTitle = [s.postedAt && `Posted ${ago(s.postedAt)}`, s.location, s.pay].filter(Boolean).join(' · ')
-            const from = sourceLine(s)
-            return (
-              <article key={s.id} className="sugg" aria-label={`${s.company}, ${s.title}`}>
-                <div className="sugg-top">
-                  <Monogram name={s.company} size={26} />
-                  <div className="sugg-heading">
-                    <div className="sugg-company" title={s.company}>
-                      {s.company}
-                    </div>
-                    <a className="sugg-title" href={s.link} target="_blank" rel="noreferrer" title={`${s.title} — open posting`}>
-                      {displayTitle(s.title)}
-                    </a>
-                  </div>
-                </div>
-                <div className="sugg-meta">
-                  <MatchMeter score={s.score} rankedBy={s.rankedBy} />
-                  {meta && (
-                    <span className="sugg-meta-text" title={metaTitle}>
-                      {meta}
-                    </span>
-                  )}
-                </div>
-                <p className="sugg-reason" title={s.reason}>
-                  {s.reason}
-                </p>
-                <div className="sugg-source" title={from}>
-                  {from || '\u00a0'}
-                </div>
-                <div className="sugg-actions">
-                  <button type="button" className="btn btn-sm" disabled={busy.has(s.id)} onClick={() => act(s, 'add')}>
-                    <Icon name="plus" />
-                    Add to Saved
-                  </button>
-                  <button type="button" className="btn btn-sm btn-ghost" disabled={busy.has(s.id)} onClick={() => act(s, 'dismiss')}>
-                    Dismiss
-                  </button>
-                  <a className="icon-btn sugg-open" href={s.link} target="_blank" rel="noreferrer" aria-label="Open posting" title="Open posting">
-                    <Icon name="external" />
-                  </a>
-                </div>
-              </article>
-            )
-          })}
+          {items.map((s) => (
+            <SuggestionCard key={s.id} s={s} busy={busy.has(s.id)} act={act} />
+          ))}
         </div>
       )}
     </section>

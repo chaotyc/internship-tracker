@@ -56,7 +56,37 @@
 }
 .app.has-panel .col {
   /* Keep cards readable beside the assistant; the board scrolls sideways instead. */
-  min-width: 240px;
+  min-width: 264px;
+}
+/* Collapsed Rejected/Closed rails stay pinned to the right edge while the board scrolls. */
+.col.is-collapsed {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  background: color-mix(in srgb, var(--surface-sunken) 60%, var(--canvas));
+}
+.col.is-collapsed:has(+ .col.is-collapsed) {
+  right: calc(46px + 12px);
+}
+.app.has-panel .col.is-collapsed:has(+ .col.is-collapsed) {
+  right: calc(36px + 8px);
+}
+/* Fill the gap between the pinned rails and the board's right padding, so cards never show through. */
+.col.is-collapsed:last-child {
+  box-shadow: 18px 0 0 0 var(--canvas);
+}
+.col.is-collapsed + .col.is-collapsed {
+  box-shadow: -12px 0 0 0 var(--canvas), 18px 0 0 0 var(--canvas);
+}
+.app.has-panel .col.is-collapsed + .col.is-collapsed {
+  box-shadow: -8px 0 0 0 var(--canvas), 18px 0 0 0 var(--canvas);
+}
+.board.fade-right .col.is-collapsed:has(+ .col.is-collapsed),
+.board.fade-right .col.is-collapsed:last-child:not(.col.is-collapsed + .col.is-collapsed) {
+  box-shadow: -10px 0 14px -10px rgba(0, 0, 0, 0.28);
+}
+.board.has-rails.fade-right {
+  --fade-r: 0px;
 }
 .lane {
   flex: 1;
@@ -347,8 +377,10 @@ body.is-dragging * {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  color: var(--ink-3);
+}
+.card-found svg {
   color: var(--accent);
-  font-weight: 500;
 }
 .card-found svg {
   width: 12px;

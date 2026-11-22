@@ -203,16 +203,18 @@
   border: 0;
   border-radius: var(--r-sm);
   background: transparent;
-  color: var(--accent);
+  color: var(--ink-2);
   font-size: var(--fs-meta);
-  font-weight: 550;
+  font-weight: 500;
 }
 .settings-disclosure:hover {
-  background: var(--accent-soft);
+  background: var(--surface-hover);
+  color: var(--ink);
 }
 .settings-disclosure svg {
   width: 14px;
   height: 14px;
+  color: var(--ink-3);
   transform: rotate(-90deg);
   transition: transform 0.15s;
 }

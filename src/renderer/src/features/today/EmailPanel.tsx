@@ -329,7 +329,7 @@ function PrivacyNote() {
         </p>
         <button type="button" className="settings-disclosure" aria-expanded={open} aria-controls={id} onClick={() => setOpen((o) => !o)}>
           <Icon name="chevronDown" />
-          Details
+          What’s sent to your AI provider
         </button>
       </div>
       {open && (

@@ -17,7 +17,7 @@
 }
 .td-head {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 12px;
 }
 .td-head h2 {
@@ -40,7 +40,10 @@
 .td-head-actions {
   margin-left: auto;
   display: flex;
+  align-items: center;
   gap: 6px;
+  /* Centre the actions on the "Today" title line, not the subtitle. */
+  height: calc(var(--fs-view) * 1.2);
 }
 
 /* --------------------------------- sections --------------------------------- */
@@ -152,7 +155,7 @@
 }
 .td-row-sub strong {
   color: var(--ink-2);
-  font-weight: 550;
+  font-weight: 500;
 }
 .td-due {
   font-size: var(--fs-meta);
@@ -603,13 +606,10 @@
 }
 .ns-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 150px 124px;
+  grid-template-columns: minmax(0, 1fr) 164px 108px;
   gap: 8px;
 }
-.ns-row input[type='time'] {
-  min-width: max-content;
-}
-.ns-row input.is-empty {
+.ns-row select.is-empty {
   color: var(--ink-4);
 }
 .ns.is-done .ns-row input:first-child {
@@ -703,7 +703,7 @@
   grid-template-columns: minmax(0, 1fr) 100px;
   gap: 12px 14px;
 }
-/* One line of privacy, the rest behind "Details". */
+/* One line of privacy, the rest behind "What’s sent to your AI provider". */
 .ep-privacy {
   display: flex;
   flex-direction: column;

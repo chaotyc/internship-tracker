@@ -303,7 +303,7 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
         {showForm && <h3 className="form-group">Posting</h3>}
         <section className={`link-row${showForm ? '' : ' is-start'}`}>
           <label className="field link-field">
-            <span>Posting link</span>
+            <span>Link</span>
             <div className="link-input">
               <Icon name="link" />
               <input

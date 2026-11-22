@@ -32,9 +32,19 @@ export function TrackSelect({ value, onChange }: { value: string; onChange: (id:
   const current = trackById(profile, value)
   const resume = resumeForTrack(profile, current.id)
   const borrowed = !current.resume && resume
+  const description = resume
+    ? `Resume: ${resume.fileName}${borrowed ? ' (from the default track)' : ''}`
+    : 'No resume on this track yet. Add one in Settings › Application tracks.'
+  // The resume rides on the label line, so this cell is exactly as tall as its neighbors.
   return (
     <div className="field">
-      <label htmlFor={id}>Application track</label>
+      <div className="trk-select-head">
+        <label htmlFor={id}>Application track</label>
+        <span id={`${id}-d`} className={`trk-select-resume${resume ? '' : ' is-empty'}`} title={description}>
+          <span className="visually-hidden">{description}</span>
+          {resume ? <MiddleTruncate text={resume.fileName} /> : <span aria-hidden="true">No resume</span>}
+        </span>
+      </div>
       <select id={id} value={current.id} onChange={(e) => onChange(e.target.value)} aria-describedby={`${id}-d`}>
         {tracks.map((t, i) => (
           <option key={t.id} value={t.id}>
@@ -43,16 +53,19 @@ export function TrackSelect({ value, onChange }: { value: string; onChange: (id:
           </option>
         ))}
       </select>
-      <small id={`${id}-d`} className="hint trk-select-hint" title={resume?.fileName}>
-        {resume ? (
-          <>
-            Resume: <b>{resume.fileName}</b>
-            {borrowed ? ' (from the default track)' : ''}
-          </>
-        ) : (
-          'No resume on this track yet. Add one in Settings › Application tracks.'
-        )}
-      </small>
     </div>
+  )
+}
+
+/** One line that keeps the start and the extension: "Alex_Rivera_Re…sume.pdf". */
+function MiddleTruncate({ text }: { text: string }) {
+  const dot = text.lastIndexOf('.')
+  const keep = Math.max(dot > 0 ? text.length - dot + 2 : 6, 6)
+  const cut = Math.max(text.length - keep, 0)
+  return (
+    <span className="trk-mid" aria-hidden="true">
+      <span className="trk-mid-start">{text.slice(0, cut)}</span>
+      <span className="trk-mid-end">{text.slice(cut)}</span>
+    </span>
   )
 }

@@ -2,7 +2,7 @@ import { useRef } from 'react'
 import type { NextStep } from '@shared/roles'
 import { addDays, localIso } from '@shared/today'
 import { Icon } from '@renderer/components/Icon'
-import { daysUntil, dueLabel, shortDate } from '@renderer/lib/format'
+import { daysUntil, dueLabel } from '@renderer/lib/format'
 import './today.css'
 
 const EMPTY: NextStep = { text: '', due: '', time: '', done: false, source: 'manual' }
@@ -13,9 +13,31 @@ function comingMonday(today: string): string {
   return addDays(today, ((8 - dow) % 7) || 7)
 }
 
+/** "Sun, Nov 22" (year only when it isn't this year), matching DateField. */
+function fullDate(iso: string): string {
+  const d = new Date(iso + 'T12:00:00')
+  if (Number.isNaN(d.getTime())) return iso
+  const sameYear = d.getFullYear() === new Date().getFullYear()
+  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', ...(sameYear ? {} : { year: 'numeric' }) })
+}
+
+/** "2pm" or "2:30pm" for an HH:MM string. */
+function timeLabel(hhmm: string): string {
+  const [h = 0, m = 0] = hhmm.split(':').map(Number)
+  return `${h % 12 || 12}${m ? ':' + String(m).padStart(2, '0') : ''}${h < 12 ? 'am' : 'pm'}`
+}
+
+/** 7am to 10pm in 30-minute steps, stored as HH:MM. */
+const TIMES = Array.from({ length: 31 }, (_, i) => {
+  const min = 7 * 60 + i * 30
+  return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`
+})
+
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+
 const SOURCE_NOTE: Record<NextStep['source'], string> = { manual: '', email: 'From an email', chat: 'Suggested by the assistant' }
 
-/** The role's one next step: what, when, quick dates, done and clear. */
+/** The role's one next step: what, when, quick dates and done. */
 export function NextStepField({ value, onChange }: { value: NextStep | null; onChange: (v: NextStep | null) => void }) {
   const v: NextStep = value ?? EMPTY
   const today = localIso()
@@ -36,9 +58,9 @@ export function NextStepField({ value, onChange }: { value: NextStep | null; onC
     onChange(next.text.trim() || next.due ? next : null)
   }
   const chips: { label: string; due: string; title: string }[] = [
-    { label: 'Today', due: today, title: 'Due today' },
-    { label: 'Tomorrow', due: addDays(today, 1), title: 'Due tomorrow' },
-    { label: 'Next Mon', due: comingMonday(today), title: 'Due next Monday' },
+    { label: 'Today', due: today, title: 'Set for today' },
+    { label: 'Tomorrow', due: addDays(today, 1), title: 'Set for tomorrow' },
+    { label: 'Next Mon', due: comingMonday(today), title: 'Set for next Monday' },
     { label: '+1 week', due: addDays(v.due || today, 7), title: v.due ? 'A week after the current date' : 'A week from today' },
   ]
   const has = !!(v.text || v.due)
@@ -47,7 +69,7 @@ export function NextStepField({ value, onChange }: { value: NextStep | null; onC
     ? { tone: 'is-done', text: 'Done' }
     : d == null
       ? { tone: '', text: has ? 'No date yet' : '' }
-      : { tone: d < 0 ? 'is-overdue' : d === 0 ? 'is-today' : '', text: d < 0 ? dueLabel(v.due, v.time) : `Due ${dueLabel(v.due, v.time)}` }
+      : { tone: d < 0 ? 'is-overdue' : d === 0 ? 'is-today' : '', text: capitalize(dueLabel(v.due, v.time)) }
 
   return (
     <div className={`field wide ns${v.done ? ' is-done' : ''}`} role="group" aria-labelledby="ns-label">
@@ -56,9 +78,9 @@ export function NextStepField({ value, onChange }: { value: NextStep | null; onC
         <input value={v.text} placeholder="e.g. Finish the take-home" onChange={(e) => set({ text: e.target.value })} aria-label="Next step" />
         {/* Same readable date button as the dialog's other dates (DateField), over a hidden native picker. */}
         <div className="date-field">
-          <button type="button" className={`date-btn${v.due ? '' : ' is-empty'}`} onClick={openPicker} aria-label={v.due ? `Next step date, ${shortDate(v.due)}` : 'Next step date'}>
+          <button type="button" className={`date-btn${v.due ? '' : ' is-empty'}`} onClick={openPicker} aria-label={v.due ? `Next step date, ${fullDate(v.due)}` : 'Next step date'}>
             <Icon name="clock" />
-            <span>{v.due ? shortDate(v.due) : 'Add a date'}</span>
+            <span>{v.due ? fullDate(v.due) : 'Add a date'}</span>
           </button>
           {v.due && (
             <button type="button" className="date-clear" onClick={() => set({ due: '' })} aria-label="Clear next step date">
@@ -67,7 +89,16 @@ export function NextStepField({ value, onChange }: { value: NextStep | null; onC
           )}
           <input ref={picker} type="date" className="date-native" value={v.due} onChange={(e) => set({ due: e.target.value })} tabIndex={-1} aria-hidden="true" />
         </div>
-        <input type="time" className={v.time ? undefined : 'is-empty'} value={v.time} disabled={!v.due} onChange={(e) => set({ time: e.target.value })} aria-label="Next step time" />
+        <select className={v.time ? undefined : 'is-empty'} value={v.time} disabled={!v.due} onChange={(e) => set({ time: e.target.value })} aria-label="Next step time">
+          <option value="">No time</option>
+          {/* Keep an off-grid time (e.g. 9:15) that came from an email or the assistant. */}
+          {v.time && !TIMES.includes(v.time) && <option value={v.time}>{timeLabel(v.time)}</option>}
+          {TIMES.map((t) => (
+            <option key={t} value={t}>
+              {timeLabel(t)}
+            </option>
+          ))}
+        </select>
       </div>
       <div className="ns-tools">
         {chips.map((c) => (
@@ -94,10 +125,6 @@ export function NextStepField({ value, onChange }: { value: NextStep | null; onC
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => onChange({ ...v, done: !v.done })}>
               <Icon name={v.done ? 'refresh' : 'check'} />
               {v.done ? 'Reopen' : 'Mark done'}
-            </button>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => onChange(null)} aria-label="Clear next step">
-              <Icon name="close" />
-              Clear
             </button>
           </span>
         )}

@@ -337,12 +337,41 @@
 }
 
 /* Role dialog: the resume the chosen track uses. */
-.trk-select-hint {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* Role dialog: the track's resume sits on the label line, so the cell stays one control tall. */
+.trk-select-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
 }
-.trk-select-hint b {
+.trk-select-head > label {
+  flex: none;
+  font-size: var(--fs-meta);
   font-weight: 600;
   color: var(--ink-2);
+}
+.trk-select-resume {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  justify-content: flex-end;
+  font-size: var(--fs-meta);
+  color: var(--ink-3);
+}
+.trk-select-resume.is-empty {
+  color: var(--warn);
+}
+/* Middle truncation: the start gives way first, the end (with the extension) always shows. */
+.trk-mid {
+  display: flex;
+  min-width: 0;
+  white-space: nowrap;
+}
+.trk-mid-start {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.trk-mid-end {
+  flex: none;
 }

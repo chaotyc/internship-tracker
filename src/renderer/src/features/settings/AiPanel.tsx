@@ -214,10 +214,10 @@ function ProviderCard(props: {
         {status.available && (
           <>
             {/* The one control for which provider is used. Checked without being pinned means chosen automatically. */}
-            <label className="ai-use" title={isAuto ? 'Chosen automatically: the first connection that works. Click to always use it.' : 'Always use this for AI features'}>
+            <label className="ai-use" title={isAuto ? 'Chosen automatically: the first connection that works. Click to always use it.' : `Always use ${info.label} for AI features`}>
               <input type="radio" name="ai-provider" checked={isActive} onChange={props.onPick} onClick={() => isAuto && props.onPick()} />
-              Use this
-              {isAuto && <span className="ai-use-auto">(automatic)</span>}
+              Use {info.label}
+              {isAuto && <span className="chip ai-use-auto">Detected</span>}
             </label>
             <button type="button" className="btn btn-sm" onClick={props.onTest} disabled={test?.state === 'running'}>
               {test?.state === 'running' ? 'Testing…' : 'Test'}
