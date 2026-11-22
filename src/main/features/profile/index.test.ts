@@ -15,7 +15,7 @@ const m = vi.hoisted(() => ({
 }))
 vi.mock('electron', () => ({
   ipcMain: { handle: (ch: string, fn: never) => m.handlers.set(ch, fn) },
-  BrowserWindow: { getAllWindows: () => [{ isDestroyed: () => false, webContents: { getURL: () => 'app://x', send: (ev: string) => m.sent.push(ev) } }] },
+  BrowserWindow: { getAllWindows: () => [{ isDestroyed: () => false, webContents: { getURL: () => 'file:///app/renderer/index.html', send: (ev: string) => m.sent.push(ev) } }] },
   dialog: { showOpenDialog: m.showOpenDialog, showSaveDialog: m.showSaveDialog },
   shell: { showItemInFolder: m.showItemInFolder, openPath: m.openPath },
   app: { getPath: () => m.downloads },
@@ -52,8 +52,9 @@ async function boot(roles?: unknown) {
     mainWindow: () => null,
   }
   profileFeature.register(ctx)
+  const appFrame = { senderFrame: { url: 'file:///app/renderer/index.html' } }
   const call = async (ch: string, req?: unknown) => {
-    const res = await m.handlers.get(ch)!({}, req)
+    const res = await m.handlers.get(ch)!(appFrame, req)
     if (!res.ok) throw new Error(res.error)
     return res.value as never
   }
@@ -71,6 +72,12 @@ beforeEach(() => {
 afterEach(() => rmSync(dir, { recursive: true, force: true }))
 
 describe('profile IPC', () => {
+  it('refuses calls from pages that are not the app (such as an autofill window)', async () => {
+    await boot()
+    const res = await m.handlers.get('profile:get')!({ senderFrame: { url: 'https://job-boards.greenhouse.io/x' } }, undefined)
+    expect(res).toEqual({ ok: false, error: 'Not allowed' })
+  })
+
   it('saves, emits profile:changed and reports status', async () => {
     const { call } = await boot()
     const saved = await call('profile:save', { legalFirstName: 'Jordan', email: 'jordan@example.com' })

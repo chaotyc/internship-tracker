@@ -1,13 +1,19 @@
+# dependencies and build output
 node_modules/
 out/
+out-*/
 dist/
 release/
-*.log
-.DS_Store
+*.tsbuildinfo
+
+# local screenshots from scripts/snapshot.mjs (docs/screenshots is tracked)
+/screenshots/
+
 # local data never belongs in the repo
 *.sqlite
 *.db
 user-data/
-screenshots/
-out-*/
-*.tsbuildinfo
+
+# logs and OS files
+*.log
+.DS_Store

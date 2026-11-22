@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a2f3a"/>
+      <stop offset="1" stop-color="#12151b"/>
+    </linearGradient>
+  </defs>
+  <!-- macOS icon grid: 824px tile centred on a 1024px canvas. -->
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+  <g fill="#ffffff">
+    <rect x="262" y="292" width="140" height="440" rx="44"/>
+    <rect x="442" y="292" width="140" height="308" rx="44" opacity="0.9"/>
+    <rect x="622" y="292" width="140" height="198" rx="44" opacity="0.8"/>
+  </g>
+</svg>

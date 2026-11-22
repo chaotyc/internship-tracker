@@ -272,12 +272,6 @@
   font-size: var(--fs-body);
   font-weight: 650;
 }
-.side-empty {
-  margin: auto;
-  padding: 24px;
-  color: var(--ink-3);
-  text-align: center;
-}
 
 /* Empty state */
 .empty {
@@ -535,11 +529,6 @@
   border-color: color-mix(in srgb, var(--danger) 40%, var(--line));
   background: var(--danger-soft);
 }
-.next-step-row {
-  display: grid;
-  grid-template-columns: 1fr 150px 110px;
-  gap: 8px;
-}
 .foot-hint {
   font-size: var(--fs-meta);
   color: var(--ink-3);
@@ -560,11 +549,6 @@
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.grid-auto {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 12px 14px;
 }
 .field.is-filled .date-btn {
   border-color: color-mix(in srgb, var(--accent) 60%, var(--line-strong));

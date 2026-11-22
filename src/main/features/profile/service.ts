@@ -44,9 +44,6 @@ export class ProfileValidationError extends Error {
 /** Key in the `secrets` table (encrypted) and in `settings` (plain fallback). */
 const KEY = 'profile'
 
-export const KEYCHAIN_UNAVAILABLE_REASON =
-  "This computer's keychain isn't available, so demographic answers and saved answers can't be encrypted. They won't be stored until it is."
-
 interface Deps {
   store: Store
   secrets: Secrets

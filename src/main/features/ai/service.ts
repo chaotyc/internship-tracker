@@ -229,15 +229,3 @@ export class AiServiceImpl implements AiService {
   }
 }
 
-/** Always fails with the "not set up" message. Kept for tests in other features that need an AiService without a model. */
-export class StubAiService implements AiService {
-  async complete(): Promise<AiResult> {
-    throw new Error(NOT_SET_UP)
-  }
-  async json<T>(): Promise<T> {
-    throw new Error(NOT_SET_UP)
-  }
-  async status(): Promise<ProviderStatus[]> {
-    return []
-  }
-}

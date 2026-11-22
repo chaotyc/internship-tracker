@@ -494,8 +494,3 @@ export function describeErrors(errors: ProfileErrors): string {
   return msgs.length === 1 ? msgs[0]! : `${msgs.length} fields need attention. First: ${msgs[0]}`
 }
 
-/** "Alex" from preferred name, else legal first name. */
-export function displayName(p: Profile): string {
-  const first = p.preferredName.trim() || p.legalFirstName.trim()
-  return [first, p.legalLastName.trim()].filter(Boolean).join(' ')
-}

@@ -5,8 +5,8 @@ import { Icon } from '@renderer/components/Icon'
 import { useToast } from '@renderer/components/Toast'
 import { api } from '@renderer/lib/api'
 import { Monogram } from '@renderer/features/board/RoleCard'
-import { dueLabel } from '@renderer/lib/format'
-import { MailIcon, sinceLabel, stageLabel, stageStyle } from './parts'
+import { dueLabel, since } from '@renderer/lib/format'
+import { MailIcon, stageLabel, stageStyle } from './parts'
 
 /** One-line version of a proposal's change, e.g. "Applied → Interviewing · next step Sat". */
 function shortChange(p: EmailProposal, role: Role | null): string {
@@ -83,7 +83,7 @@ function ProposalFull({ p, role, onOpenRole, onDone, onCollapse }: { p: EmailPro
 
   const nothingLeft = !stageChanges && !hasStep
   const applyDisabled = !!busy || !role || nothingLeft || (both && !useStage && !useStep)
-  const when = p.email.date ? sinceLabel(p.email.date) : sinceLabel(p.createdAt)
+  const when = p.email.date ? since(p.email.date) : since(p.createdAt)
 
   return (
     <article className="td-prop" aria-label={`Proposed update for ${p.company}`}>

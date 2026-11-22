@@ -31,7 +31,8 @@ function createWindow(): BrowserWindow {
     },
   })
   if (!isHeadless()) win.once('ready-to-show', () => win.show())
-  const snapshot = process.env['TRACKER_SNAPSHOT']
+  // Dev aids (screenshots) are ignored in packaged builds.
+  const snapshot = app.isPackaged ? undefined : process.env['TRACKER_SNAPSHOT']
   if (snapshot) {
     // Dev aid: render, save a PNG of the window, quit. See scripts/snapshot.mjs.
     win.webContents.once('did-finish-load', () => {
@@ -58,6 +59,21 @@ function createWindow(): BrowserWindow {
 
 app.setName('Internship Tracker')
 
+// One instance at a time: two copies writing the same database would lose data.
+// Screenshot runs use a throwaway demo database, so they may run side by side.
+const demo = process.env['TRACKER_DEMO'] === '1'
+if (!demo && !app.requestSingleInstanceLock()) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    if (!mainWindow) return
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.show()
+    mainWindow.focus()
+  })
+  void start()
+}
+
 async function start(): Promise<void> {
   if (isHeadless() && process.platform === 'darwin') app.setActivationPolicy('prohibited')
   await app.whenReady()
@@ -65,7 +81,6 @@ async function start(): Promise<void> {
   const theme = process.env['TRACKER_THEME']
   if (theme === 'light' || theme === 'dark') nativeTheme.themeSource = theme
   const dataDir = app.getPath('userData')
-  const demo = process.env['TRACKER_DEMO'] === '1'
   const store = await openStore(demo ? null : join(dataDir, 'tracker.sqlite'))
   store.migrate([settingsMigration, secretsMigration, ...features.flatMap((f) => f.migrations)])
 
@@ -102,5 +117,3 @@ async function start(): Promise<void> {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
-
-void start()

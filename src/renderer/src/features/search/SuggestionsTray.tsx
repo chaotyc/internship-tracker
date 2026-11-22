@@ -38,16 +38,6 @@ export function titleTerm(title: string): string {
   return core.replace(/\s+/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
 }
 
-/** Posted age first so freshness survives, then location, then pay: ["2d ago", "San Jose, CA", "$50–60/hr"]. */
-export function metaParts(s: Pick<Suggestion, 'postedAt' | 'location' | 'pay'>): string[] {
-  return [s.postedAt && `Posted ${ago(s.postedAt)}`, s.location, s.pay].filter((p): p is string => !!p)
-}
-
-/** The full meta line, "2d ago · San Jose, CA · $50–60/hr". */
-export function metaLine(s: Pick<Suggestion, 'postedAt' | 'location' | 'pay'>): string {
-  return metaParts(s).join(' · ')
-}
-
 /** The board card's fit meter with the label this role gets when added, then the score: "▮▮▮▮ Strong fit · 91%". */
 function MatchMeter({ score, rankedBy }: { score: number; rankedBy?: Suggestion['rankedBy'] }) {
   const pct = Math.round(Math.max(0, Math.min(100, score)))

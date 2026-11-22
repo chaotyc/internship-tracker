@@ -1,8 +1,6 @@
 import type { CSSProperties } from 'react'
 import { STAGES, type StageKey } from '@shared/roles'
-import { localIso } from '@shared/today'
 import { Icon } from '@renderer/components/Icon'
-import { since } from '@renderer/lib/format'
 
 export const stageLabel = (k: StageKey) => STAGES.find((s) => s.key === k)?.label ?? k
 export const stageStyle = (k: StageKey) => ({ ['--stage' as string]: `var(--stage-${k})` }) as CSSProperties
@@ -18,12 +16,6 @@ export function ShieldIcon(props: { className?: string }) {
       <path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z" />
     </svg>
   )
-}
-
-/** "just now", "5 min ago", "2 h ago", or a date. */
-/** Kept for existing imports; the one relative-time rule lives in lib/format. */
-export function sinceLabel(iso: string, now = Date.now()): string {
-  return since(iso, now)
 }
 
 /** Reads a dropped .eml (or .txt) file; refuses anything else or anything huge. */

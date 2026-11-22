@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState, type DragEvent, type K
 import { Icon } from '@renderer/components/Icon'
 import { api } from '@renderer/lib/api'
 import { PaneHeader } from '@renderer/features/settings/PaneHeader'
-import { ChipInput, fullDate, Note, words } from '@renderer/features/settings/ProfilePanel'
+import { ChipInput, fullDate, Note } from '@renderer/features/settings/ProfilePanel'
 import {
   RESUME_EXTENSIONS,
   RESUME_MAX_BYTES,

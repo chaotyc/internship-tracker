@@ -26,12 +26,6 @@ export interface WatchCompany {
 /** Where autosearch found a role: a watched job board, a watched Workday site, or the SimplifyJobs community list. */
 export type SuggestionSource = 'boards' | 'workday' | 'simplify'
 
-export const SOURCE_LABELS: Record<SuggestionSource, string> = {
-  boards: 'Job boards',
-  workday: 'Workday',
-  simplify: 'SimplifyJobs list',
-}
-
 /** The community internship list autosearch can use as a local index of links. */
 export const SIMPLIFY_REPO = 'https://github.com/SimplifyJobs/Summer2027-Internships'
 export const SIMPLIFY_NOTE =

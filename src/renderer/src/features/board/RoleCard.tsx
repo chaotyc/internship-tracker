@@ -3,9 +3,6 @@ import type { Fit, Role } from '@shared/roles'
 import { Icon } from '@renderer/components/Icon'
 import { ago, daysUntil, deadlineLabel, deadlineTone, dueLabel, hueFor, monogram, shortDate } from '@renderer/lib/format'
 
-// Kept for features that import it from here.
-export { dueLabel }
-
 interface Props extends Omit<HTMLAttributes<HTMLElement>, 'role'> {
   role: Role
   ghost?: boolean

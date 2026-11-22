@@ -4,9 +4,9 @@ import { Icon } from '@renderer/components/Icon'
 import { Switch } from '@renderer/components/Switch'
 import { useToast } from '@renderer/components/Toast'
 import { api, useRoles } from '@renderer/lib/api'
+import { since } from '@renderer/lib/format'
 import { PaneHeader } from '@renderer/features/settings/PaneHeader'
 import { EmailDrop } from './EmailDrop'
-import { sinceLabel } from './parts'
 import '@renderer/features/settings/profile.css'
 import './today.css'
 
@@ -154,11 +154,11 @@ function Connected({ status, onStatus, onSettings }: { status: EmailStatus; onSt
             <small>Checking for new emails…</small>
           ) : error ? (
             <small className="is-error">
-              Last check {sinceLabel(status.lastCheck)}: {error}
+              Last check {since(status.lastCheck)}: {error}
             </small>
           ) : status.lastCheck ? (
             <small>
-              Checked {sinceLabel(status.lastCheck)}. {status.lastResult}
+              Checked {since(status.lastCheck)}. {status.lastResult}
             </small>
           ) : (
             <small>Not checked yet.</small>
