@@ -1,124 +1,190 @@
-/** Autosearch: read the watched boards, keep internships that fit, rank them against the profile. */
-import type { Profile } from '@shared/profile'
-import type { AutosearchProgress, Suggestion, WatchCompany } from '@shared/search'
+/**
+ * Autosearch: read the enabled sources (watched job boards, watched Workday sites, the SimplifyJobs list),
+ * keep internships that fit, and rank the new ones against each application track.
+ */
+import { DEFAULT_TRACK_ID, type ApplicationTrack, type Profile } from '@shared/profile'
+import { DEFAULT_SEARCH_OPTIONS, boardKey, type AutosearchProgress, type Suggestion, type SuggestionSource, type WatchCompany } from '@shared/search'
 import type { AiService } from '../ai/service'
-import { fetchBoard, type JobPosting } from './boards'
-import { boilerplateKeywords, filterPostings, rankByKeywords, type Scored } from './filter'
-import { profileForAi } from './fromLink'
+import { fetchBoard, fetchPosting, parsePostingUrl, type JobPosting } from './boards'
+import { boilerplateKeywords, excludedBy, filterPostings, isInternshipLike, matchesLocation, matchesTerm, rankByKeywords } from './filter'
 import { CancelledError, mapLimit } from './http'
+import { bestTrackByKeywords, prefsForAllTracks, rankWithAi, type Dismissal, type TrackScored } from './rank'
+import { SIMPLIFY_SOURCE_KEY, knownBoardLink, listingsToPostings, type CachedListing } from './simplify'
 import { linkKey } from './suggestions'
 
+export { rankWithAi }
+
 export const RANK_LIMIT = 40
+/** SimplifyJobs entries have no description; this many of the best are read from their board before ranking. */
+export const ENRICH_LIMIT = 15
 
 export interface AutosearchDeps {
   watchlist: WatchCompany[]
   profile: Profile
+  /** From ctx.services.profile.tracks(); always at least one. Defaults to none (profile only). */
+  tracks?: ApplicationTrack[]
+  /** The last ~20 dismissed suggestions, sent to the AI as negative examples. */
+  dismissed?: Dismissal[]
+  sources?: Record<SuggestionSource, boolean>
   ai: AiService
   /** True when the link is already on the board. */
   onBoard: (link: string) => boolean
   /** Normalized links the user already added or dismissed. */
   settled: Set<string>
+  /** Normalized links already waiting as suggestions; they are kept as they are, not ranked again. */
+  pending?: Set<string>
   progress: (p: AutosearchProgress) => void
   signal: AbortSignal
   fetchBoard?: typeof fetchBoard
+  fetchPosting?: typeof fetchPosting
+  /** Reads the SimplifyJobs list (cached, ETag-checked). Required when the simplify source is on. */
+  loadSimplify?: (signal: AbortSignal) => Promise<{ items: CachedListing[]; stale: string }>
 }
 
 export type NewSuggestion = Omit<Suggestion, 'id' | 'status' | 'foundAt'>
+
+/** What one source returned, for the per-board status and the per-source merge. */
+export interface SourceRead {
+  key: string
+  name: string
+  source: SuggestionSource
+  ok: boolean
+  error: string
+  /** True when `links` is the source's whole current list, so suggestions missing from it can go. */
+  complete: boolean
+  links: Set<string>
+}
 
 export interface AutosearchOutcome {
   suggestions: NewSuggestion[]
   rankedBy: 'ai' | 'keywords'
   failed: { company: string; detail: string }[]
+  reads: SourceRead[]
+  /** False when nothing new passed the filter, so no AI call was made. */
+  aiCalled: boolean
   summary: string
 }
 
 const plural = (n: number, w: string, many = w + 's') => `${n} ${n === 1 ? w : many}`
 
-const RANK_SYSTEM = `You rank internship postings for one applicant. Score each posting 0-100 for how well it fits the applicant's background, target roles, term, location and pay, and give one plain sentence saying why (name concrete overlaps or the main gap). Be calibrated: 85+ only for close matches. Reply with JSON: {"ranked":[{"i":<index>,"score":<0-100>,"reason":"<one sentence>"}]} covering every index.`
+interface Unit {
+  key: string
+  name: string
+  source: SuggestionSource
+  read: (signal: AbortSignal) => Promise<{ postings: JobPosting[]; complete: boolean; links?: string[]; stale?: string }>
+}
 
-/** Asks the AI to score the candidates. Returns null when the AI isn't available or answers badly. */
-export async function rankWithAi(
-  candidates: Scored[],
-  profile: Profile,
-  ai: AiService,
-  signal: AbortSignal,
-): Promise<{ ranked: Scored[] } | { error: string }> {
-  const lines = candidates.map((c, i) => {
-    const p = c.posting
-    const desc = p.description.replace(/\s+/g, ' ').slice(0, 500)
-    return `[${i}] ${p.company} — ${p.title} — ${p.location || 'location not listed'}${p.compensation ? ` — ${p.compensation}` : ''}${p.postedAt ? ` — posted ${p.postedAt}` : ''}\n${desc}`
-  })
-  const content = `Applicant:\n${profileForAi(profile, 6000) || '(no profile details set up)'}\n\nPostings:\n${lines.join('\n\n')}`
-  try {
-    const out = await ai.json<{ ranked?: { i?: unknown; score?: unknown; reason?: unknown }[] }>(
-      { system: RANK_SYSTEM, messages: [{ role: 'user', content }], json: true },
-      { signal },
-    )
-    const ranked: Scored[] = []
-    const seen = new Set<number>()
-    for (const r of out?.ranked ?? []) {
-      const i = typeof r.i === 'number' ? r.i : Number(r.i)
-      if (!Number.isInteger(i) || i < 0 || i >= candidates.length || seen.has(i)) continue
-      seen.add(i)
-      const score = Math.max(0, Math.min(100, Math.round(Number(r.score) || 0)))
-      const reason = typeof r.reason === 'string' && r.reason.trim() ? r.reason.replace(/\s+/g, ' ').trim().slice(0, 280) : candidates[i]!.reason
-      ranked.push({ posting: candidates[i]!.posting, score, reason })
-    }
-    if (!ranked.length) return { error: 'The AI reply had no rankings.' }
-    return { ranked: ranked.sort((a, b) => b.score - a.score) }
-  } catch (err) {
-    if (signal.aborted) throw new CancelledError()
-    return { error: err instanceof Error ? err.message : String(err) }
-  }
+interface Tagged {
+  source: SuggestionSource
+  sourceKey: string
 }
 
 export async function runAutosearch(deps: AutosearchDeps): Promise<AutosearchOutcome> {
   const { watchlist, profile, signal, progress } = deps
+  const sources = deps.sources ?? DEFAULT_SEARCH_OPTIONS.sources
+  const tracks = deps.tracks ?? []
   const read = deps.fetchBoard ?? fetchBoard
   const check = () => {
     if (signal.aborted) throw new CancelledError()
   }
-  if (!watchlist.length) throw new Error('Add companies in Settings → Job boards, then run autosearch.')
+  const prefs = prefsForAllTracks(profile.preferences, tracks)
+
+  // Workday has no "everything" call: search for "intern" and the target roles, and only read details
+  // for list entries whose title, term and place already fit.
+  const workdayQueries = ['intern', ...prefs.targetRoles].slice(0, 4)
+  const workdayKeep = (p: JobPosting) =>
+    isInternshipLike(p) && matchesTerm(p.title, prefs.term) && matchesLocation(p.location, prefs) && !excludedBy(p, prefs.excludeKeywords)
+
+  const units: Unit[] = []
+  for (const c of watchlist) {
+    const source: SuggestionSource = c.board === 'workday' ? 'workday' : 'boards'
+    if (!sources[source]) continue
+    units.push({
+      key: boardKey(c),
+      name: c.name,
+      source,
+      read: async (s) => ({
+        postings: await read({ board: c.board, slug: c.slug }, c.name, {
+          signal: s,
+          ...(c.board === 'workday' ? { workday: { queries: workdayQueries, keep: workdayKeep, maxDetails: 25 } } : {}),
+        }),
+        // A Workday search shows part of the site, so a missing posting doesn't mean it closed.
+        complete: c.board !== 'workday',
+      }),
+    })
+  }
+  if (sources.simplify && deps.loadSimplify) {
+    const load = deps.loadSimplify
+    units.push({
+      key: SIMPLIFY_SOURCE_KEY,
+      name: 'the SimplifyJobs list',
+      source: 'simplify',
+      read: async (s) => {
+        const { items, stale } = await load(s)
+        return { postings: listingsToPostings(items, prefs.term), complete: !stale, links: items.map((i) => i.url), stale }
+      },
+    })
+  }
+  if (!units.length) {
+    if (!watchlist.length) throw new Error('Add companies in Settings → Job boards, then run autosearch.')
+    throw new Error('Every source is turned off. Turn one on in Settings → Job boards.')
+  }
 
   let done = 0
   const failed: AutosearchOutcome['failed'] = []
-  progress({ phase: 'fetching', message: `Reading ${plural(watchlist.length, 'job board')}…`, done: 0, total: watchlist.length })
-  const lists = await mapLimit(watchlist, 4, async (c) => {
+  const reads: SourceRead[] = []
+  const tags = new Map<JobPosting, Tagged>()
+  const what = units.every((u) => u.source !== 'simplify') ? 'job board' : 'source'
+  progress({ phase: 'fetching', message: `Reading ${plural(units.length, what)}…`, done: 0, total: units.length })
+  const lists = await mapLimit(units, 4, async (u) => {
     check()
     try {
-      return await read({ board: c.board, slug: c.slug }, c.name, { signal })
+      const r = await u.read(signal)
+      for (const p of r.postings) tags.set(p, { source: u.source, sourceKey: u.key })
+      const links = new Set((r.links ?? r.postings.map((p) => p.url)).map(linkKey))
+      reads.push({ key: u.key, name: u.name, source: u.source, ok: !r.stale, error: r.stale ?? '', complete: r.complete, links })
+      return r.postings
     } catch (err) {
       if (signal.aborted) throw new CancelledError()
-      failed.push({ company: c.name, detail: err instanceof Error ? err.message : String(err) })
+      const detail = err instanceof Error ? err.message : String(err)
+      failed.push({ company: u.name === 'the SimplifyJobs list' ? 'SimplifyJobs list' : u.name, detail })
+      reads.push({ key: u.key, name: u.name, source: u.source, ok: false, error: detail, complete: false, links: new Set() })
       return [] as JobPosting[]
     } finally {
       done++
-      if (!signal.aborted) progress({ phase: 'fetching', message: `Read ${c.name}`, done, total: watchlist.length })
+      if (!signal.aborted) progress({ phase: 'fetching', message: `Read ${u.name}`, done, total: units.length })
     }
   })
   check()
-  if (failed.length === watchlist.length) throw new Error(`Couldn't read any job boards. ${failed[0]?.detail ?? ''}`.trim())
+  if (failed.length === units.length) throw new Error(`Couldn't read any job boards. ${failed[0]?.detail ?? ''}`.trim())
 
   const all = lists.flat()
   progress({ phase: 'filtering', message: `Filtering ${plural(all.length, 'posting')}…`, done: 0, total: all.length })
-  const prefs = profile.preferences
   const { kept } = filterPostings(all, prefs)
   const seen = new Set<string>()
   const fresh = kept.filter((p) => {
     const k = linkKey(p.url)
-    if (seen.has(k) || deps.settled.has(k) || deps.onBoard(p.url)) return false
+    if (seen.has(k) || deps.settled.has(k) || deps.pending?.has(k) || deps.onBoard(p.url)) return false
     seen.add(k)
     return true
   })
   progress({ phase: 'filtering', message: `${plural(fresh.length, 'new internship')} match your preferences`, done: all.length, total: all.length })
 
-  const candidates = rankByKeywords(fresh, prefs, { limit: RANK_LIMIT, boilerplate: boilerplateKeywords(all, prefs) })
+  const boilerplate = boilerplateKeywords(all, prefs)
+  let candidates: TrackScored[] = rankByKeywords(fresh, prefs, { limit: RANK_LIMIT, boilerplate })
+  candidates = await enrich(candidates, deps, tags)
+  check()
+  // Best track per posting by keywords: the fallback ranking, and the AI's default when it names no track.
+  candidates = candidates.map((c) => bestTrackByKeywords(c.posting, profile.preferences, tracks, undefined, boilerplate.get(c.posting.company)))
+  candidates.sort((a, b) => b.score - a.score || b.posting.postedAt.localeCompare(a.posting.postedAt))
+
   let ranked = candidates
   let rankedBy: 'ai' | 'keywords' = 'keywords'
   let note = ''
+  // Nothing new passed the filter: no AI call.
   if (candidates.length) {
     progress({ phase: 'ranking', message: `Ranking ${plural(candidates.length, 'role')} against your profile…`, done: 0, total: candidates.length })
-    const res = await rankWithAi(candidates, profile, deps.ai, signal)
+    const res = await rankWithAi(candidates, profile, deps.ai, signal, tracks, deps.dismissed ?? [])
     check()
     if ('ranked' in res) {
       ranked = res.ranked
@@ -130,22 +196,62 @@ export async function runAutosearch(deps: AutosearchDeps): Promise<AutosearchOut
     }
   }
 
-  const suggestions: NewSuggestion[] = ranked.map((r) => ({
-    company: r.posting.company,
-    title: r.posting.title,
-    link: r.posting.url,
-    location: r.posting.location,
-    postedAt: r.posting.postedAt,
-    score: r.score,
-    reason: r.reason,
-    pay: r.posting.compensation,
-    board: r.posting.board,
-    rankedBy,
-  }))
-  const companiesRead = watchlist.length - failed.length
+  const named = profile.tracks.length > 0
+  const suggestions: NewSuggestion[] = ranked.map((r) => {
+    const tag = tags.get(r.posting)
+    const track = r.trackId ? tracks.find((t) => t.id === r.trackId) : undefined
+    const board = tag?.source === 'simplify' ? parsePostingUrl(r.posting.url)?.board : r.posting.board
+    return {
+      company: r.posting.company,
+      title: r.posting.title,
+      link: r.posting.url,
+      location: r.posting.location,
+      postedAt: r.posting.postedAt,
+      score: r.score,
+      reason: r.reason,
+      pay: r.posting.compensation,
+      ...(board ? { board } : {}),
+      rankedBy,
+      ...(tag ? { source: tag.source, sourceKey: tag.sourceKey } : {}),
+      ...(track ? { trackId: track.id, ...(named && track.id !== DEFAULT_TRACK_ID ? { trackName: track.name } : {}) } : {}),
+    }
+  })
+  const boardsRead = reads.filter((r) => r.source !== 'simplify' && r.ok).length
+  const listRead = reads.some((r) => r.source === 'simplify' && r.links.size)
+  const where = [boardsRead && plural(boardsRead, 'company', 'companies'), listRead && 'the SimplifyJobs list'].filter(Boolean).join(' and ') || 'your sources'
   const summary =
-    `${suggestions.length ? `Found ${plural(suggestions.length, 'role')}` : 'No new matching roles'} across ${plural(companiesRead, 'company', 'companies')}.` +
+    `${suggestions.length ? `Found ${plural(suggestions.length, 'role')}` : 'No new matching roles'} across ${where}.` +
     note +
     (failed.length ? ` Couldn't read ${failed.map((f) => f.company).join(', ')}.` : '')
-  return { suggestions, rankedBy, failed, summary }
+  return { suggestions, rankedBy, failed, reads, aiCalled: candidates.length > 0, summary }
+}
+
+/**
+ * SimplifyJobs entries carry no description. For the best few whose link is on a board the app reads,
+ * fetch the posting (two at a time) so ranking sees its requirements; drop ones the board says closed.
+ */
+async function enrich(candidates: TrackScored[], deps: AutosearchDeps, tags: Map<JobPosting, Tagged>): Promise<TrackScored[]> {
+  const get = deps.fetchPosting ?? fetchPosting
+  const targets = candidates
+    .filter((c) => tags.get(c.posting)?.source === 'simplify' && !c.posting.description && knownBoardLink(c.posting.url))
+    .slice(0, ENRICH_LIMIT)
+  if (!targets.length) return candidates
+  const closed = new Set<JobPosting>()
+  await mapLimit(targets, 2, async (c) => {
+    if (deps.signal.aborted) return
+    const ref = parsePostingUrl(c.posting.url)
+    if (!ref) return
+    try {
+      const full = await get(ref, { signal: deps.signal, timeoutMs: 20_000 })
+      if (!full) closed.add(c.posting)
+      else {
+        c.posting.description = full.description
+        if (!c.posting.compensation) c.posting.compensation = full.compensation
+        if (!c.posting.location) c.posting.location = full.location
+      }
+    } catch {
+      /* keep the list entry as it is */
+    }
+  })
+  return candidates.filter((c) => !closed.has(c.posting))
 }

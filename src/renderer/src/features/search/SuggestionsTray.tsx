@@ -11,6 +11,12 @@ import './search.css'
 
 const RANKED_BY: Record<NonNullable<Suggestion['rankedBy']>, string> = { ai: 'AI', keywords: 'keywords' }
 
+/** "Greenhouse", "Workday" or "via SimplifyJobs list", plus the track it fits. */
+export function sourceLine(s: Pick<Suggestion, 'source' | 'board' | 'trackName'>): string {
+  const from = s.source === 'simplify' ? 'via SimplifyJobs list' : s.board ? BOARD_LABELS[s.board] : ''
+  return [from, s.trackName && `${s.trackName} track`].filter(Boolean).join(' · ')
+}
+
 /** Same four-step scale as the board's fit meter. */
 export function fitLevel(score: number): number {
   return score >= 85 ? 4 : score >= 70 ? 3 : score >= 50 ? 2 : 1
@@ -183,9 +189,8 @@ export function SuggestionsTray({ open, onClose }: { open: boolean; onClose: () 
           className={`tray-scroll${fade.start ? ' fade-start' : ''}${fade.end ? ' fade-end' : ''}`}
         >
           {items.map((s) => {
-            const meta = [s.location, s.postedAt && `Posted ${ago(s.postedAt)}`, s.pay, s.board && BOARD_LABELS[s.board]]
-              .filter(Boolean)
-              .join(' · ')
+            const meta = [s.location, s.postedAt && `Posted ${ago(s.postedAt)}`, s.pay].filter(Boolean).join(' · ')
+            const from = sourceLine(s)
             return (
               <article key={s.id} className="sugg" aria-label={`${s.company}, ${s.title}`}>
                 <div className="sugg-top">
@@ -210,6 +215,9 @@ export function SuggestionsTray({ open, onClose }: { open: boolean; onClose: () 
                 <p className="sugg-reason" title={s.reason}>
                   {s.reason}
                 </p>
+                <div className="sugg-source" title={from}>
+                  {from || '\u00a0'}
+                </div>
                 <div className="sugg-actions">
                   <button type="button" className="btn btn-sm" disabled={busy.has(s.id)} onClick={() => act(s, 'add')}>
                     <Icon name="plus" />

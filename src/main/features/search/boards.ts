@@ -1,7 +1,8 @@
-/** Public job-board APIs (Greenhouse, Ashby, Lever): URL parsing, clients and one normalized posting shape. */
-import type { BoardKind } from '@shared/search'
+/** Public job-board APIs (Greenhouse, Ashby, Lever, Workday): URL parsing, clients and one normalized posting shape. */
+import { SUGGESTED_COMPANIES, type BoardKind } from '@shared/search'
 import { HttpError, getJson, getText, type RequestOptions } from './http'
 import { escapedHtmlToText, formatPay, htmlToText, isoDay, metaContent, pageTitle, payFromText } from './html'
+import { fetchWorkdayBoard, fetchWorkdayDetail, parseWorkdaySlug, parseWorkdayUrl, workdayCompanyName, workdaySiteUrl, workdaySlug, type WorkdaySearch } from './workday'
 
 export interface JobPosting {
   board: BoardKind
@@ -20,7 +21,10 @@ export interface JobPosting {
   deadline: string
 }
 
-/** A specific posting on a known board. `slug` is null for embedded links (?gh_jid=) until resolved. */
+/**
+ * A specific posting on a known board. `slug` is null for embedded links (?gh_jid=) until resolved.
+ * Workday: slug is "{tenant}.wd{N}/{site}" and id is the path after /job/.
+ */
 export interface PostingRef {
   board: BoardKind
   slug: string | null
@@ -56,6 +60,11 @@ export function parsePostingUrl(input: string): PostingRef | null {
   if (!u) return null
   const host = u.hostname.toLowerCase()
   const p = parts(u)
+
+  if (host.endsWith('.myworkdayjobs.com')) {
+    const wd = parseWorkdayUrl(input)
+    return wd?.path ? { board: 'workday', slug: workdaySlug(wd), id: wd.path } : null
+  }
 
   if (/(^|\.)greenhouse\.io$/.test(host)) {
     // boards.greenhouse.io/embed/job_app?for=acme&token=123
@@ -100,6 +109,10 @@ export function parseBoardUrl(input: string): BoardRef | null {
   if (!u) return null
   const host = u.hostname.toLowerCase()
   const p = parts(u)
+  if (host.endsWith('.myworkdayjobs.com')) {
+    const wd = parseWorkdayUrl(input)
+    return wd ? { board: 'workday', slug: workdaySlug(wd) } : null
+  }
   if (/(^|\.)greenhouse\.io$/.test(host)) {
     if (p[0] === 'embed') {
       const slug = u.searchParams.get('for')
@@ -128,6 +141,9 @@ export function findBoardInHtml(html: string): BoardRef | null {
   if (ash && ash[1] !== 'api') return { board: 'ashby', slug: ash[1]! }
   const lever = /jobs\.(eu\.)?lever\.co\/([A-Za-z0-9._-]+)/i.exec(html)
   if (lever) return { board: 'lever', slug: lever[2]!, ...(lever[1] ? { eu: true } : {}) }
+  const wd = /https?:\/\/[a-z0-9-]+\.wd\d+\.myworkdayjobs\.com\/(?:[a-z]{2}-[A-Z]{2}\/)?[A-Za-z0-9_-]+/i.exec(html)
+  const site = wd ? parseWorkdayUrl(wd[0]) : null
+  if (site) return { board: 'workday', slug: workdaySlug(site) }
   return null
 }
 
@@ -267,9 +283,25 @@ export function normalizeLever(j: LeverJob, company: string): JobPosting {
 
 // ---------- Clients ----------
 
-/** Every open posting on a board. Throws HttpError(404) when the board doesn't exist. */
-export async function fetchBoard(ref: BoardRef, company: string, opts: RequestOptions = {}): Promise<JobPosting[]> {
-  const o = { timeoutMs: BOARD_TIMEOUT, ...opts }
+/** Name for a Workday site: the suggested-company name when it is one, else the tenant. */
+export function workdayName(slug: string): string {
+  const known = SUGGESTED_COMPANIES.find((c) => c.board === 'workday' && c.slug.toLowerCase() === slug.toLowerCase())
+  const site = parseWorkdaySlug(slug)
+  return known?.name ?? (site ? workdayCompanyName(site) : titleizeSlug(slug))
+}
+
+/**
+ * Every open posting on a board. Throws HttpError(404) when the board doesn't exist.
+ * Workday has no "list everything" call, so it searches with `workday.queries` (default "intern").
+ */
+export async function fetchBoard(ref: BoardRef, company: string, opts: RequestOptions & { workday?: WorkdaySearch } = {}): Promise<JobPosting[]> {
+  const { workday, ...rest } = opts
+  const o = { timeoutMs: BOARD_TIMEOUT, ...rest }
+  if (ref.board === 'workday') {
+    const site = parseWorkdaySlug(ref.slug)
+    if (!site) throw new Error(`"${ref.slug}" isn't a Workday careers site.`)
+    return fetchWorkdayBoard(site, company, { ...o, timeoutMs: 20_000, search: workday })
+  }
   if (ref.board === 'greenhouse') {
     const d = await getJson<{ jobs: GhJob[] }>(`https://boards-api.greenhouse.io/v1/boards/${enc(ref.slug)}/jobs?content=true`, o)
     return (d.jobs ?? []).map((j) => normalizeGreenhouse(j, company))
@@ -288,6 +320,14 @@ export async function boardName(ref: BoardRef, opts: RequestOptions = {}): Promi
     if (ref.board === 'greenhouse') {
       const d = await getJson<{ name?: string }>(`https://boards-api.greenhouse.io/v1/boards/${enc(ref.slug)}`, opts)
       if (d.name?.trim()) return d.name.trim()
+    } else if (ref.board === 'workday') {
+      const site = parseWorkdaySlug(ref.slug)
+      const known = SUGGESTED_COMPANIES.find((c) => c.board === 'workday' && c.slug.toLowerCase() === ref.slug.toLowerCase())
+      if (known || !site) return workdayName(ref.slug)
+      const { text } = await getText(workdaySiteUrl(site), opts)
+      const t = (metaContent(text, 'og:title') || pageTitle(text)).replace(/^(?:careers|jobs)\s+(?:at|@)\s+/i, '').replace(/\s*(?:[-|–]\s*)?(?:Jobs|Careers|Job Board)\s*$/i, '').trim()
+      if (t && t.length <= 60 && !/^(?:careers|jobs|workday)$/i.test(t)) return t
+      return workdayName(ref.slug)
     } else {
       const page = ref.board === 'ashby' ? `https://jobs.ashbyhq.com/${enc(ref.slug)}` : `https://jobs.${ref.eu ? 'eu.' : ''}lever.co/${enc(ref.slug)}`
       const { text } = await getText(page, opts)
@@ -297,7 +337,7 @@ export async function boardName(ref: BoardRef, opts: RequestOptions = {}): Promi
   } catch {
     /* fall through */
   }
-  return titleizeSlug(ref.slug)
+  return ref.board === 'workday' ? workdayName(ref.slug) : titleizeSlug(ref.slug)
 }
 
 /** Looks for a Greenhouse token or Ashby org on the page an embedded link points to, then by the site's own name. */
@@ -333,6 +373,12 @@ export async function fetchPosting(ref: PostingRef, opts: RequestOptions & { pag
   if (!slug && opts.pageUrl) slug = await resolveSlug(ref, opts.pageUrl, opts)
   if (!slug) throw new Error("Couldn't tell which job board this page uses.")
   const board: BoardRef = { board: ref.board, slug, ...(ref.eu ? { eu: true } : {}) }
+
+  if (ref.board === 'workday') {
+    const site = parseWorkdaySlug(slug)
+    if (!site) throw new Error("Couldn't read that Workday link.")
+    return fetchWorkdayDetail({ ...site, path: ref.id }, workdayName(slug), opts)
+  }
 
   if (ref.board === 'greenhouse') {
     try {
