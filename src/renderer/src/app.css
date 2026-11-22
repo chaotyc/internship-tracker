@@ -550,7 +550,7 @@
 /* The first group opens the form: no rule, and a little space before its first field label. */
 .role-form > .form-group:first-child {
   margin: 0 0 -4px;
-  padding-top: 0;
+  padding-top: 8px;
   border-top: 0;
 }
 /* Delete stays quiet (red text, no frame) until hovered; the confirm step is unchanged. */

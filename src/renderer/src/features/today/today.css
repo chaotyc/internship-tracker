@@ -898,8 +898,14 @@
   align-items: center;
   gap: 3px;
   margin-left: 8px;
-  color: var(--warn);
+  color: var(--ink-3);
   font-weight: 500;
+}
+.td-row-deadline.warn {
+  color: var(--warn);
+}
+.td-row-deadline.danger {
+  color: var(--danger);
 }
 .td-row-deadline svg {
   width: 11px;

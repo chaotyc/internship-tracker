@@ -14,7 +14,7 @@ import {
 import { Icon } from '@renderer/components/Icon'
 import { useToast } from '@renderer/components/Toast'
 import { api, useRoles } from '@renderer/lib/api'
-import { dueLabel, shortDate } from '@renderer/lib/format'
+import { deadlineTone, dueLabel, shortDate } from '@renderer/lib/format'
 import { Monogram } from '@renderer/features/board/RoleCard'
 import { EmailDrop } from './EmailDrop'
 import { ProposalCard } from './ProposalCard'
@@ -330,7 +330,7 @@ function Row({
         <div className="td-row-sub">
           <strong>{item.company}</strong> · {item.title}
           {item.deadline && (
-            <span className="td-row-deadline">
+            <span className={`td-row-deadline ${deadlineTone(item.deadline)}`}>
               <Icon name="flag" />
               Due {dueLabel(item.deadline, '')}
             </span>
@@ -434,7 +434,7 @@ function TodayEmpty({ onPaste, hasRoles }: { onPaste: () => void; hasRoles: bool
       <div className="td-empty-actions">
         <button type="button" className="btn" onClick={onPaste}>
           <MailIcon className="td-btn-icon" />
-          Paste an email
+          Add an email
         </button>
         <button type="button" className="btn btn-primary" onClick={() => openSettings('email')}>
           Connect email

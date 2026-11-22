@@ -14,6 +14,13 @@ export function daysUntil(iso: string, now = new Date()): number | null {
   return Math.round((d.getTime() - today.getTime()) / DAY)
 }
 
+/** One colour rule for deadlines everywhere: red within 3 days or passed, amber within 10, plain after. */
+export function deadlineTone(iso: string): '' | 'danger' | 'warn' {
+  const d = daysUntil(iso)
+  if (d == null) return ''
+  return d <= 3 ? 'danger' : d <= 10 ? 'warn' : ''
+}
+
 export function shortDate(iso: string): string {
   const d = parseDay(iso)
   if (!d) return iso
@@ -33,9 +40,11 @@ export function ago(iso: string): string {
   return shortDate(iso)
 }
 
-/** Stable hue for a company's monogram. */
-/** Cool hues only, so a company badge never looks like an amber or red urgency signal. */
-const MONO_HUES = [165, 185, 200, 215, 235, 255, 275]
+/**
+ * Stable hue for a company's monogram: teal to blue only, so a company badge never
+ * looks like an urgency signal (amber, red) or the Interviewing stage (violet).
+ */
+const MONO_HUES = [165, 180, 195, 210, 225]
 
 export function hueFor(name: string): number {
   let h = 0

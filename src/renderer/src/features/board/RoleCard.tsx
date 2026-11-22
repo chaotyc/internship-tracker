@@ -1,7 +1,7 @@
 import type { HTMLAttributes } from 'react'
 import type { Fit, Role } from '@shared/roles'
 import { Icon } from '@renderer/components/Icon'
-import { ago, daysUntil, dueLabel, hueFor, monogram, shortDate } from '@renderer/lib/format'
+import { ago, daysUntil, deadlineTone, dueLabel, hueFor, monogram, shortDate } from '@renderer/lib/format'
 
 // Kept for features that import it from here.
 export { dueLabel }
@@ -53,7 +53,7 @@ function DeadlineChip({ deadline }: { deadline: string }) {
   if (d < 0) return <span className="chip danger">Deadline passed</span>
   const label = `Due ${dueLabel(deadline, '')}`
   // Only near deadlines get a color; distant ones are plain facts.
-  const tone = d <= 3 ? 'danger' : d <= 10 ? 'warn' : ''
+  const tone = deadlineTone(deadline)
   return (
     <span className={`chip card-due ${tone}`} title={`Deadline ${shortDate(deadline)}`}>
       <Icon name="flag" />

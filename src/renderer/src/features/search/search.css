@@ -647,6 +647,7 @@
   overflow: hidden;
 }
 .watch-list li {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -681,12 +682,21 @@
   color: var(--accent);
   text-decoration: underline;
 }
+/* The remove button takes the board badge's place on hover, so the badge sits flush otherwise. */
 .watch-list .icon-btn {
-  opacity: 0.6;
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
 }
 .watch-list li:hover .icon-btn,
-.watch-list .icon-btn:focus-visible {
+.watch-list li:focus-within .icon-btn {
   opacity: 1;
+}
+.watch-list li:hover .board-badge,
+.watch-list li:focus-within .board-badge {
+  visibility: hidden;
 }
 .watch-list .icon-btn:hover {
   color: var(--danger);
