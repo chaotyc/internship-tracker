@@ -175,8 +175,8 @@ export function RoleCard({ role, ghost, ...rest }: Props) {
             </span>
           )}
           {!saved && role.appliedOn && role.stage !== 'closed' && <span className="card-age" title={`Applied ${ago(role.appliedOn)}`}>
-              <span className="card-age-prefix">Applied </span>
-              {ago(role.appliedOn)}
+              Applied <span className="card-age-full">{ago(role.appliedOn)}</span>
+              <span className="card-age-short">{ago(role.appliedOn).replace(/ ago$/, '').replace(/^yesterday$/, '1d').replace(/^today$/, 'today')}</span>
             </span>}
         </div>
       )}

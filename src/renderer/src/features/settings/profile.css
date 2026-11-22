@@ -705,3 +705,18 @@
     background: var(--ink);
   }
 }
+
+.pf-progress.is-ready {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ok);
+}
+.pf-progress.is-ready svg {
+  width: 13px;
+  height: 13px;
+}
+.pf-progress.is-ready small {
+  color: var(--ok);
+  font-weight: 500;
+}

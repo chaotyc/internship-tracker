@@ -26,6 +26,13 @@ textarea {
 button {
   cursor: pointer;
 }
+a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+}
+a:hover {
+  color: var(--accent-hover);
+}
 :focus-visible {
   outline: none;
   box-shadow: var(--ring);
@@ -80,9 +87,10 @@ button {
   cursor: default;
 }
 .btn-primary:disabled {
-  /* Still the main action, just not ready: a faint accent tint with muted text, in both themes. */
+  /* Not ready: a flat neutral fill with no border, so it reads neither as a soft accent action
+     (Autofill) nor as a bordered secondary button (Cancel). Same in both themes. */
   opacity: 1;
-  background: color-mix(in srgb, var(--accent) 22%, var(--surface));
+  background: var(--surface-sunken);
   border-color: transparent;
   color: var(--ink-4);
 }

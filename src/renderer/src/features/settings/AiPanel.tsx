@@ -267,9 +267,10 @@ function ProviderCard(props: {
                   </button>
                 )}
               </form>
-              {!status.hasKey && <span className="hint">{info.hint}</span>}
+              {!status.hasKey && <span className="hint">{linkHint(info.hint)}</span>}
             </div>
           )}
+          {isActive && (
           <div className="field ai-model">
             <label htmlFor={modelId}>Model</label>
             <input
@@ -283,6 +284,7 @@ function ProviderCard(props: {
               onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
             />
           </div>
+          )}
         </div>
       )}
     </article>
@@ -297,3 +299,20 @@ function timeOf(at: number): string {
 function withCode(text: string): ReactNode[] {
   return text.split('`').map((part, i) => (i % 2 ? <code key={i}>{part}</code> : part))
 }
+
+/** "Create a key at platform.claude.com." with the site as a link that opens in the browser. */
+function linkHint(hint: string) {
+  const m = hint.match(/([a-z0-9-]+(?:\.[a-z0-9-]+)+\.[a-z]{2,})/i)
+  if (!m) return hint
+  const [before, after] = [hint.slice(0, m.index), hint.slice(m.index! + m[1]!.length)]
+  return (
+    <>
+      {before}
+      <a href={`https://${m[1]}`} target="_blank" rel="noreferrer">
+        {m[1]}
+      </a>
+      {after}
+    </>
+  )
+}
+

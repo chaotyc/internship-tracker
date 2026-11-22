@@ -680,14 +680,19 @@ export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<Profile
           <div className="pf-hero-text">
             <strong>{name || 'Your profile'}</strong>
             <span>{[draft.email, where].filter(Boolean).join(' · ') || 'Fill in what you’d put on an application. Every field is optional.'}</span>
-            <div className="pf-progress" title={`${done} of ${total} essentials filled in`}>
-              <div className="pf-progress-bar" aria-hidden="true">
-                <i style={{ width: `${(done / total) * 100}%` }} />
+            {done === total ? (
+              <div className="pf-progress is-ready">
+                <Icon name="check" />
+                <small>Ready for autofill</small>
               </div>
-              <small>
-                {done === total ? 'Ready for autofill' : `${done} of ${total} essentials`}
-              </small>
-            </div>
+            ) : (
+              <div className="pf-progress" title={`${done} of ${total} essentials filled in`}>
+                <div className="pf-progress-bar" aria-hidden="true">
+                  <i style={{ width: `${(done / total) * 100}%` }} />
+                </div>
+                <small>{`${done} of ${total} essentials`}</small>
+              </div>
+            )}
           </div>
           {status && (
             <span className={`chip ${encrypted ? 'ok' : 'warn'} pf-lock-chip`}>
@@ -1022,7 +1027,7 @@ export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<Profile
           ) : (
             <span>
               <Icon name="lock" />
-              {encrypted ? 'All changes saved, encrypted on this computer' : 'All changes saved on this computer'}
+              All changes saved
             </span>
           )}
         </span>

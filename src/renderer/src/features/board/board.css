@@ -480,7 +480,13 @@ body.is-dragging * {
   text-overflow: ellipsis;
 }
 
-/* Beside the assistant the lane is narrow: the date alone, so it never needs an ellipsis. */
-.app.has-panel .card-age-prefix {
+/* Beside the assistant the lane is narrow: "Applied 6w" keeps the verb and drops "ago". */
+.card-age-short {
   display: none;
+}
+.app.has-panel .card-age-full {
+  display: none;
+}
+.app.has-panel .card-age-short {
+  display: inline;
 }

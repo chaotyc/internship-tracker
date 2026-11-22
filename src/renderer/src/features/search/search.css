@@ -906,3 +906,18 @@
   color: var(--warn);
   font-weight: 500;
 }
+
+/* Remove buttons appear on hover or keyboard focus, like Today's later rows. */
+.watch-list li > .icon-btn {
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.watch-list li:hover > .icon-btn,
+.watch-list li:focus-within > .icon-btn {
+  opacity: 1;
+}
+@media (pointer: coarse) {
+  .watch-list li > .icon-btn {
+    opacity: 1;
+  }
+}
