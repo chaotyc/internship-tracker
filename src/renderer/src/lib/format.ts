@@ -34,10 +34,13 @@ export function ago(iso: string): string {
 }
 
 /** Stable hue for a company's monogram. */
+/** Cool hues only, so a company badge never looks like an amber or red urgency signal. */
+const MONO_HUES = [165, 185, 200, 215, 235, 255, 275]
+
 export function hueFor(name: string): number {
   let h = 0
-  for (const c of name.toLowerCase()) h = (h * 31 + c.charCodeAt(0)) % 360
-  return h
+  for (const c of name.toLowerCase()) h = (h * 31 + c.charCodeAt(0)) % 997
+  return MONO_HUES[h % MONO_HUES.length]!
 }
 
 export function plural(n: number, word: string): string {

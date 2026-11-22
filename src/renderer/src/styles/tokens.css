@@ -29,7 +29,7 @@
 
   --stage-saved: #8a91a0;
   --stage-applied: #3d73e0;
-  --stage-interviewing: #c2820d;
+  --stage-interviewing: #7c5ce0;
   --stage-offer: #1f9a62;
   --stage-rejected: #cc4b42;
   --stage-closed: #a6acb8;
@@ -92,7 +92,7 @@
     --ok-soft: color-mix(in srgb, var(--ok) 11%, var(--surface));
     --stage-saved: #8f96a5;
     --stage-applied: #6a9bf7;
-    --stage-interviewing: #e6a63e;
+    --stage-interviewing: #a48cff;
     --stage-offer: #4cc88b;
     --stage-rejected: #ef6d64;
     --stage-closed: #6b7280;

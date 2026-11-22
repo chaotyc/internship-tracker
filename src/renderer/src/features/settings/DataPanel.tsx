@@ -93,10 +93,10 @@ export function DataPanel() {
 
   return (
     <div className="dp">
-      <PaneHeader title="Data & privacy" description="Everything stays in one folder on this computer. Export it or erase it." />
+      <PaneHeader title="Data & privacy" description="No account, no cloud copy. Export or erase it any time." />
       <section className="settings-section" aria-labelledby="dp-where">
         <h3 id="dp-where">Where your data lives</h3>
-        <p>Your board, profile, chats and resume are kept in one folder on this computer. There’s no account and no cloud copy.</p>
+        <p>This folder holds your board, profile, chats and resumes.</p>
         {statusError ? (
           <p className="dp-msg is-error">
             <Icon name="alert" />

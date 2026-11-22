@@ -301,7 +301,7 @@ function ConnectForm({ onConnected, canStore }: { onConnected: (s: EmailStatus) 
         </div>
         <div className="ep-form-foot">
           <button type="submit" className="btn btn-primary" disabled={busy || !canStore || !host.trim() || !user.trim() || !password.trim()}>
-            {busy ? <Icon name="refresh" className="td-spin" /> : <Icon name="lock" />}
+            {busy ? <Icon name="refresh" className="td-spin" /> : <Icon name="mail" />}
             {busy ? 'Connecting…' : 'Connect read-only'}
           </button>
           {error && (

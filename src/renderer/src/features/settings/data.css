@@ -11,7 +11,7 @@
 .dp-path {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: var(--r-lg);

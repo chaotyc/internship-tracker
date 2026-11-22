@@ -1026,7 +1026,7 @@ export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<Profile
             </span>
           ) : (
             <span>
-              <Icon name="lock" />
+              <Icon name="check" />
               All changes saved
             </span>
           )}

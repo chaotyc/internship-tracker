@@ -64,9 +64,8 @@
   flex: 1;
 }
 
-/* Content continues under the footer: a soft shadow says so. */
-.dialog-foot.has-more {
-  box-shadow: 0 -8px 16px -12px rgba(0, 0, 0, 0.35);
-  position: relative;
-  z-index: 1;
+/* Content continues below: the same 40px fade Settings uses. */
+.dialog-body.has-more {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent);
 }

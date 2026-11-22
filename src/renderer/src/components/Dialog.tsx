@@ -66,7 +66,7 @@ export function Dialog({ open, onClose, title, subtitle, width = 620, children, 
               <Icon name="close" />
             </button>
           </header>
-          <div className="dialog-body" ref={body}>
+          <div className={`dialog-body${more ? ' has-more' : ''}`} ref={body}>
             {children}
           </div>
           {footer && <footer className={`dialog-foot${more ? ' has-more' : ''}`}>{footer}</footer>}
