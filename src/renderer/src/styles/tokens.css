@@ -1,0 +1,87 @@
+/*
+ * Design tokens. Desktop productivity app: calm cool-grey canvas, white working
+ * surfaces, one cobalt accent for actions, stage hues reserved for status only.
+ */
+:root {
+  --canvas: #f3f4f6;
+  --surface: #ffffff;
+  --surface-sunken: #eceef2;
+  --surface-hover: #f7f8fa;
+  --line: #e1e4ea;
+  --line-strong: #cdd2db;
+  --ink: #15171c;
+  --ink-2: #4b5260;
+  --ink-3: #7b8292;
+  --ink-4: #a3a9b6;
+  --accent: #3554e8;
+  --accent-hover: #2943cc;
+  --accent-soft: #e9edfd;
+  --accent-ink: #ffffff;
+  --danger: #d1453b;
+  --danger-soft: #fdecea;
+  --warn: #b86e00;
+  --warn-soft: #fdf2df;
+  --ok: #1d8a57;
+  --ok-soft: #e4f5ec;
+
+  --stage-saved: #8a91a0;
+  --stage-applied: #3d73e0;
+  --stage-interviewing: #c2820d;
+  --stage-offer: #1f9a62;
+  --stage-rejected: #cc4b42;
+  --stage-closed: #a6acb8;
+
+  --shadow-1: 0 1px 2px rgba(21, 23, 28, 0.05), 0 1px 1px rgba(21, 23, 28, 0.03);
+  --shadow-2: 0 4px 14px rgba(21, 23, 28, 0.08), 0 1px 3px rgba(21, 23, 28, 0.06);
+  --shadow-lift: 0 18px 40px rgba(21, 23, 28, 0.18), 0 4px 10px rgba(21, 23, 28, 0.1);
+  --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
+
+  --font-ui: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
+
+  --r-sm: 6px;
+  --r-md: 9px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+
+  --topbar-h: 56px;
+  --col-w: 288px;
+  --panel-w: 392px;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #0f1115;
+    --surface: #171a20;
+    --surface-sunken: #13161b;
+    --surface-hover: #1d2128;
+    --line: #262b34;
+    --line-strong: #343a46;
+    --ink: #e8eaef;
+    --ink-2: #b0b6c2;
+    --ink-3: #828999;
+    --ink-4: #5c6371;
+    --accent: #6f86ff;
+    --accent-hover: #8597ff;
+    --accent-soft: #1f2645;
+    --accent-ink: #0d1020;
+    --danger: #f06b61;
+    --danger-soft: #3a1c1a;
+    --warn: #e8a33c;
+    --warn-soft: #382a14;
+    --ok: #4cc88b;
+    --ok-soft: #15301f;
+    --stage-saved: #8f96a5;
+    --stage-applied: #6a9bf7;
+    --stage-interviewing: #e6a63e;
+    --stage-offer: #4cc88b;
+    --stage-rejected: #ef6d64;
+    --stage-closed: #6b7280;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-2: 0 6px 18px rgba(0, 0, 0, 0.45);
+    --shadow-lift: 0 20px 44px rgba(0, 0, 0, 0.6);
+    color-scheme: dark;
+  }
+}

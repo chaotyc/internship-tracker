@@ -1,0 +1,346 @@
+.app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.topbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  height: var(--topbar-h);
+  padding: 0 14px 0 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  -webkit-app-region: drag;
+}
+:root.platform-mac .topbar {
+  padding-left: 84px;
+}
+.topbar button,
+.topbar input,
+.topbar label,
+.topbar a {
+  -webkit-app-region: no-drag;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--surface);
+}
+.brand-mark svg {
+  width: 15px;
+  height: 15px;
+}
+.brand h1 {
+  margin: 0;
+  font: 650 15px/1.2 var(--font-display);
+  letter-spacing: -0.01em;
+}
+.brand p {
+  margin: 1px 0 0;
+  font-size: 12px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.pipeline {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pipeline li {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 0 12px;
+  border-left: 1px solid var(--line);
+}
+.pipeline li:first-child {
+  border-left: 0;
+}
+.pipeline-n {
+  font: 650 15px/1 var(--font-display);
+  color: var(--ink);
+}
+.pipeline-n::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--stage);
+  vertical-align: middle;
+  transform: translateY(-2px);
+}
+.pipeline-l {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.topbar-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.topbar-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--line);
+  margin: 0 2px;
+}
+.search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 220px;
+  height: 32px;
+  padding: 0 8px 0 10px;
+  border-radius: var(--r-md);
+  background: var(--surface-sunken);
+  border: 1px solid transparent;
+  color: var(--ink-3);
+  transition: border-color 0.12s, background 0.12s, box-shadow 0.12s;
+}
+.search:focus-within {
+  background: var(--surface);
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+.search svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+.search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+  color: var(--ink);
+}
+.search input::placeholder {
+  color: var(--ink-3);
+}
+.workspace {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 18px 0;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  font-size: 13px;
+}
+.banner svg {
+  width: 16px;
+  height: 16px;
+}
+.banner.error {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.banner .btn {
+  margin-left: auto;
+}
+
+/* Side panel (assistant) */
+.side-panel {
+  flex: 0 0 var(--panel-w);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-left: 1px solid var(--line);
+  background: var(--surface);
+}
+.side-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 10px 0 16px;
+  border-bottom: 1px solid var(--line);
+}
+.side-head h2 {
+  margin: 0;
+  flex: 1;
+  font-size: 14px;
+  font-weight: 650;
+}
+.side-empty {
+  margin: auto;
+  padding: 24px;
+  color: var(--ink-3);
+  text-align: center;
+}
+
+/* Empty state */
+.empty {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  overflow: auto;
+}
+.empty-card {
+  width: min(520px, 100%);
+}
+.empty-card h2 {
+  margin: 0;
+  font: 700 24px/1.2 var(--font-display);
+  letter-spacing: -0.02em;
+}
+.empty-card > p {
+  margin: 8px 0 22px;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+.empty-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.empty-step {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  text-align: left;
+  box-shadow: var(--shadow-1);
+  transition: border-color 0.12s, box-shadow 0.12s, transform 0.12s;
+}
+.empty-step:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-2);
+}
+.empty-step > span:nth-child(2) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.empty-step strong {
+  font-weight: 600;
+}
+.empty-step small {
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+.empty-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.empty-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.empty-arrow {
+  width: 16px;
+  height: 16px;
+  color: var(--ink-4);
+}
+.empty-step:hover .empty-arrow {
+  color: var(--accent);
+}
+
+/* Role dialog bits */
+.dlg-role-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.dlg-role-title > span:last-child {
+  display: flex;
+  flex-direction: column;
+}
+.dlg-role-title small {
+  font: 400 13px/1.3 var(--font-ui);
+  color: var(--ink-3);
+}
+.link-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.link-field {
+  flex: 1 1 300px;
+}
+.link-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 4px 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink-3);
+}
+.link-input:focus-within {
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+.link-input > svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+.field .link-input input {
+  flex: 1;
+  height: 32px;
+  border: 0;
+  padding: 0;
+  box-shadow: none;
+  background: transparent;
+  color: var(--ink);
+}
+.link-row .btn {
+  height: 34px;
+}
+.read-note {
+  margin: -8px 0 0;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.read-note.warn {
+  color: var(--warn);
+}
+.read-note.error {
+  color: var(--danger);
+}
+.field .is-filled {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--line-strong));
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface));
+}
