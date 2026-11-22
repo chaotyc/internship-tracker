@@ -683,6 +683,46 @@
 .ep-form .wide {
   grid-column: 1 / -1;
 }
+/* Presets know their IMAP server; it's folded behind "Server settings" unless Custom. */
+.ep-server-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: -2px;
+}
+.ep-server-sum {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-3);
+  font-size: var(--fs-meta);
+}
+.ep-server {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 100px;
+  gap: 12px 14px;
+}
+/* One line of privacy, the rest behind "Details". */
+.ep-privacy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ep-privacy-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+}
+.ep-privacy-detail {
+  margin: 0;
+  padding-left: 19px;
+  font-size: var(--fs-meta);
+  line-height: 1.45;
+  color: var(--ink-3);
+  text-wrap: pretty;
+}
 .ep-form-foot {
   grid-column: 1 / -1;
   display: flex;

@@ -186,52 +186,51 @@
   border-top: 1px solid var(--line);
 }
 
-/* ---------- Find roles button + waiting-suggestions chip ---------- */
+/* ---------- Find roles split button: run | waiting suggestions ---------- */
+/* Idle and running states share one width so the top bar never shifts. */
 .autosearch {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  width: 176px;
   -webkit-app-region: no-drag;
 }
-.sugg-count {
-  display: inline-flex;
-  align-items: center;
-  height: var(--h-ctl);
-  padding: 0 12px;
-  border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
-  border-radius: var(--r-md);
-  background: var(--accent-soft);
-  color: var(--accent);
+.autosearch-main {
+  flex: 1;
+  justify-content: center;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.autosearch-sugg {
+  justify-content: center;
+  min-width: 38px;
+  margin-left: -1px;
+  padding: 0 8px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  color: var(--ink-3);
   font-size: var(--fs-meta);
   font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
 }
-.sugg-count:hover {
-  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+.autosearch-sugg.has-items {
+  color: var(--accent);
 }
-.sugg-count:focus-visible {
-  outline: none;
-  box-shadow: var(--ring);
+/* Keep the hovered or focused half's full border on top of the shared seam. */
+.autosearch .btn:hover,
+.autosearch .btn:focus-visible,
+.autosearch .btn.is-pressed {
+  position: relative;
+  z-index: 1;
 }
-/* While the tray is open the control stays put and reads as pressed; clicking it closes the tray. */
-.sugg-count.is-pressed {
-  background: color-mix(in srgb, var(--accent) 18%, var(--surface));
-  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
-  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--accent) 22%, transparent);
-}
-.sugg-count.is-pressed:focus-visible {
-  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--accent) 22%, transparent), var(--ring);
+/* While the tray is open the count reads as pressed; clicking it closes the tray. */
+.autosearch-sugg.is-pressed {
+  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--ink) 12%, transparent);
 }
 
 /* ---------- Autosearch progress ---------- */
 .autosearch-run {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  width: 196px;
+  gap: 6px;
+  width: 176px;
   height: var(--h-ctl);
   padding: 0 4px 0 10px;
   border-radius: var(--r-md);
@@ -263,7 +262,7 @@
 .autosearch-bar {
   position: relative;
   flex: 1;
-  min-width: 24px;
+  min-width: 16px;
   height: 4px;
   border-radius: 99px;
   background: color-mix(in srgb, var(--accent) 18%, transparent);
@@ -335,20 +334,11 @@
   font-weight: 650;
   white-space: nowrap;
 }
-/* Same outlined pill in both themes; a chip fill disappears on the light tray background. */
+/* Plain muted number, like the lane headers and Today group counts. */
 .tray-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: var(--surface);
-  box-shadow: inset 0 0 0 1px var(--line-strong);
-  color: var(--ink-2);
-  font-size: var(--fs-label);
-  font-weight: 650;
+  color: var(--ink-3);
+  font-size: var(--fs-meta);
+  font-weight: 500;
 }
 .tray-ranked {
   flex: none;
@@ -551,7 +541,7 @@
   height: 14px;
 }
 
-/* Estimated match: the board's four-bar fit meter, then the number in muted text. */
+/* Estimated match: a progress ring, then the number in muted text. The bar meter is the user's own fit rating on the board. */
 .sugg-fit {
   flex: none;
   display: inline-flex;
@@ -560,18 +550,21 @@
   white-space: nowrap;
   cursor: help;
 }
-.sugg-fit .fit-bars {
-  display: inline-flex;
-  gap: 2px;
+.match-ring {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  transform: rotate(-90deg);
 }
-.sugg-fit .fit-bars i {
-  width: 4px;
-  height: 9px;
-  border-radius: 1px;
-  background: var(--line-strong);
+.match-ring circle {
+  fill: none;
+  stroke-width: 2;
 }
-.sugg-fit .fit-bars i.on {
-  background: var(--ink-2);
+.match-ring-track {
+  stroke: var(--line);
+}
+.match-ring-value {
+  stroke: var(--ink-2);
 }
 .sugg-fit-n {
   color: var(--ink-3);
@@ -856,15 +849,29 @@
   line-height: 1.4;
   color: var(--ink-3);
 }
-.src-switch-text small a {
+/* Under a switch's hint, lined up with its text: last check, disclosures. */
+.src-extra {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin-top: 4px;
+  padding-left: 42px;
+}
+.src-extra .watch-check {
+  white-space: normal;
+}
+.src-detail {
+  margin: 0;
+  font-size: var(--fs-meta);
+  line-height: 1.4;
+  color: var(--ink-3);
+}
+.src-detail a {
   color: var(--ink-2);
 }
-.src-switch-text small a:hover {
+.src-detail a:hover {
   color: var(--accent);
-}
-.src-switch-text .watch-check {
-  font-weight: 400;
-  white-space: normal;
 }
 
 /* Where a suggestion came from and which track it fits. */

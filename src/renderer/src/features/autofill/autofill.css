@@ -46,7 +46,7 @@
   background: var(--surface);
   color: var(--ink);
   box-shadow: var(--shadow-lift);
-  font: 13px/1.45 var(--font-ui);
+  font: var(--fs-body)/1.45 var(--font-ui);
 }
 .af-pop:popover-open {
   animation: af-in 0.14s ease-out;
@@ -85,13 +85,13 @@
 }
 .af-title strong {
   display: block;
-  font: 650 14px/1.3 var(--font-display);
+  font: 650 var(--fs-body)/1.3 var(--font-display);
   letter-spacing: -0.005em;
 }
 .af-title p {
   margin: 3px 0 0;
   color: var(--ink-2);
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
 }
 .af-close {
   width: 26px;
@@ -123,7 +123,7 @@
   align-items: center;
   gap: 6px;
   margin: 0 0 6px;
-  font-size: 11.5px;
+  font-size: var(--fs-label);
   font-weight: 650;
   letter-spacing: 0.03em;
   text-transform: uppercase;
@@ -167,7 +167,7 @@
 }
 .af-more {
   margin: 4px 0 0 14px;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--ink-3);
 }
 .af-notes {
@@ -175,7 +175,7 @@
   padding: 10px 14px 12px;
   display: grid;
   gap: 4px;
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
   color: var(--ink-2);
 }
 .af-foot {

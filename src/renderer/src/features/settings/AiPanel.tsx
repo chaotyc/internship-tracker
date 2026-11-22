@@ -50,7 +50,8 @@ export function AiPanel() {
       .catch((e: Error) => finish({ ok: false, detail: e.message }))
   }
 
-  const header = <PaneHeader title="AI connections" description="Which AI the assistant, autofill and search use. Nothing goes to any other provider." />
+  const description = 'Which AI the assistant, autofill and search use. Nothing goes to any other provider.'
+  const header = <PaneHeader title="AI connections" description={description} />
   if (error && !statuses)
     return (
       <div className="ai-panel">
@@ -73,16 +74,18 @@ export function AiPanel() {
   const chosen = settings.defaultProvider && byId.get(settings.defaultProvider)?.available ? settings.defaultProvider : null
   const active = chosen ?? PROVIDER_ORDER.find((id) => byId.get(id)?.available) ?? null
 
+  // Pinned providers that aren't usable fall back to the automatic choice.
+  const automatic = active !== null && active !== chosen
   const card = (id: ProviderId) => (
     <ProviderCard
       key={id}
       status={byId.get(id)!}
-      isDefault={settings.defaultProvider === id}
       isActive={active === id}
+      isAuto={active === id && automatic}
       model={settings.models[id] ?? ''}
       test={tests[id]}
       onTest={() => test(id)}
-      onDefault={() => save({ ...settings, defaultProvider: id })}
+      onPick={() => save({ ...settings, defaultProvider: id })}
       onModel={(m) => {
         const models = { ...settings.models }
         if (m.trim()) models[id] = m.trim()
@@ -94,38 +97,40 @@ export function AiPanel() {
     />
   )
 
+  // The radios already show which provider is in use; the banner only covers what they can't:
+  // nothing usable, or a pinned provider that has gone missing.
+  const pinnedMissing = settings.defaultProvider && !chosen ? settings.defaultProvider : null
   return (
     <div className="ai-panel">
-      {header}
-      <div className={`ai-summary${active ? '' : ' is-empty'}`} role="status">
-        <span className="ai-summary-icon" aria-hidden>
-          <Icon name={active ? 'sparkle' : 'alert'} />
-        </span>
-        <p>
-          {chosen ? (
-            <>
-              Using <strong>{PROVIDERS[chosen].label}</strong>
-            </>
-          ) : settings.defaultProvider && active ? (
-            <>
-              {PROVIDERS[settings.defaultProvider].label} isn’t available, so <strong>{PROVIDERS[active].label}</strong> is used
-            </>
-          ) : settings.defaultProvider ? (
-            `${PROVIDERS[settings.defaultProvider].label} isn’t available. Install a CLI below or paste an API key.`
-          ) : active ? (
-            <>
-              Using <strong>{PROVIDERS[active].label}</strong> <span className="ai-summary-why">(chosen automatically)</span>
-            </>
-          ) : (
-            'No connection yet. Install a CLI below or paste an API key.'
-          )}
-        </p>
-        {settings.defaultProvider && (
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => save({ ...settings, defaultProvider: null })}>
-            Choose automatically
-          </button>
-        )}
-      </div>
+      <PaneHeader
+        title="AI connections"
+        description={description}
+        action={
+          settings.defaultProvider && (
+            <button type="button" className="btn btn-sm btn-ghost" title="Use the first connection that works" onClick={() => save({ ...settings, defaultProvider: null })}>
+              Choose automatically
+            </button>
+          )
+        }
+      />
+      {(!active || pinnedMissing) && (
+        <div className={`ai-summary${active ? '' : ' is-empty'}`} role="status">
+          <span className="ai-summary-icon" aria-hidden>
+            <Icon name="alert" />
+          </span>
+          <p>
+            {pinnedMissing && active ? (
+              <>
+                {PROVIDERS[pinnedMissing].label} isn’t available, so <strong>{PROVIDERS[active].label}</strong> is used.
+              </>
+            ) : pinnedMissing ? (
+              `${PROVIDERS[pinnedMissing].label} isn’t available. Install a CLI below or paste an API key.`
+            ) : (
+              'No connection yet. Install a CLI below or paste an API key.'
+            )}
+          </p>
+        </div>
+      )}
       {error && (
         <p className="ai-error" role="alert">
           {error}
@@ -149,17 +154,17 @@ export function AiPanel() {
 
 function ProviderCard(props: {
   status: ProviderStatus
-  isDefault: boolean
   isActive: boolean
+  isAuto: boolean
   model: string
   test: TestState | undefined
   onTest: () => void
-  onDefault: () => void
+  onPick: () => void
   onModel: (model: string) => void
   onStatuses: (s: ProviderStatus[]) => void
   onError: (e: string | null) => void
 }) {
-  const { status, isDefault, isActive, model, test } = props
+  const { status, isActive, isAuto, model, test } = props
   const info = PROVIDERS[status.id]
   const [draft, setDraft] = useState(model)
   const [lastModel, setLastModel] = useState(model)
@@ -204,21 +209,16 @@ function ProviderCard(props: {
           <span>{info.vendor}</span>
           {status.kind === 'cli' && status.available && status.version && <span className="ai-version">v{status.version}</span>}
         </div>
-        <StatusPill status={status} isActive={isActive} isAuto={isActive && !isDefault} />
+        {!status.available && <span className="chip ai-pill is-muted">{status.kind === 'cli' ? 'Not installed' : 'No key'}</span>}
         <span className="ai-spacer" />
         {status.available && (
           <>
-            {isActive && !isDefault ? (
-              // In use without being pinned: offer to pin it rather than show an unchecked "Default".
-              <button type="button" className="btn btn-sm btn-ghost ai-make-default" title="Always use this for AI features" onClick={props.onDefault}>
-                Make default
-              </button>
-            ) : (
-              <label className="ai-default" title="Always use this for AI features">
-                <input type="radio" name="ai-default" checked={isDefault} onChange={props.onDefault} />
-                Default
-              </label>
-            )}
+            {/* The one control for which provider is used. Checked without being pinned means chosen automatically. */}
+            <label className="ai-use" title={isAuto ? 'Chosen automatically: the first connection that works. Click to always use it.' : 'Always use this for AI features'}>
+              <input type="radio" name="ai-provider" checked={isActive} onChange={props.onPick} onClick={() => isAuto && props.onPick()} />
+              Use this
+              {isAuto && <span className="ai-use-auto">(automatic)</span>}
+            </label>
             <button type="button" className="btn btn-sm" onClick={props.onTest} disabled={test?.state === 'running'}>
               {test?.state === 'running' ? 'Testing…' : 'Test'}
             </button>
@@ -279,20 +279,6 @@ function ProviderCard(props: {
       )}
     </article>
   )
-}
-
-/** One pill per row: in use, ready, or what's missing. */
-function StatusPill({ status, isActive, isAuto }: { status: ProviderStatus; isActive: boolean; isAuto: boolean }) {
-  if (isActive) {
-    return (
-      <span className="chip accent ai-pill" title={isAuto ? 'Chosen automatically: the first connection that works' : undefined}>
-        <Icon name="check" />
-        {isAuto ? 'In use · automatic' : 'In use'}
-      </span>
-    )
-  }
-  if (status.available) return <span className="chip ai-pill">Ready</span>
-  return <span className="chip ai-pill is-muted">{status.kind === 'cli' ? 'Not installed' : 'No key'}</span>
 }
 
 function timeOf(at: number): string {

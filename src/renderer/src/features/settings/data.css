@@ -197,7 +197,7 @@
 .dp-danger.settings-section:last-child {
   border-bottom: 1px solid color-mix(in srgb, var(--danger) 35%, var(--line));
 }
-.dp-danger h3 {
+.settings-section.dp-danger h3 {
   color: var(--danger);
 }
 .dp-confirm {

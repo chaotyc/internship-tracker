@@ -1,6 +1,8 @@
 import type { CSSProperties } from 'react'
 import { STAGES, type StageKey } from '@shared/roles'
+import { localIso } from '@shared/today'
 import { Icon } from '@renderer/components/Icon'
+import { shortDate } from '@renderer/lib/format'
 
 export const stageLabel = (k: StageKey) => STAGES.find((s) => s.key === k)?.label ?? k
 export const stageStyle = (k: StageKey) => ({ ['--stage' as string]: `var(--stage-${k})` }) as CSSProperties
@@ -40,7 +42,7 @@ export function sinceLabel(iso: string, now = Date.now()): string {
   if (min < 60) return `${min} min ago`
   const h = Math.round(min / 60)
   if (h < 24) return `${h} h ago`
-  return new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  return shortDate(localIso(new Date(t)))
 }
 
 /** Reads a dropped .eml (or .txt) file; refuses anything else or anything huge. */

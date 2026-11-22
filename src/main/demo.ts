@@ -15,9 +15,9 @@ export function seedDemo(roles: RolesService): void {
     { company: 'Vectorline', title: 'Inference Intern', stage: 'applied', link: 'https://jobs.ashbyhq.com/vectorline/6f23713f-5409-45b7-aae8-adb8710cdbc3', fit: 'Strong', location: 'San Jose, CA (on-site)', appliedOn: iso(-3) },
     { company: 'Kite', title: 'Software Engineering Intern', stage: 'applied', fit: 'Moderate', location: 'Menlo Park, CA', pay: '$7.3–12.7k/mo', appliedOn: iso(-12) },
     { company: 'Tessellate', title: 'Kernels Intern', stage: 'applied', fit: 'Strong', location: 'Mountain View, CA', pay: '$13.3k/mo', appliedOn: iso(-1) },
-    { company: 'Cobaltine AI', title: 'Research Intern, Inference', stage: 'interviewing', link: 'https://job-boards.greenhouse.io/cobaltineai/jobs/4188119007', fit: 'Strong', location: 'San Francisco, CA', pay: '$58–70/hr', appliedOn: iso(-21), notes: 'Technical screen Thu 2pm with the inference team' },
-    { company: 'Granitecore', title: 'ML Engineer Intern', stage: 'interviewing', fit: 'Good', location: 'Santa Clara, CA', appliedOn: iso(-30), notes: 'Recruiter call done; take-home due Monday' },
-    { company: 'Meridian Compute', title: 'Engineering Intern', stage: 'offer', fit: 'Strong', location: 'Remote (US)', pay: '$55/hr', appliedOn: iso(-40), notes: 'Offer deadline in 9 days' },
+    { company: 'Cobaltine AI', title: 'Research Intern, Inference', stage: 'interviewing', link: 'https://job-boards.greenhouse.io/cobaltineai/jobs/4188119007', fit: 'Strong', location: 'San Francisco, CA', pay: '$58–70/hr', appliedOn: iso(-21), notes: 'Inference team; ask about their serving stack' },
+    { company: 'Granitecore', title: 'ML Engineer Intern', stage: 'interviewing', fit: 'Good', location: 'Santa Clara, CA', appliedOn: iso(-30), notes: 'Recruiter call went well' },
+    { company: 'Meridian Compute', title: 'Engineering Intern', stage: 'offer', fit: 'Strong', location: 'Remote (US)', pay: '$55/hr', appliedOn: iso(-40), deadline: iso(9), notes: 'Ask whether they can wait for Cobaltine AI' },
     { company: 'Summit Semiconductor', title: 'ML & AI Engineering Intern', stage: 'rejected', fit: 'Moderate', location: 'San Diego, CA', appliedOn: iso(-35) },
     { company: 'Quanta Optics Lab', title: 'Residency Program 2027', stage: 'closed', fit: 'Good', location: 'Toronto, ON', postingStatus: 'Applications closed Nov 15' },
   ]

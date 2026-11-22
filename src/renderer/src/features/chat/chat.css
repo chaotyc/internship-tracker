@@ -19,7 +19,7 @@
   min-width: 0;
   margin: 0 0 6px;
   padding: 0 2px;
-  font-size: 12px;
+  font-size: var(--fs-meta);
 }
 .chat-context-trigger {
   display: inline-flex;
@@ -32,7 +32,7 @@
   border-radius: 999px;
   background: transparent;
   color: var(--ink-2);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   white-space: nowrap;
   transition: background 0.12s, color 0.12s;
 }
@@ -139,7 +139,7 @@
   outline: none;
   background: transparent;
   color: var(--ink);
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 .chat-picker-search input:focus-visible {
   box-shadow: none;
@@ -180,17 +180,17 @@
   white-space: nowrap;
 }
 .chat-picker-company {
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 550;
   color: var(--ink);
 }
 .chat-picker-title {
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--ink-3);
 }
 .chat-picker-stage {
   flex: none;
-  font-size: 11.5px;
+  font-size: var(--fs-label);
   color: var(--ink-3);
 }
 .chat-picker-check {
@@ -201,7 +201,7 @@
 }
 .chat-picker-note {
   padding: 10px 8px;
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
   color: var(--ink-3);
 }
 
@@ -236,7 +236,7 @@
   border-bottom: 1px solid var(--line);
   background: var(--danger-soft);
   color: var(--ink);
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
 }
 .chat-confirm span {
   flex: 1;
@@ -262,7 +262,7 @@
 /* Messages */
 .chat-msg {
   min-width: 0;
-  font-size: 13.5px;
+  font-size: var(--fs-body);
   line-height: 1.55;
 }
 .chat-user {
@@ -282,7 +282,7 @@
   overflow-wrap: anywhere;
 }
 .chat-about {
-  font-size: 11.5px;
+  font-size: var(--fs-label);
   color: var(--ink-3);
   max-width: 100%;
   overflow: hidden;
@@ -294,7 +294,7 @@
 }
 .chat-stopped {
   margin: 4px 0 0;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--ink-3);
   font-style: italic;
 }
@@ -344,7 +344,7 @@
   text-decoration-color: currentColor;
 }
 .md code {
-  font: 12px/1.4 var(--font-mono);
+  font: var(--fs-meta)/1.4 var(--font-mono);
   padding: 1px 5px;
   border-radius: 4px;
   background: var(--surface-sunken);
@@ -432,7 +432,7 @@
 .chat-action h4 {
   flex: 1;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 650;
 }
 .chat-action-icon {
@@ -454,7 +454,7 @@
   grid-template-columns: auto 1fr;
   gap: 4px 12px;
   margin: 10px 12px 0;
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
 }
 .chat-action dl > div {
   display: contents;
@@ -511,7 +511,7 @@
 }
 .chat-action-error {
   margin: 8px 12px 0;
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
   color: var(--danger);
 }
 
@@ -524,7 +524,7 @@
   border-radius: var(--r-md);
   background: var(--danger-soft);
   color: var(--ink);
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 .chat-scroll > .chat-error {
   margin: 16px 16px 0;
@@ -568,7 +568,7 @@
 }
 .chat-empty h3 {
   margin: 14px 0 4px;
-  font: 650 17px/1.3 var(--font-display);
+  font: 650 var(--fs-title)/1.3 var(--font-display);
   letter-spacing: -0.01em;
 }
 .chat-empty > p {
@@ -619,7 +619,7 @@
   border-radius: var(--r-md);
   background: var(--surface-sunken);
   color: var(--ink-2);
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
 }
 .chat-resume > svg {
   width: 15px;
@@ -727,19 +727,19 @@
 .chat-hint {
   margin: 0;
   padding: 0 2px;
-  font-size: 11.5px;
+  font-size: var(--fs-label);
   color: var(--ink-3);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .chat-hint .kbd {
-  font-size: 10px;
+  font-size: var(--fs-label);
   padding: 1px 4px;
 }
 .chat-resume-note {
   margin: 10px 2px 0;
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
   color: var(--warn);
 }
 

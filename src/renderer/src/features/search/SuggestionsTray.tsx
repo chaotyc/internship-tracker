@@ -32,22 +32,15 @@ export function metaLine(s: Pick<Suggestion, 'postedAt' | 'location' | 'pay'>): 
   return [s.postedAt && ago(s.postedAt), s.location, s.pay].filter(Boolean).join(' · ')
 }
 
-/** Same four-step scale as the board's fit meter. */
-export function fitLevel(score: number): number {
-  return score >= 85 ? 4 : score >= 70 ? 3 : score >= 50 ? 2 : 1
-}
-
-/** Estimated match, 0-100, drawn as the board's four-bar fit meter plus the number. */
+/** Estimated match, 0-100, drawn as a small progress ring plus the number. The board's bar meter is reserved for the user's own fit rating. */
 function MatchMeter({ score, rankedBy }: { score: number; rankedBy?: Suggestion['rankedBy'] }) {
-  const level = fitLevel(score)
   const pct = Math.round(Math.max(0, Math.min(100, score)))
   return (
     <span className="sugg-fit" title={rankedBy ? `Estimated match, ranked by ${RANKED_BY[rankedBy]}` : 'Estimated match'}>
-      <span className="fit-bars" aria-hidden="true">
-        {[1, 2, 3, 4].map((i) => (
-          <i key={i} className={i <= level ? 'on' : ''} />
-        ))}
-      </span>
+      <svg className="match-ring" viewBox="0 0 14 14" aria-hidden="true">
+        <circle className="match-ring-track" cx="7" cy="7" r="5.5" />
+        {pct > 0 && <circle className="match-ring-value" cx="7" cy="7" r="5.5" pathLength={100} strokeDasharray={`${pct} 100`} />}
+      </svg>
       <span className="sugg-fit-n tabular">{pct}% match</span>
     </span>
   )
@@ -83,7 +76,7 @@ export function SuggestionsTray({ open, onClose }: { open: boolean; onClose: () 
   const { closeRequests } = useSuggestionState()
   const seenClose = useRef(closeRequests)
 
-  // The top-bar pill asks to close through the shared store; App owns `open`, so close via onClose.
+  // The top-bar count button asks to close through the shared store; App owns `open`, so close via onClose.
   useEffect(() => {
     if (closeRequests === seenClose.current) return
     seenClose.current = closeRequests

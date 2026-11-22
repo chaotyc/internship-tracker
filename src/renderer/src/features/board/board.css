@@ -55,7 +55,8 @@
   min-width: 36px;
 }
 .app.has-panel .col {
-  min-width: 196px;
+  /* Keep cards readable beside the assistant; the board scrolls sideways instead. */
+  min-width: 240px;
 }
 .lane {
   flex: 1;
@@ -77,13 +78,9 @@
 }
 .lane-count {
   order: 3;
-  min-width: 20px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: var(--chip-bg);
-  font-size: var(--fs-label);
-  font-weight: 650;
-  color: var(--ink-2);
+  font-size: var(--fs-meta);
+  font-weight: 500;
+  color: var(--ink-3);
 }
 .lane-label {
   writing-mode: vertical-rl;
@@ -299,8 +296,9 @@ body.is-dragging * {
   gap: 1px;
   padding: 6px 9px;
   border-radius: 6px;
-  border: 1px solid var(--line);
-  background: var(--surface-sunken);
+  /* Slightly raised from the card in both themes, so it never reads as an empty input. */
+  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--ink) 5%, var(--surface));
   color: var(--ink);
   line-height: 1.35;
 }
@@ -381,9 +379,19 @@ body.is-dragging * {
   color: var(--ink-2);
 }
 .card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 0;
   color: var(--ink-3);
   font-size: var(--fs-meta);
-  overflow-wrap: anywhere;
+}
+/* Each part stays whole; lines break at the separator, never inside "$20–94/hr". */
+.card-meta > span {
+  white-space: nowrap;
+}
+.card-meta > span + span::before {
+  content: '·';
+  margin: 0 5px;
 }
 .card-chips {
   display: flex;

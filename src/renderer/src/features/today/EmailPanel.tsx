@@ -46,7 +46,7 @@ export function EmailPanel() {
     }
   }
 
-  const header = <PaneHeader title="Email updates" description="Recruiter emails become proposed updates in Today. Nothing changes until you apply one." />
+  const header = <PaneHeader title="Email updates" description="Recruiter emails become proposed updates in Today. Nothing changes until you update the role." />
   if (loadError)
     return (
       <>
@@ -169,15 +169,28 @@ function ConnectForm({ onConnected, canStore }: { onConnected: (s: EmailStatus) 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [helpOpen, setHelpOpen] = useState(false)
+  const [custom, setCustom] = useState(false)
+  const [serverOpen, setServerOpen] = useState(false)
   const providerId = useId()
-  const preset = PRESETS.findIndex((p) => p.host === host)
+  const found = PRESETS.findIndex((p) => p.host === host)
+  // The last option is Custom: always the one chosen when the server isn't a preset's.
+  const choice = custom || found < 0 ? PRESETS.length : found
+  const pick = (i: number) => {
+    if (i === PRESETS.length) return setCustom(true)
+    setCustom(false)
+    setHost(PRESETS[i]!.host)
+    setPort('993')
+  }
+  // Presets know their server, so it stays folded away; Custom shows it.
+  const showServer = choice === PRESETS.length || serverOpen
   // Arrow keys move the choice, like any radio group.
   const movePreset = (e: KeyboardEvent<HTMLDivElement>) => {
     const d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0
     if (!d) return
     e.preventDefault()
-    const i = (Math.max(preset, d > 0 ? -1 : 0) + d + PRESETS.length) % PRESETS.length
-    setHost(PRESETS[i]!.host)
+    const n = PRESETS.length + 1
+    const i = (choice + d + n) % n
+    pick(i)
     e.currentTarget.querySelectorAll<HTMLButtonElement>('button')[i]?.focus()
   }
 
@@ -199,17 +212,17 @@ function ConnectForm({ onConnected, canStore }: { onConnected: (s: EmailStatus) 
       <div className="field ep-provider">
         <span id={providerId}>Mail provider</span>
         <div className="settings-segmented" role="radiogroup" aria-labelledby={providerId} onKeyDown={movePreset}>
-          {PRESETS.map((p, i) => (
+          {[...PRESETS.map((p) => p.label), 'Custom'].map((label, i) => (
             <button
-              key={p.label}
+              key={label}
               type="button"
               role="radio"
-              aria-checked={i === preset}
-              tabIndex={i === Math.max(preset, 0) ? 0 : -1}
-              className={i === preset ? 'is-on' : undefined}
-              onClick={() => setHost(p.host)}
+              aria-checked={i === choice}
+              tabIndex={i === choice ? 0 : -1}
+              className={i === choice ? 'is-on' : undefined}
+              onClick={() => pick(i)}
             >
-              {p.label}
+              {label}
             </button>
           ))}
         </div>
@@ -221,14 +234,41 @@ function ConnectForm({ onConnected, canStore }: { onConnected: (s: EmailStatus) 
           void connect()
         }}
       >
-        <label className="field">
-          <span>Mail server (IMAP)</span>
-          <input value={host} onChange={(e) => setHost(e.target.value)} placeholder="imap.gmail.com" spellCheck={false} autoCapitalize="off" />
-        </label>
-        <label className="field">
-          <span>Port</span>
-          <input value={port} onChange={(e) => setPort(e.target.value.replace(/\D/g, ''))} inputMode="numeric" placeholder="993" />
-        </label>
+        {choice < PRESETS.length && (
+          <div className="ep-server-toggle wide">
+            <button type="button" className="settings-disclosure" aria-expanded={serverOpen} aria-controls={`${providerId}-server`} onClick={() => setServerOpen((o) => !o)}>
+              <Icon name="chevronDown" />
+              Server settings
+            </button>
+            {!serverOpen && (
+              <span className="ep-server-sum">
+                {host}:{port || '993'}
+              </span>
+            )}
+          </div>
+        )}
+        {showServer && (
+          <div id={`${providerId}-server`} className="ep-server wide">
+            <label className="field">
+              <span>Mail server (IMAP)</span>
+              <input
+                value={host}
+                onChange={(e) => {
+                  // Editing a preset's server makes it a custom one.
+                  if (choice < PRESETS.length) setCustom(true)
+                  setHost(e.target.value)
+                }}
+                placeholder="imap.example.com"
+                spellCheck={false}
+                autoCapitalize="off"
+              />
+            </label>
+            <label className="field">
+              <span>Port</span>
+              <input value={port} onChange={(e) => setPort(e.target.value.replace(/\D/g, ''))} inputMode="numeric" placeholder="993" />
+            </label>
+          </div>
+        )}
         <label className="field wide">
           <span>Email address</span>
           <input type="email" value={user} onChange={(e) => setUser(e.target.value)} placeholder="you@example.com" autoComplete="off" spellCheck={false} />
@@ -278,10 +318,25 @@ function ConnectForm({ onConnected, canStore }: { onConnected: (s: EmailStatus) 
 }
 
 function PrivacyNote() {
+  const [open, setOpen] = useState(false)
+  const id = useId()
   return (
-    <p className="td-privacy">
-      <ShieldIcon />
-      Read-only over TLS: the app never marks, moves, deletes or sends mail. It looks at the sender and subject of new emails on this computer and opens only the ones from companies on your board. Only those go to your AI provider.
-    </p>
+    <div className="ep-privacy">
+      <div className="ep-privacy-line">
+        <p className="td-privacy">
+          <ShieldIcon />
+          Read-only over TLS. Only emails from companies on your board go to your AI provider.
+        </p>
+        <button type="button" className="settings-disclosure" aria-expanded={open} aria-controls={id} onClick={() => setOpen((o) => !o)}>
+          <Icon name="chevronDown" />
+          Details
+        </button>
+      </div>
+      {open && (
+        <p id={id} className="ep-privacy-detail">
+          The app never marks, moves, deletes or sends mail. It looks at the sender and subject of new emails on this computer and opens only the ones from companies on your board.
+        </p>
+      )}
+    </div>
   )
 }

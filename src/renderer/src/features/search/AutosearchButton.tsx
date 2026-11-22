@@ -67,23 +67,23 @@ export function AutosearchButton({ onResults }: { onResults: () => void }) {
 
   if (!running) {
     const waiting = count ?? 0
+    const label = trayOpen ? 'Hide suggested roles' : `Show ${waiting} suggested role${waiting === 1 ? '' : 's'}`
     return (
-      <div className="autosearch">
-        <button type="button" className="btn" onClick={run} title="Find new internships on the job boards you follow">
+      <div className="autosearch" role="group" aria-label="Find roles">
+        <button type="button" className="btn autosearch-main" onClick={run} title="Find new internships on the job boards you follow">
           <Icon name="sparkle" />
           Find roles
         </button>
-        {(waiting > 0 || trayOpen) && (
-          <button
-            type="button"
-            className={`sugg-count tabular${trayOpen ? ' is-pressed' : ''}`}
-            onClick={trayOpen ? requestTrayClose : onResults}
-            aria-pressed={trayOpen}
-            title={trayOpen ? 'Hide suggested roles' : 'Show suggested roles'}
-          >
-            {waiting} suggestion{waiting === 1 ? '' : 's'}
-          </button>
-        )}
+        <button
+          type="button"
+          className={`btn autosearch-sugg tabular${waiting > 0 ? ' has-items' : ''}${trayOpen ? ' is-pressed' : ''}`}
+          onClick={trayOpen ? requestTrayClose : onResults}
+          aria-pressed={trayOpen}
+          aria-label={label}
+          title={label}
+        >
+          {count ?? ''}
+        </button>
       </div>
     )
   }

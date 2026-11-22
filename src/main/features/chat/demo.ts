@@ -14,7 +14,7 @@ export function seedDemoChat(chat: ChatStore): void {
       '2. **Prism Labs · Optical I/O Intern** looks close to closing. Apply this week or move it to Closed.',
       '3. **Meridian Compute** wants an answer on your offer within 9 days. Worth asking whether they can wait until you hear back from Cobaltine AI.',
       '',
-      'Also prep for the *Cobaltine AI* technical screen on Thursday: review KV-cache batching and be ready to talk through your `vLLM` project.',
+      'Also prep for the *Cobaltine AI* technical screen this afternoon at 2pm: review KV-cache batching and be ready to talk through your `vLLM` project.',
     ].join('\n'),
   })
   chat.add({

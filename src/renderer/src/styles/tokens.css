@@ -51,6 +51,7 @@
   --fs-body: 13.5px; /* body, inputs, buttons */
   --fs-title: 15px; /* card company, panel and section titles */
   --fs-view: 21px; /* view titles (Today, Settings panes) */
+  --fs-dialog: 18px; /* dialog titles */
   /* Control heights: 32 regular, 26 small. */
   --h-ctl: 32px;
   --h-ctl-sm: 26px;

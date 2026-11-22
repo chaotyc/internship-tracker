@@ -67,7 +67,7 @@ export function RefreshButton() {
         title={running ? 'Checking saved postings…' : 'Check saved postings for closures and deadlines'}
       >
         <Icon name="refresh" className={running ? 'spin' : undefined} />
-        Check saved
+        Recheck postings
       </button>
       {open && result && (
         <div className="popover refresh-pop" role="dialog" aria-label="Refresh results">

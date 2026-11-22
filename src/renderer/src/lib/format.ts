@@ -63,3 +63,24 @@ export function hostOf(url: string): string {
     return ''
   }
 }
+
+/**
+ * The one date rule for the whole app: "today 2pm", "tomorrow", a weekday under a
+ * week away ("Thu"), otherwise "Nov 30"; past dates read "3 days overdue".
+ */
+export function dueLabel(due: string, time: string): string {
+  const d = daysUntil(due)
+  if (d == null) return due
+  const t = time ? ` ${formatTime(time)}` : ''
+  if (d < 0) return d === -1 ? 'overdue since yesterday' : `${-d} days overdue`
+  if (d === 0) return `today${t}`
+  if (d === 1) return `tomorrow${t}`
+  if (d < 7) return `${new Date(due + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short' })}${t}`
+  return `${shortDate(due)}${t}`
+}
+
+function formatTime(hhmm: string): string {
+  const [h = 0, m = 0] = hhmm.split(':').map(Number)
+  const d = new Date(2000, 0, 1, h, m)
+  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: m ? '2-digit' : undefined }).replace(':00', '').toLowerCase().replace(' ', '')
+}

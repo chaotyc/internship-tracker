@@ -4,10 +4,11 @@ import type { EmailProposal } from '@shared/today'
 import { Icon } from '@renderer/components/Icon'
 import { useToast } from '@renderer/components/Toast'
 import { api } from '@renderer/lib/api'
-import { Monogram, dueLabel } from '@renderer/features/board/RoleCard'
+import { Monogram } from '@renderer/features/board/RoleCard'
+import { dueLabel } from '@renderer/lib/format'
 import { MailIcon, sinceLabel, stageLabel } from './parts'
 
-/** One proposed update from an email: what it says, exactly what Apply will change, Apply / Dismiss. */
+/** One proposed update from an email: what it says, exactly what Update role will change, Update role / Dismiss. */
 export function ProposalCard({ p, role, onOpenRole, onDone }: { p: EmailProposal; role: Role | null; onOpenRole: (id: string) => void; onDone: (id: string) => void }) {
   const toast = useToast()
   const stageChanges = !!p.stage && !!role && p.stage !== role.stage
@@ -15,15 +16,17 @@ export function ProposalCard({ p, role, onOpenRole, onDone }: { p: EmailProposal
   const both = stageChanges && hasStep
   const [useStage, setUseStage] = useState(true)
   const [useStep, setUseStep] = useState(true)
-  const [busy, setBusy] = useState<'' | 'apply' | 'dismiss'>('')
+  const [busy, setBusy] = useState<'' | 'apply' | 'applied' | 'dismiss'>('')
   const current = role?.nextStep && !role.nextStep.done && role.nextStep.text ? role.nextStep : null
 
   const apply = async () => {
     setBusy('apply')
     try {
       await api.invoke('today:applyProposal', { id: p.id, stage: stageChanges && useStage, nextStep: hasStep && useStep })
-      onDone(p.id)
+      setBusy('applied')
       toast(`Updated ${p.company}.`, { tone: 'success' })
+      // Let "Updated" show for a moment before the card goes away.
+      setTimeout(() => onDone(p.id), 700)
     } catch (e) {
       toast((e as Error).message, { tone: 'error' })
       setBusy('')
@@ -67,7 +70,7 @@ export function ProposalCard({ p, role, onOpenRole, onDone }: { p: EmailProposal
       </div>
       <p className="td-prop-summary">{p.summary}</p>
       {(stageChanges || hasStep) && (
-        <ul className="td-changes" aria-label="What Apply will change">
+        <ul className="td-changes" aria-label="What Update role will change">
           {stageChanges && role && (
             <li className={`td-change${both && !useStage ? ' is-off' : ''}`}>
               <span className="td-change-label">
@@ -109,7 +112,7 @@ export function ProposalCard({ p, role, onOpenRole, onDone }: { p: EmailProposal
       <div className="td-prop-actions">
         <button type="button" className="btn btn-primary" onClick={() => void apply()} disabled={applyDisabled}>
           <Icon name="check" />
-          {busy === 'apply' ? 'Applying…' : 'Apply'}
+          {busy === 'apply' ? 'Updating…' : busy === 'applied' ? 'Updated' : 'Update role'}
         </button>
         <button type="button" className="btn" onClick={() => void dismiss()} disabled={!!busy}>
           {busy === 'dismiss' ? 'Dismissing…' : 'Dismiss'}

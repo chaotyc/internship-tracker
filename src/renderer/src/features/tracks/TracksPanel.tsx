@@ -29,14 +29,7 @@ function TrackResume({ track, onProfile }: { track: ApplicationTrack; onProfile:
   const [warning, setWarning] = useState<string | null>(null)
   const [over, setOver] = useState(false)
   const [showText, setShowText] = useState(false)
-  const [armed, setArmed] = useState(false)
   const resume = track.resume
-
-  useEffect(() => {
-    if (!armed) return
-    const t = setTimeout(() => setArmed(false), 3500)
-    return () => clearTimeout(t)
-  }, [armed])
 
   const run = async (fn: () => Promise<ResumeImport | null>) => {
     setBusy(true)
@@ -75,20 +68,6 @@ function TrackResume({ track, onProfile }: { track: ApplicationTrack; onProfile:
     },
     onDrop,
   }
-  const remove = async () => {
-    if (!armed) return setArmed(true)
-    setArmed(false)
-    setBusy(true)
-    try {
-      onProfile(await api.invoke('profile:removeTrackResume', { id: track.id }))
-      setShowText(false)
-      setWarning(null)
-    } catch (e) {
-      setError((e as Error).message)
-    } finally {
-      setBusy(false)
-    }
-  }
 
   return (
     <div className="trk-resume">
@@ -110,16 +89,6 @@ function TrackResume({ track, onProfile }: { track: ApplicationTrack; onProfile:
               <button type="button" className="btn btn-sm" onClick={choose} disabled={busy}>
                 <Icon name="upload" />
                 {busy ? 'Reading…' : 'Replace'}
-              </button>
-              <button
-                type="button"
-                className={`btn btn-sm btn-ghost btn-danger${armed ? ' is-armed' : ''}`}
-                onClick={remove}
-                disabled={busy}
-                aria-label={armed ? `Confirm: remove the resume for ${track.name}` : `Remove the resume for ${track.name}`}
-              >
-                <Icon name="trash" />
-                {armed ? 'Remove file?' : 'Remove'}
               </button>
             </div>
           </div>
@@ -157,7 +126,7 @@ function TrackResume({ track, onProfile }: { track: ApplicationTrack; onProfile:
 }
 
 // ---------------------------------------------------------------------------
-// "⋯" menu: reorder and delete, out of the way until needed
+// "⋯" menu: reorder, remove the resume and delete, out of the way until needed
 
 interface MenuItem {
   label: string
@@ -267,7 +236,7 @@ function TrackCard({ track, index, count, profileAnswers, encrypted, autoFocusNa
   const [draft, setDraft] = useState<Draft>(() => draftOf(track))
   const [state, setState] = useState<SaveState>('idle')
   const [error, setError] = useState<string | null>(null)
-  const [confirming, setConfirming] = useState<{ roles: number } | null>(null)
+  const [confirming, setConfirming] = useState<{ kind: 'track'; roles: number } | { kind: 'resume' } | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [focusKey, setFocusKey] = useState<string | null>(null)
   const [touched, setTouched] = useState<Set<number>>(() => new Set())
@@ -350,7 +319,19 @@ function TrackCard({ track, index, count, profileAnswers, encrypted, autoFocusNa
 
   const askDelete = async () => {
     const roles = await api.invoke('roles:list').catch(() => [])
-    setConfirming({ roles: roles.filter((r) => r.trackId === track.id).length })
+    setConfirming({ kind: 'track', roles: roles.filter((r) => r.trackId === track.id).length })
+  }
+  const removeResume = async () => {
+    setDeleting(true)
+    try {
+      onProfile(await api.invoke('profile:removeTrackResume', { id: track.id }))
+      setConfirming(null)
+    } catch (e) {
+      setError((e as Error).message)
+      setConfirming(null)
+    } finally {
+      setDeleting(false)
+    }
   }
   const doDelete = async () => {
     setDeleting(true)
@@ -421,6 +402,7 @@ function TrackCard({ track, index, count, profileAnswers, encrypted, autoFocusNa
             items={[
               { label: 'Move up', onSelect: () => onMove(-1), disabled: index === 0 },
               { label: 'Move down', onSelect: () => onMove(1), disabled: index === count - 1 },
+              ...(track.resume ? [{ label: 'Remove resume…', onSelect: () => setConfirming({ kind: 'resume' }), danger: true }] : []),
               { label: 'Delete track…', onSelect: () => void askDelete(), danger: true },
             ]}
           />
@@ -431,9 +413,11 @@ function TrackCard({ track, index, count, profileAnswers, encrypted, autoFocusNa
         <div className="trk-confirm" role="alertdialog" aria-labelledby={`${uid}-ct`} aria-describedby={`${uid}-cd`}>
           <Icon name="alert" />
           <div className="trk-confirm-text">
-            <strong id={`${uid}-ct`}>Delete “{draft.name}”?</strong>
+            <strong id={`${uid}-ct`}>{confirming.kind === 'resume' ? `Remove the resume from “${draft.name}”?` : `Delete “${draft.name}”?`}</strong>
             <span id={`${uid}-cd`}>
-              {count === 1
+              {confirming.kind === 'resume'
+                ? `${track.resume?.fileName ?? 'The file'} and its extracted text are deleted from this computer.`
+                : count === 1
                 ? 'Its resume stays as your profile resume.'
                 : [track.resume ? 'Its resume file is deleted too.' : '', confirming.roles ? `${confirming.roles} role${confirming.roles === 1 ? '' : 's'} on it will use the default track.` : '']
                     .filter(Boolean)
@@ -443,9 +427,15 @@ function TrackCard({ track, index, count, profileAnswers, encrypted, autoFocusNa
           <button type="button" className="btn btn-sm btn-ghost" onClick={() => setConfirming(null)} disabled={deleting} autoFocus>
             Cancel
           </button>
-          <button type="button" className="btn btn-sm trk-confirm-delete" onClick={() => void doDelete()} disabled={deleting}>
-            {deleting ? 'Deleting…' : 'Delete track'}
-          </button>
+          {confirming.kind === 'resume' ? (
+            <button type="button" className="btn btn-sm trk-confirm-delete" onClick={() => void removeResume()} disabled={deleting}>
+              {deleting ? 'Removing…' : 'Remove resume'}
+            </button>
+          ) : (
+            <button type="button" className="btn btn-sm trk-confirm-delete" onClick={() => void doDelete()} disabled={deleting}>
+              {deleting ? 'Deleting…' : 'Delete track'}
+            </button>
+          )}
         </div>
       )}
 

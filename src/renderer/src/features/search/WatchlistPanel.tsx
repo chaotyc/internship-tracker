@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useId, useState, type ReactNode } from 'react'
 import {
   BOARD_LABELS,
   SIMPLIFY_NOTE,
@@ -55,6 +55,7 @@ function CheckLine({ st, off }: { st?: BoardStatus; off: boolean }) {
   return <span className="watch-check">{st.lastOk ? `Checked ${since(st.lastOk)}` : 'Not checked yet'}</span>
 }
 
+/** A switch row. `children` sit under the hint, outside the label, so links and buttons there don't flip the switch. */
 function SourceSwitch({ checked, onChange, label, hint, children }: { checked: boolean; onChange: (v: boolean) => void; label: string; hint: ReactNode; children?: ReactNode }) {
   return (
     <li className="src-row">
@@ -64,10 +65,35 @@ function SourceSwitch({ checked, onChange, label, hint, children }: { checked: b
         <span className="src-switch-text">
           {label}
           <small>{hint}</small>
-          {children}
         </span>
       </label>
+      {children && <div className="src-extra">{children}</div>}
     </li>
+  )
+}
+
+/** First sentence of the SimplifyJobs note up front; the licensing detail behind a disclosure. */
+const [SIMPLIFY_LEAD, ...simplifyRest] = SIMPLIFY_NOTE.split(/(?<=\.)\s+/)
+const SIMPLIFY_DETAIL = simplifyRest.join(' ')
+
+function SimplifyDetails() {
+  const [open, setOpen] = useState(false)
+  const id = useId()
+  return (
+    <>
+      <button type="button" className="settings-disclosure" aria-expanded={open} aria-controls={id} onClick={() => setOpen((o) => !o)}>
+        <Icon name="chevronDown" />
+        License and privacy
+      </button>
+      {open && (
+        <p id={id} className="src-detail">
+          {SIMPLIFY_DETAIL}{' '}
+          <a href={SIMPLIFY_REPO} target="_blank" rel="noreferrer">
+            {SIMPLIFY_REPO.replace(/^https:\/\//, '')}
+          </a>
+        </p>
+      )}
+    </>
   )
 }
 
@@ -180,59 +206,6 @@ export function WatchlistPanel() {
         {note.text && <p className={`watch-note${note.tone ? ` ${note.tone}` : ''}`}>{note.text}</p>}
       </section>
 
-      {status && sources && (
-        <section className="settings-section">
-          <h3>Where to look</h3>
-          <p>Autosearch reads the sources that are on when you click Find roles, and in the daily scan.</p>
-          <ul className="src-list">
-            <SourceSwitch checked={sources.boards} onChange={(v) => setSource('boards', v)} label="Job boards" hint="Greenhouse, Ashby and Lever boards on your list." />
-            <SourceSwitch
-              checked={sources.workday}
-              onChange={(v) => setSource('workday', v)}
-              label="Workday"
-              hint="Workday careers sites on your list, searched for “intern” and your target roles. Two requests at a time per site."
-            />
-            <SourceSwitch
-              checked={sources.simplify}
-              onChange={(v) => setSource('simplify', v)}
-              label="SimplifyJobs list"
-              hint={
-                <>
-                  {SIMPLIFY_NOTE}{' '}
-                  <a href={SIMPLIFY_REPO} target="_blank" rel="noreferrer">
-                    {SIMPLIFY_REPO.replace(/^https:\/\//, '')}
-                  </a>
-                </>
-              }
-            >
-              {sources.simplify && <CheckLine st={status.boards['simplify']} off={false} />}
-            </SourceSwitch>
-          </ul>
-        </section>
-      )}
-
-      {status && (
-        <section className="settings-section">
-          <h3>Daily scan</h3>
-          <ul className="src-list">
-            <SourceSwitch
-              checked={status.options.scheduled}
-              onChange={(v) => setOptions({ scheduled: v })}
-              label="Check for new roles once a day"
-              hint="While the app is open, at most once a day, plus a catch-up when you open it after a day or more. New roles are added to your suggestions; the AI is only asked when something new turns up."
-            >
-              <span className={`watch-check${status.lastScan && !status.lastScan.ok ? ' error' : ''}`}>
-                {status.running
-                  ? 'Scanning now…'
-                  : status.lastScan
-                    ? `Last ${status.lastScan.scheduled ? 'scheduled ' : ''}scan ${since(status.lastScan.at)}${status.lastScan.ok ? '' : ' failed'}: ${status.lastScan.summary}`
-                    : 'No scans yet.'}
-              </span>
-            </SourceSwitch>
-          </ul>
-        </section>
-      )}
-
       <section className="settings-section">
         <div className="watch-head">
           <h3>Watching</h3>
@@ -295,6 +268,53 @@ export function WatchlistPanel() {
               </div>
             )
           })}
+        </section>
+      )}
+
+      {status && sources && (
+        <section className="settings-section">
+          <h3>Where to look</h3>
+          <p>Autosearch reads the sources that are on when you click Find roles, and in the daily scan.</p>
+          <ul className="src-list">
+            <SourceSwitch checked={sources.boards} onChange={(v) => setSource('boards', v)} label="Greenhouse, Ashby & Lever" hint="The Greenhouse, Ashby and Lever boards on your list." />
+            <SourceSwitch
+              checked={sources.workday}
+              onChange={(v) => setSource('workday', v)}
+              label="Workday"
+              hint="Workday careers sites on your list, searched for “intern” and your target roles. Two requests at a time per site."
+            />
+            <SourceSwitch
+              checked={sources.simplify}
+              onChange={(v) => setSource('simplify', v)}
+              label="SimplifyJobs list"
+              hint={SIMPLIFY_LEAD}
+            >
+              <SimplifyDetails />
+              {sources.simplify && <CheckLine st={status.boards['simplify']} off={false} />}
+            </SourceSwitch>
+          </ul>
+        </section>
+      )}
+
+      {status && (
+        <section className="settings-section">
+          <h3>Daily scan</h3>
+          <ul className="src-list">
+            <SourceSwitch
+              checked={status.options.scheduled}
+              onChange={(v) => setOptions({ scheduled: v })}
+              label="Check for new roles once a day"
+              hint="While the app is open, at most once a day, plus a catch-up when you open it after a day or more. New roles are added to your suggestions; the AI is only asked when something new turns up."
+            >
+              <span className={`watch-check${status.lastScan && !status.lastScan.ok ? ' error' : ''}`}>
+                {status.running
+                  ? 'Scanning now…'
+                  : status.lastScan
+                    ? `Last scan ${status.lastScan.ok ? '' : 'failed '}${since(status.lastScan.at)}${status.lastScan.scheduled ? '' : ' (manual)'}: ${status.lastScan.summary}`
+                    : 'No scans yet.'}
+              </span>
+            </SourceSwitch>
+          </ul>
         </section>
       )}
     </div>

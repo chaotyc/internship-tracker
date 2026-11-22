@@ -37,14 +37,14 @@
 }
 .dialog-titles h2 {
   margin: 0;
-  font: 650 18px/1.3 var(--font-display);
+  font: 650 var(--fs-dialog)/1.3 var(--font-display);
   letter-spacing: -0.01em;
   text-wrap: balance;
 }
 .dialog-titles p {
   margin: 3px 0 0;
   color: var(--ink-3);
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 .dialog-body {
   overflow-y: auto;

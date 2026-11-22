@@ -1,8 +1,8 @@
+import { useRef } from 'react'
 import type { NextStep } from '@shared/roles'
 import { addDays, localIso } from '@shared/today'
 import { Icon } from '@renderer/components/Icon'
-import { daysUntil } from '@renderer/lib/format'
-import { dueLabel } from '@renderer/features/board/RoleCard'
+import { daysUntil, dueLabel, shortDate } from '@renderer/lib/format'
 import './today.css'
 
 const EMPTY: NextStep = { text: '', due: '', time: '', done: false, source: 'manual' }
@@ -19,6 +19,16 @@ const SOURCE_NOTE: Record<NextStep['source'], string> = { manual: '', email: 'Fr
 export function NextStepField({ value, onChange }: { value: NextStep | null; onChange: (v: NextStep | null) => void }) {
   const v: NextStep = value ?? EMPTY
   const today = localIso()
+  const picker = useRef<HTMLInputElement>(null)
+  const openPicker = () => {
+    const el = picker.current
+    if (!el) return
+    try {
+      el.showPicker()
+    } catch {
+      el.focus()
+    }
+  }
   const set = (patch: Partial<NextStep>) => {
     // Editing a step makes it the user's own again and reopens it.
     const next: NextStep = { ...v, source: 'manual', done: false, ...patch }
@@ -44,7 +54,19 @@ export function NextStepField({ value, onChange }: { value: NextStep | null; onC
       <span id="ns-label">Next step</span>
       <div className="ns-row">
         <input value={v.text} placeholder="e.g. Finish the take-home" onChange={(e) => set({ text: e.target.value })} aria-label="Next step" />
-        <input type="date" className={v.due ? undefined : 'is-empty'} value={v.due} onChange={(e) => set({ due: e.target.value })} aria-label="Next step date" />
+        {/* Same readable date button as the dialog's other dates (DateField), over a hidden native picker. */}
+        <div className="date-field">
+          <button type="button" className={`date-btn${v.due ? '' : ' is-empty'}`} onClick={openPicker} aria-label={v.due ? `Next step date, ${shortDate(v.due)}` : 'Next step date'}>
+            <Icon name="clock" />
+            <span>{v.due ? shortDate(v.due) : 'Add a date'}</span>
+          </button>
+          {v.due && (
+            <button type="button" className="date-clear" onClick={() => set({ due: '' })} aria-label="Clear next step date">
+              <Icon name="close" />
+            </button>
+          )}
+          <input ref={picker} type="date" className="date-native" value={v.due} onChange={(e) => set({ due: e.target.value })} tabIndex={-1} aria-hidden="true" />
+        </div>
         <input type="time" className={v.time ? undefined : 'is-empty'} value={v.time} disabled={!v.due} onChange={(e) => set({ time: e.target.value })} aria-label="Next step time" />
       </div>
       <div className="ns-tools">

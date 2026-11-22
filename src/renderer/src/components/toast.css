@@ -21,7 +21,7 @@
   background: var(--ink);
   color: var(--canvas);
   box-shadow: var(--shadow-lift);
-  font-size: 13px;
+  font-size: var(--fs-body);
   animation: toast-in 0.18s ease-out;
 }
 .toast-error {

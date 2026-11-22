@@ -1,7 +1,10 @@
 import type { HTMLAttributes } from 'react'
 import type { Fit, Role } from '@shared/roles'
 import { Icon } from '@renderer/components/Icon'
-import { ago, daysUntil, hueFor, monogram, shortDate } from '@renderer/lib/format'
+import { ago, daysUntil, dueLabel, hueFor, monogram, shortDate } from '@renderer/lib/format'
+
+// Kept for features that import it from here.
+export { dueLabel }
 
 interface Props extends Omit<HTMLAttributes<HTMLElement>, 'role'> {
   role: Role
@@ -48,7 +51,7 @@ function DeadlineChip({ deadline }: { deadline: string }) {
   const d = daysUntil(deadline)
   if (d == null) return null
   if (d < 0) return <span className="chip danger">Deadline passed</span>
-  const label = d === 0 ? 'Due today' : d === 1 ? 'Due tomorrow' : d <= 14 ? `Due in ${d} days` : `Due ${shortDate(deadline)}`
+  const label = `Due ${dueLabel(deadline, '')}`
   // Only near deadlines get a color; distant ones are plain facts.
   const tone = d <= 3 ? 'danger' : d <= 10 ? 'warn' : ''
   return (
@@ -76,26 +79,8 @@ function nextTone(due: string): string {
   return d < 0 ? ' is-overdue' : d === 0 ? ' is-today' : ''
 }
 
-/** "today 2pm", "tomorrow", "Thu", "Dec 11", "3 days overdue". */
-export function dueLabel(due: string, time: string): string {
-  const d = daysUntil(due)
-  if (d == null) return due
-  const t = time ? ` ${formatTime(time)}` : ''
-  if (d < 0) return d === -1 ? 'overdue since yesterday' : `${-d} days overdue`
-  if (d === 0) return `today${t}`
-  if (d === 1) return `tomorrow${t}`
-  if (d < 7) return `${new Date(due + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short' })}${t}`
-  return `${shortDate(due)}${t}`
-}
-
-function formatTime(hhmm: string): string {
-  const [h = 0, m = 0] = hhmm.split(':').map(Number)
-  const d = new Date(2000, 0, 1, h, m)
-  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: m ? '2-digit' : undefined }).replace(':00', '').toLowerCase().replace(' ', '')
-}
-
 export function RoleCard({ role, ghost, ...rest }: Props) {
-  const meta = [role.location, role.pay].filter(Boolean).join(' · ')
+  const meta = [role.location, role.pay].filter(Boolean)
   const live = role.liveness?.status
   const saved = role.stage === 'saved'
   const finished = role.stage === 'rejected' || role.stage === 'closed'
@@ -151,7 +136,13 @@ export function RoleCard({ role, ghost, ...rest }: Props) {
           <span className="card-next-text">{role.nextStep!.text || 'Next step'}</span>
         </div>
       )}
-      {meta && <div className="card-meta">{meta}</div>}
+      {meta.length > 0 && (
+        <div className="card-meta">
+          {meta.map((m, i) => (
+            <span key={i}>{m}</span>
+          ))}
+        </div>
+      )}
       {alerts && (
         <div className="card-chips">
           {saved && live === 'closed' && (

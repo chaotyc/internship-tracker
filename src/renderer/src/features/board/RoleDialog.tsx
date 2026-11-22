@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { FITS, STAGES, type NextStep, type Role, type RoleInput, type StageKey } from '@shared/roles'
 import { NextStepField } from '@renderer/features/today/NextStepField'
 import { TrackSelect } from '@renderer/features/tracks/TrackSelect'
+import { DateField } from '@renderer/components/DateField'
 import { Dialog } from '@renderer/components/Dialog'
 import { Icon } from '@renderer/components/Icon'
 import { useToast } from '@renderer/components/Toast'
@@ -276,7 +277,7 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
                 {saveError}
               </span>
             ) : (
-              showForm && <span className="foot-hint">{MOD}Enter to save</span>
+              showForm && dirty && <span className="foot-hint">{MOD}Enter to save</span>
             )}
             <button type="button" className="btn" onClick={requestClose}>
               Cancel
@@ -299,6 +300,7 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
           }
         }}
       >
+        {showForm && <h3 className="form-group">Posting</h3>}
         <section className={`link-row${showForm ? '' : ' is-start'}`}>
           <label className="field link-field">
             <span>Posting link</span>
@@ -345,7 +347,6 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
         {showForm && (
           <>
             <div className="grid-2">
-              <h3 className="form-group wide">Posting</h3>
               <label className="field">
                 <span>
                   Company<span className="req">*</span>
@@ -369,6 +370,7 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
                 <input className={cls('pay')} value={form.pay} placeholder="$45–60/hr" onChange={(e) => set('pay', e.target.value)} />
               </label>
               <h3 className="form-group wide">Progress</h3>
+              <div className="wide grid-auto">
               <label className="field">
                 <span>Stage</span>
                 <select value={form.stage} onChange={(e) => set('stage', e.target.value as StageKey)}>
@@ -388,15 +390,10 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
                   ))}
                 </select>
               </label>
-              <label className="field">
-                <span>Deadline</span>
-                <input className={[cls('deadline'), form.deadline ? '' : 'is-empty'].filter(Boolean).join(' ')} type="date" value={form.deadline} onChange={(e) => set('deadline', e.target.value)} />
-              </label>
-              <label className="field">
-                <span>Applied on</span>
-                <input className={form.appliedOn ? undefined : 'is-empty'} type="date" value={form.appliedOn} onChange={(e) => set('appliedOn', e.target.value)} />
-              </label>
               <TrackSelect value={form.trackId} onChange={(id) => set('trackId', id)} />
+              </div>
+              <DateField id="rd-deadline" label="Deadline" className={cls('deadline')} value={form.deadline} onChange={(v) => set('deadline', v)} />
+              <DateField id="rd-applied" label="Applied on" value={form.appliedOn} onChange={(v) => set('appliedOn', v)} placeholder="Not yet" />
               <NextStepField value={form.nextStep} onChange={(v) => set('nextStep', v)} />
               <label className="field wide">
                 <span>Notes</span>

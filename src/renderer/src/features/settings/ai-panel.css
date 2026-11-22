@@ -4,7 +4,7 @@
   gap: 18px;
 }
 
-/* Which connection AI features use right now. */
+/* Only when something needs attention: no connection, or the pinned one is missing. */
 .ai-summary {
   display: flex;
   align-items: center;
@@ -38,9 +38,6 @@
 .ai-summary-icon svg {
   width: 14px;
   height: 14px;
-}
-.ai-summary-why {
-  color: var(--ink-3);
 }
 
 .ai-error {
@@ -109,7 +106,7 @@
   flex: 1;
 }
 
-.ai-default {
+.ai-use {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -119,18 +116,18 @@
   cursor: pointer;
   user-select: none;
 }
-.ai-default input {
+.ai-use input {
   width: 14px;
   height: 14px;
   margin: 0;
   accent-color: var(--accent);
   cursor: inherit;
 }
+.ai-use-auto {
+  color: var(--ink-3);
+}
 .ai-pill {
   flex: none;
-}
-.ai-make-default {
-  color: var(--accent);
 }
 .ai-pill.is-muted {
   background: transparent;

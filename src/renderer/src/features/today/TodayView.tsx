@@ -14,8 +14,8 @@ import {
 import { Icon } from '@renderer/components/Icon'
 import { useToast } from '@renderer/components/Toast'
 import { api, useRoles } from '@renderer/lib/api'
-import { shortDate } from '@renderer/lib/format'
-import { Monogram, dueLabel } from '@renderer/features/board/RoleCard'
+import { dueLabel, shortDate } from '@renderer/lib/format'
+import { Monogram } from '@renderer/features/board/RoleCard'
 import { EmailDrop } from './EmailDrop'
 import { ProposalCard } from './ProposalCard'
 import { MailIcon, readEmailFile, stageLabel, stageStyle } from './parts'
@@ -105,7 +105,7 @@ export function TodayView({ onOpenRole }: { onOpenRole: (id: string) => void }) 
   const done = (item: TodayItem) => void patchStep(item, (r) => completeStep(r.nextStep!), `Done: ${item.text}`)
   const snooze = (item: TodayItem, when: SnoozeKey) => {
     const date = snoozeDate(when, today)
-    void patchStep(item, (r) => snoozeStep(r.nextStep!, when, today), `Snoozed to ${when === 'tomorrow' ? 'tomorrow' : shortDate(date)}.`)
+    void patchStep(item, (r) => snoozeStep(r.nextStep!, when, today), `Snoozed to ${dueLabel(date, item.time)}.`)
   }
 
   /* --------------------------------- keyboard --------------------------------- */
@@ -225,7 +225,7 @@ export function TodayView({ onOpenRole }: { onOpenRole: (id: string) => void }) 
             <div className="td-section-head">
               <h3 id="td-email-h">Email updates</h3>
               {proposals.length > 0 && <span className="td-count tabular">{proposals.length}</span>}
-              <span className="td-section-hint">Nothing changes until you apply it</span>
+              <span className="td-section-hint">Nothing changes until you update the role</span>
             </div>
             {proposals.length > 0 && (
               <div className="td-proposals">
@@ -368,7 +368,6 @@ function SnoozeMenu({ onSnooze, today, label }: { onSnooze: (w: SnoozeKey) => vo
     setOpen(false)
     onSnooze(w)
   }
-  const day = (iso: string) => new Date(iso + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
   return (
     <div
       className="td-menu-wrap"
@@ -396,11 +395,11 @@ function SnoozeMenu({ onSnooze, today, label }: { onSnooze: (w: SnoozeKey) => vo
         <div className="td-menu" role="menu">
           <button type="button" role="menuitem" onClick={() => pick('tomorrow')}>
             Tomorrow
-            <small>{day(snoozeDate('tomorrow', today))}</small>
+            <small>{shortDate(snoozeDate('tomorrow', today))}</small>
           </button>
           <button type="button" role="menuitem" onClick={() => pick('next-week')}>
             Next week
-            <small>{day(snoozeDate('next-week', today))}</small>
+            <small>{shortDate(snoozeDate('next-week', today))}</small>
           </button>
         </div>
       )}
