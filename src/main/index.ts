@@ -1,11 +1,12 @@
 import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, nativeTheme, shell } from 'electron'
 import { openStore } from './db/store'
 import { Secrets, secretsMigration } from './secrets'
 import { Settings, settingsMigration } from './settings'
 import { features } from './features'
 import { seedDemo } from './demo'
+import { isHeadless } from './headless'
 import type { FeatureContext, Services } from './context'
 
 let mainWindow: BrowserWindow | null = null
@@ -26,9 +27,10 @@ function createWindow(): BrowserWindow {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      offscreen: isHeadless(),
     },
   })
-  win.once('ready-to-show', () => win.show())
+  if (!isHeadless()) win.once('ready-to-show', () => win.show())
   const snapshot = process.env['TRACKER_SNAPSHOT']
   if (snapshot) {
     // Dev aid: render, save a PNG of the window, quit. See scripts/snapshot.mjs.
@@ -55,15 +57,21 @@ function createWindow(): BrowserWindow {
 }
 
 async function start(): Promise<void> {
+  if (isHeadless() && process.platform === 'darwin') app.setActivationPolicy('prohibited')
   await app.whenReady()
+  // Dev aid: force a theme for screenshots (TRACKER_THEME=light|dark).
+  const theme = process.env['TRACKER_THEME']
+  if (theme === 'light' || theme === 'dark') nativeTheme.themeSource = theme
   const dataDir = app.getPath('userData')
   const demo = process.env['TRACKER_DEMO'] === '1'
   const store = await openStore(demo ? null : join(dataDir, 'tracker.sqlite'))
   store.migrate([settingsMigration, secretsMigration, ...features.flatMap((f) => f.migrations)])
 
+  const secrets = new Secrets(store)
+  await secrets.load()
   const ctx: FeatureContext = {
     store,
-    secrets: new Secrets(store),
+    secrets,
     settings: new Settings(store),
     services: {} as Services,
     dataDir,
@@ -76,7 +84,17 @@ async function start(): Promise<void> {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow()
   })
-  app.on('before-quit', () => store.flush())
+  let quitting = false
+  app.on('before-quit', (e) => {
+    if (quitting) return
+    // Let queued keychain writes land before the final save.
+    e.preventDefault()
+    quitting = true
+    void secrets.flush().finally(() => {
+      store.flush()
+      app.quit()
+    })
+  })
 }
 
 app.on('window-all-closed', () => {

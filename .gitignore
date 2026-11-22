@@ -10,3 +10,4 @@ release/
 user-data/
 screenshots/
 out-*/
+*.tsbuildinfo
