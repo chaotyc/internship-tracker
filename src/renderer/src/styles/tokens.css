@@ -45,6 +45,16 @@
   --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
 
+  /* Type scale: use these five sizes only. */
+  --fs-label: 11px; /* uppercase group labels, tiny badges */
+  --fs-meta: 12.5px; /* secondary text, hints, chips */
+  --fs-body: 13.5px; /* body, inputs, buttons */
+  --fs-title: 15px; /* card company, panel and section titles */
+  --fs-view: 21px; /* view titles (Today, Settings panes) */
+  /* Control heights: 32 regular, 26 small. */
+  --h-ctl: 32px;
+  --h-ctl-sm: 26px;
+
   --r-sm: 6px;
   --r-md: 9px;
   --r-lg: 12px;

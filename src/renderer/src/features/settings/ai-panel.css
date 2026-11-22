@@ -49,7 +49,7 @@
   border-radius: var(--r-md);
   background: var(--danger-soft);
   color: var(--danger);
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
 }
 
 .ai-list {
@@ -95,12 +95,12 @@
 }
 .ai-card-name span {
   color: var(--ink-3);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   white-space: nowrap;
 }
 .ai-card-name .ai-version {
   color: var(--ink-3);
-  font: 11.5px var(--font-mono);
+  font: var(--fs-label) var(--font-mono);
 }
 .ai-card.is-missing .ai-card-name strong {
   color: var(--ink-2);
@@ -114,7 +114,7 @@
   align-items: center;
   gap: 6px;
   padding: 0 4px;
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
   color: var(--ink-2);
   cursor: pointer;
   user-select: none;
@@ -129,6 +129,9 @@
 .ai-pill {
   flex: none;
 }
+.ai-make-default {
+  color: var(--accent);
+}
 .ai-pill.is-muted {
   background: transparent;
   box-shadow: inset 0 0 0 1px var(--line);
@@ -142,16 +145,16 @@
   gap: 10px;
 }
 .ai-fields .field > label {
-  font-size: 11.5px;
+  font-size: var(--fs-meta);
   color: var(--ink-3);
 }
 .ai-fields input {
-  height: 30px;
-  font-size: 13px;
+  height: var(--h-ctl);
+  font-size: var(--fs-body);
 }
 .ai-model input {
   font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
 }
 .ai-model input::placeholder {
   font-family: var(--font-ui);
@@ -159,15 +162,9 @@
 .ai-fields input::placeholder {
   color: var(--ink-4);
 }
-/* Model: a compact secondary row under the connection. */
-.ai-fields .ai-model {
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  max-width: 340px;
-}
-.ai-fields .ai-model > label {
-  flex: none;
+/* Model: full width of the card body, like the API key field. */
+.ai-fields .ai-model input {
+  width: 100%;
 }
 
 .ai-key-row {
@@ -181,7 +178,7 @@
   min-width: 0;
 }
 .ai-key-row .btn {
-  height: 30px;
+  height: var(--h-ctl);
 }
 .ai-remove {
   color: var(--danger);
@@ -194,14 +191,14 @@
 .ai-hint {
   margin: 0;
   color: var(--ink-3);
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
 }
 .ai-hint code {
   padding: 1px 5px;
   border-radius: 4px;
   background: var(--surface-sunken);
   color: var(--ink-2);
-  font: 11.5px var(--font-mono);
+  font: var(--fs-label) var(--font-mono);
   white-space: nowrap;
 }
 
@@ -212,7 +209,7 @@
   gap: 6px;
   min-width: 0;
   margin: -4px 0 0;
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
 }
 .ai-test svg {
   width: 14px;

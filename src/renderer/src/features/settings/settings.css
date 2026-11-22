@@ -47,7 +47,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 400;
-  font-size: 11.5px;
+  font-size: var(--fs-meta);
   color: var(--ink-3);
 }
 .settings-tab:hover {
@@ -120,12 +120,12 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
   color: var(--ink-2);
 }
 .settings-confirm-text strong {
   color: var(--ink);
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
 }
 
@@ -136,6 +136,34 @@
   text-align: center;
 }
 /* Shared building blocks for settings panels. */
+
+/* Every pane starts with this (PaneHeader): tab name, one-line description, optional action. */
+.settings-pane-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.settings-pane-head > div {
+  min-width: 0;
+}
+.settings-pane-head h2 {
+  margin: 0;
+  font: 650 var(--fs-title)/1.3 var(--font-display);
+  letter-spacing: -0.01em;
+}
+.settings-pane-head p {
+  margin: 2px 0 0;
+  color: var(--ink-3);
+  font-size: var(--fs-meta);
+  text-wrap: pretty;
+}
+.settings-pane-head > .btn {
+  flex: none;
+}
+
 .settings-section {
   display: flex;
   flex-direction: column;
@@ -146,13 +174,76 @@
 .settings-section:last-child {
   border-bottom: 0;
 }
-.settings-section h3 {
+/* The one subsection heading style inside panes: sentence case, body size, 600,
+   with an optional meta-size description under it. */
+.settings-section h3,
+.settings-sub {
   margin: 0;
-  font-size: 14px;
-  font-weight: 650;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  line-height: 1.35;
 }
 .settings-section > p {
   margin: -6px 0 0;
   color: var(--ink-3);
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
+}
+
+/* Chevron disclosure ("Preview extracted text", "How do I get an app password?"). */
+.settings-disclosure {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  padding: 2px 6px 2px 2px;
+  margin-left: -2px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--accent);
+  font-size: var(--fs-meta);
+  font-weight: 550;
+}
+.settings-disclosure:hover {
+  background: var(--accent-soft);
+}
+.settings-disclosure svg {
+  width: 14px;
+  height: 14px;
+  transform: rotate(-90deg);
+  transition: transform 0.15s;
+}
+.settings-disclosure[aria-expanded='true'] svg {
+  transform: none;
+}
+
+/* Segmented control: one choice from a few (Yes/No/Not set, mail provider). */
+.settings-segmented {
+  flex: none;
+  display: inline-flex;
+  width: fit-content;
+  padding: 2px;
+  border-radius: var(--r-md);
+  background: var(--surface-sunken);
+  border: 1px solid var(--line);
+}
+.settings-segmented button {
+  min-width: 64px;
+  height: var(--h-ctl-sm);
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink-3);
+  font-size: var(--fs-meta);
+  font-weight: 550;
+  transition: background 0.12s, color 0.12s;
+}
+.settings-segmented button:hover {
+  color: var(--ink);
+}
+.settings-segmented button.is-on {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-1), 0 0 0 1px var(--line);
 }

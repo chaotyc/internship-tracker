@@ -26,7 +26,7 @@
   flex-direction: column;
   min-height: 0;
   border-radius: var(--r-lg);
-  background: var(--surface-sunken);
+  background: color-mix(in srgb, var(--surface-sunken) 60%, var(--canvas));
   transition: background 0.15s, box-shadow 0.15s;
 }
 .col.is-flash {
@@ -76,13 +76,18 @@
   background: var(--ink-4);
 }
 .lane-count {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--ink-3);
+  order: 3;
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--chip-bg);
+  font-size: var(--fs-label);
+  font-weight: 650;
+  color: var(--ink-2);
 }
 .lane-label {
   writing-mode: vertical-rl;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
   letter-spacing: 0.01em;
 }
@@ -105,7 +110,7 @@
 }
 .col-head h2 {
   margin: 0;
-  font-size: 13.5px;
+  font-size: var(--fs-body);
   font-weight: 600;
   letter-spacing: 0.005em;
 }
@@ -227,15 +232,14 @@ body.is-dragging * {
 }
 .card-company {
   font-weight: 600;
-  font-size: 13.5px;
+  font-size: var(--fs-title);
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
 .card-title {
-  margin-top: 2px;
-  color: var(--ink);
-  opacity: 0.82;
-  font-size: 12.5px;
+  margin-top: 1px;
+  color: var(--ink-2);
+  font-size: var(--fs-body);
   line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -291,57 +295,54 @@ body.is-dragging * {
 }
 .card-next {
   display: flex;
-  gap: 6px;
-  align-items: flex-start;
-  padding: 6px 8px;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 9px;
   border-radius: 6px;
-  border: 1px solid color-mix(in srgb, var(--stage, var(--accent)) 30%, var(--line));
-  background: color-mix(in srgb, var(--stage, var(--accent)) 7%, var(--surface));
+  border: 1px solid var(--line);
+  background: var(--surface-sunken);
   color: var(--ink);
-  font-size: 12.5px;
-  font-weight: 500;
   line-height: 1.35;
 }
-.card-next span {
+.card-next-due {
+  font-size: var(--fs-label);
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.card-next-due::first-letter {
+  text-transform: uppercase;
+}
+.card-next-text {
+  font-size: var(--fs-meta);
+  font-weight: 500;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.card-next em {
-  font-style: normal;
-  color: var(--ink-2);
-  font-weight: 400;
-}
+/* Colour only means urgency: amber due today, red overdue. */
 .card-next.is-today {
-  border-color: color-mix(in srgb, var(--warn) 45%, var(--line));
+  border-color: color-mix(in srgb, var(--warn) 40%, var(--line));
   background: var(--warn-soft);
 }
-.card-next.is-today svg,
-.card-next.is-today em {
+.card-next.is-today .card-next-due {
   color: var(--warn);
 }
 .card-next.is-overdue {
-  border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--line));
   background: var(--danger-soft);
 }
-.card-next.is-overdue svg,
-.card-next.is-overdue em {
+.card-next.is-overdue .card-next-due {
   color: var(--danger);
-}
-.card-next svg {
-  width: 12px;
-  height: 12px;
-  margin-top: 3px;
-  flex: none;
-  color: var(--stage, var(--accent));
 }
 .card-foot {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 12px;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--ink-3);
 }
 .card-found {
@@ -381,7 +382,7 @@ body.is-dragging * {
 }
 .card-meta {
   color: var(--ink-3);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   overflow-wrap: anywhere;
 }
 .card-chips {
@@ -392,8 +393,8 @@ body.is-dragging * {
 .card-note {
   padding-top: 7px;
   border-top: 1px solid var(--line);
-  color: var(--ink-2);
-  font-size: 12px;
+  color: var(--ink-3);
+  font-size: var(--fs-meta);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;

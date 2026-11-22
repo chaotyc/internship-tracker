@@ -76,7 +76,7 @@ export function AutosearchButton({ onResults }: { onResults: () => void }) {
         {(waiting > 0 || trayOpen) && (
           <button
             type="button"
-            className={`chip accent sugg-count tabular${trayOpen ? ' is-pressed' : ''}`}
+            className={`sugg-count tabular${trayOpen ? ' is-pressed' : ''}`}
             onClick={trayOpen ? requestTrayClose : onResults}
             aria-pressed={trayOpen}
             title={trayOpen ? 'Hide suggested roles' : 'Show suggested roles'}

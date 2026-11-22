@@ -45,7 +45,7 @@ export function NextStepField({ value, onChange }: { value: NextStep | null; onC
       <div className="ns-row">
         <input value={v.text} placeholder="e.g. Finish the take-home" onChange={(e) => set({ text: e.target.value })} aria-label="Next step" />
         <input type="date" className={v.due ? undefined : 'is-empty'} value={v.due} onChange={(e) => set({ due: e.target.value })} aria-label="Next step date" />
-        <input type="time" value={v.time} disabled={!v.due} onChange={(e) => set({ time: e.target.value })} aria-label="Next step time" />
+        <input type="time" className={v.time ? undefined : 'is-empty'} value={v.time} disabled={!v.due} onChange={(e) => set({ time: e.target.value })} aria-label="Next step time" />
       </div>
       <div className="ns-tools">
         {chips.map((c) => (

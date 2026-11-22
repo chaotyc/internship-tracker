@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useId, useRef, useState, type DragEvent } from 'react'
+import { useCallback, useEffect, useId, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { Icon } from '@renderer/components/Icon'
 import { api } from '@renderer/lib/api'
+import { PaneHeader } from '@renderer/features/settings/PaneHeader'
 import { ChipInput, fullDate, Note, words } from '@renderer/features/settings/ProfilePanel'
 import {
   RESUME_EXTENSIONS,
@@ -124,7 +125,7 @@ function TrackResume({ track, onProfile }: { track: ApplicationTrack; onProfile:
           </div>
           {resume.text ? (
             <>
-              <button type="button" className="pf-disclosure" aria-expanded={showText} onClick={() => setShowText((s) => !s)}>
+              <button type="button" className="settings-disclosure" aria-expanded={showText} onClick={() => setShowText((s) => !s)}>
                 <Icon name="chevronDown" />
                 {showText ? 'Hide extracted text' : 'Preview extracted text'}
               </button>
@@ -151,6 +152,92 @@ function TrackResume({ track, onProfile }: { track: ApplicationTrack; onProfile:
         </button>
       )}
       {error && <Note tone="danger">{error}</Note>}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// "⋯" menu: reorder and delete, out of the way until needed
+
+interface MenuItem {
+  label: string
+  onSelect: () => void
+  disabled?: boolean
+  danger?: boolean
+}
+
+function TrackMenu({ name, items }: { name: string; items: MenuItem[] }) {
+  const [open, setOpen] = useState(false)
+  const wrap = useRef<HTMLDivElement>(null)
+  const button = useRef<HTMLButtonElement>(null)
+  const menu = useRef<HTMLDivElement>(null)
+  const menuId = useId()
+
+  useEffect(() => {
+    if (!open) return
+    menu.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus()
+    const onDown = (e: MouseEvent) => {
+      if (wrap.current && !wrap.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [open])
+
+  const close = (refocus: boolean) => {
+    setOpen(false)
+    if (refocus) button.current?.focus()
+  }
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Escape') {
+      // Close the menu, not the Settings dialog.
+      e.preventDefault()
+      e.stopPropagation()
+      close(true)
+      return
+    }
+    if (e.key === 'Tab') return setOpen(false)
+    const d = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0
+    if (!d) return
+    e.preventDefault()
+    const btns = [...(menu.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? [])]
+    const i = btns.indexOf(document.activeElement as HTMLButtonElement)
+    btns[(i + d + btns.length) % btns.length]?.focus()
+  }
+
+  return (
+    <div ref={wrap} className="trk-menu-wrap">
+      <button
+        ref={button}
+        type="button"
+        className={`icon-btn trk-more${open ? ' is-open' : ''}`}
+        aria-label={`More actions for ${name || 'this track'}`}
+        title="More"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={open ? menuId : undefined}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <Icon name="more" />
+      </button>
+      {open && (
+        <div ref={menu} id={menuId} className="trk-menu" role="menu" aria-label={`Actions for ${name || 'this track'}`} onKeyDown={onKeyDown}>
+          {items.map((it) => (
+            <button
+              key={it.label}
+              type="button"
+              role="menuitem"
+              className={it.danger ? 'is-danger' : undefined}
+              disabled={it.disabled}
+              onClick={() => {
+                close(!it.danger)
+                it.onSelect()
+              }}
+            >
+              {it.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -329,17 +416,14 @@ function TrackCard({ track, index, count, profileAnswers, encrypted, autoFocusNa
               Make default
             </button>
           )}
-          <div className="trk-order" role="group" aria-label="Order">
-            <button type="button" className="icon-btn trk-up" aria-label={`Move ${draft.name} up`} title="Move up" disabled={index === 0} onClick={() => onMove(-1)}>
-              <Icon name="chevronDown" />
-            </button>
-            <button type="button" className="icon-btn" aria-label={`Move ${draft.name} down`} title="Move down" disabled={index === count - 1} onClick={() => onMove(1)}>
-              <Icon name="chevronDown" />
-            </button>
-          </div>
-          <button type="button" className="icon-btn trk-delete" aria-label={`Delete ${draft.name}`} title="Delete track" onClick={() => void askDelete()}>
-            <Icon name="trash" />
-          </button>
+          <TrackMenu
+            name={draft.name}
+            items={[
+              { label: 'Move up', onSelect: () => onMove(-1), disabled: index === 0 },
+              { label: 'Move down', onSelect: () => onMove(1), disabled: index === count - 1 },
+              { label: 'Delete track…', onSelect: () => void askDelete(), danger: true },
+            ]}
+          />
         </div>
       </header>
 
@@ -380,7 +464,7 @@ function TrackCard({ track, index, count, profileAnswers, encrypted, autoFocusNa
       <div className="trk-answers">
         <div className="trk-answers-head">
           <div>
-            <h4>Answer overrides</h4>
+            <h4 className="settings-sub">Answer overrides</h4>
             <p className="pf-hint">Used instead of your saved answer to the same question for roles on this track.</p>
           </div>
           {encrypted && draft.answers.length > 0 && (
@@ -507,8 +591,23 @@ export function TracksPanel() {
   }
   const onProfile = useCallback((p: Profile) => setProfile(p), [])
 
-  if (loadError) return <Note tone="danger">Your tracks couldn’t be loaded: {loadError}</Note>
-  if (!profile) return <div className="pf-loading" aria-busy="true" />
+  const header = (action?: ReactNode) => (
+    <PaneHeader title="Application tracks" description="A resume, target roles and answers for each kind of role you apply to." action={action} />
+  )
+  if (loadError)
+    return (
+      <div className="pf trk">
+        {header()}
+        <Note tone="danger">Your tracks couldn’t be loaded: {loadError}</Note>
+      </div>
+    )
+  if (!profile)
+    return (
+      <div className="pf trk">
+        {header()}
+        <div className="pf-loading" aria-busy="true" />
+      </div>
+    )
 
   const tracks = profile.tracks
   const move = (i: number, dir: -1 | 1) => {
@@ -521,20 +620,14 @@ export function TracksPanel() {
 
   return (
     <div className="pf trk">
-      <div className="pf-section-head trk-intro">
-        <div>
-          <h3>Application tracks</h3>
-          <p className="pf-hint">
-            A resume and focus for each kind of role you apply to. Pick a track on any role; autofill, the assistant and search use its resume and answers.
-          </p>
-        </div>
-        {tracks.length > 1 && (
+      {header(
+        tracks.length > 1 && (
           <button type="button" className="btn btn-sm" onClick={() => void create()} disabled={busy}>
             <Icon name="plus" />
             Add track
           </button>
-        )}
-      </div>
+        ),
+      )}
 
       {tracks.length === 0 ? (
         <div className="trk-empty">

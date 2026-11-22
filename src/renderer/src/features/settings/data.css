@@ -42,7 +42,7 @@
 .dp-path-name {
   display: flex;
   min-width: 0;
-  font: 12.5px/1.4 var(--font-mono);
+  font: var(--fs-meta)/1.4 var(--font-mono);
   color: var(--ink);
   white-space: nowrap;
   user-select: text;
@@ -60,7 +60,31 @@
 }
 .dp-path-text small {
   color: var(--ink-3);
-  font-size: 12px;
+  font-size: var(--fs-meta);
+}
+/* Demo mode: a warning, so it doesn't read as a claim about the real folder. */
+.dp-demo {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--warn) 30%, var(--line));
+  border-radius: var(--r-md);
+  background: var(--warn-soft);
+  color: var(--ink-2);
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+}
+.dp-demo svg {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin-top: 1px;
+  color: var(--warn);
+}
+.dp-demo strong {
+  color: var(--ink);
+  font-weight: 600;
 }
 .dp-status {
   display: flex;
@@ -104,7 +128,7 @@
 .dp-status p {
   margin: 2px 0 0;
   color: var(--ink-2);
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
   line-height: 1.5;
 }
 .dp-facts {
@@ -114,7 +138,7 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
   color: var(--ink-2);
 }
 .dp-facts li {
@@ -138,7 +162,7 @@
 .dp-small {
   margin: 0;
   color: var(--ink-3);
-  font-size: 12px;
+  font-size: var(--fs-meta);
 }
 .dp-msg {
   display: inline-flex;
@@ -146,7 +170,7 @@
   gap: 6px;
   min-width: 0;
   margin: 0;
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
 }
 .dp-msg svg {
   flex: none;
@@ -188,7 +212,7 @@
   margin: -6px 0 0;
   padding-left: 18px;
   color: var(--ink-2);
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
   line-height: 1.6;
 }
 .dp-confirm .field {

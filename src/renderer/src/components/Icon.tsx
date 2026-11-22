@@ -37,6 +37,8 @@ const PATHS = {
   unlock: 'M7 11V8a5 5 0 0 1 9.6-2M6 11h12v9H6z',
   folder: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
   download: 'M12 4v12M7 11l5 5 5-5M5 20h14',
+  mail: 'M4 6h16v12H4zM4 7l8 6 8-6',
+  more: 'M7 12a1 1 0 1 0-2 0 1 1 0 1 0 2 0zM13 12a1 1 0 1 0-2 0 1 1 0 1 0 2 0zM19 12a1 1 0 1 0-2 0 1 1 0 1 0 2 0z',
 } as const
 
 export type IconName = keyof typeof PATHS

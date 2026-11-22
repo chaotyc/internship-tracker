@@ -16,7 +16,7 @@ const TABS: { key: SettingsTab; label: string; icon: IconName; hint: string }[] 
   { key: 'tracks', label: 'Application tracks', icon: 'file', hint: 'A resume per kind of role' },
   { key: 'ai', label: 'AI connections', icon: 'sparkle', hint: 'Claude, OpenAI or Gemini' },
   { key: 'boards', label: 'Job boards', icon: 'list', hint: 'Companies to watch' },
-  { key: 'email', label: 'Email updates', icon: 'send', hint: 'Turn emails into next steps' },
+  { key: 'email', label: 'Email updates', icon: 'mail', hint: 'Turn emails into next steps' },
   { key: 'data', label: 'Data & privacy', icon: 'database', hint: 'Export or erase' },
 ]
 

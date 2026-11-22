@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useId, useState, type KeyboardEvent } from 'react'
 import type { EmailSettings, EmailStatus } from '@shared/today'
 import { Icon } from '@renderer/components/Icon'
 import { useToast } from '@renderer/components/Toast'
 import { api, useRoles } from '@renderer/lib/api'
+import { PaneHeader } from '@renderer/features/settings/PaneHeader'
 import { EmailDrop } from './EmailDrop'
-import { MailIcon, ShieldIcon, Switch, sinceLabel } from './parts'
+import { ShieldIcon, Switch, sinceLabel } from './parts'
 import './today.css'
 
 const PRESETS = [
@@ -45,21 +46,31 @@ export function EmailPanel() {
     }
   }
 
-  if (loadError) return <p className="settings-empty">Couldn't load email settings: {loadError}</p>
-  if (!status) return null
+  const header = <PaneHeader title="Email updates" description="Recruiter emails become proposed updates in Today. Nothing changes until you apply one." />
+  if (loadError)
+    return (
+      <>
+        {header}
+        <p className="settings-empty">Couldn't load email settings: {loadError}</p>
+      </>
+    )
+  if (!status) return header
 
   return (
     <>
+      {header}
       <section className="settings-section">
         <h3>Inbox</h3>
-        <p>Connect your inbox and recruiter emails become proposed updates in Today. You review each one; nothing changes until you apply it.</p>
+        <p>Connect read-only to pick up new recruiter emails automatically.</p>
         {status.connected ? <Connected status={status} onStatus={setStatus} onSettings={saveSettings} /> : <ConnectForm onConnected={setStatus} canStore={status.canStoreSecrets} />}
       </section>
 
       <section className="settings-section">
         <h3>Paste or drop an email</h3>
         <p>No inbox connection needed: paste a message’s text, or drop a .eml file saved from your mail app.</p>
-        <EmailDrop roles={roles ?? []} where="settings" />
+        <div className="ep-drop">
+          <EmailDrop roles={roles ?? []} where="settings" />
+        </div>
       </section>
 
       <section className="settings-section">
@@ -109,7 +120,7 @@ function Connected({ status, onStatus, onSettings }: { status: EmailStatus; onSt
   return (
     <>
       <div className="ep-status">
-        <span className={`ep-status-icon${error ? ' is-error' : ''}`}>{error ? <Icon name="alert" /> : <MailIcon />}</span>
+        <span className={`ep-status-icon${error ? ' is-error' : ''}`}>{error ? <Icon name="alert" /> : <Icon name="mail" />}</span>
         <div>
           <strong>{status.user}</strong>
           <small>
@@ -157,6 +168,18 @@ function ConnectForm({ onConnected, canStore }: { onConnected: (s: EmailStatus) 
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [helpOpen, setHelpOpen] = useState(false)
+  const providerId = useId()
+  const preset = PRESETS.findIndex((p) => p.host === host)
+  // Arrow keys move the choice, like any radio group.
+  const movePreset = (e: KeyboardEvent<HTMLDivElement>) => {
+    const d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0
+    if (!d) return
+    e.preventDefault()
+    const i = (Math.max(preset, d > 0 ? -1 : 0) + d + PRESETS.length) % PRESETS.length
+    setHost(PRESETS[i]!.host)
+    e.currentTarget.querySelectorAll<HTMLButtonElement>('button')[i]?.focus()
+  }
 
   const connect = async () => {
     setBusy(true)
@@ -173,12 +196,23 @@ function ConnectForm({ onConnected, canStore }: { onConnected: (s: EmailStatus) 
 
   return (
     <>
-      <div className="ep-presets" role="group" aria-label="Mail provider">
-        {PRESETS.map((p) => (
-          <button key={p.label} type="button" className="ns-chip" aria-pressed={host === p.host} onClick={() => setHost(p.host)}>
-            {p.label}
-          </button>
-        ))}
+      <div className="field ep-provider">
+        <span id={providerId}>Mail provider</span>
+        <div className="settings-segmented" role="radiogroup" aria-labelledby={providerId} onKeyDown={movePreset}>
+          {PRESETS.map((p, i) => (
+            <button
+              key={p.label}
+              type="button"
+              role="radio"
+              aria-checked={i === preset}
+              tabIndex={i === Math.max(preset, 0) ? 0 : -1}
+              className={i === preset ? 'is-on' : undefined}
+              onClick={() => setHost(p.host)}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
       </div>
       <form
         className="ep-form"
@@ -204,22 +238,27 @@ function ConnectForm({ onConnected, canStore }: { onConnected: (s: EmailStatus) 
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="16-character app password" autoComplete="off" />
           <small className="hint">Not your normal password. Stored only in this computer’s keychain.</small>
         </label>
-        <details className="ep-help wide">
-          <summary>How do I get an app password?</summary>
-          <ol>
-            <li>
-              <strong>Gmail:</strong> turn on 2-Step Verification for your Google Account, then create an app password at <code>myaccount.google.com/apppasswords</code>. Server{' '}
-              <code>imap.gmail.com</code>, port <code>993</code>.
-            </li>
-            <li>
-              <strong>Outlook.com:</strong> turn on two-step verification at <code>account.microsoft.com/security</code>, then under Advanced security options create an app password. Server{' '}
-              <code>outlook.office365.com</code>, port <code>993</code>. School and work accounts often block app passwords; ask your IT team.
-            </li>
-            <li>
-              <strong>iCloud:</strong> create an app-specific password at <code>account.apple.com</code> under Sign-In and Security. Server <code>imap.mail.me.com</code>, port <code>993</code>.
-            </li>
-          </ol>
-        </details>
+        <div className="ep-help wide">
+          <button type="button" className="settings-disclosure" aria-expanded={helpOpen} aria-controls={`${providerId}-help`} onClick={() => setHelpOpen((o) => !o)}>
+            <Icon name="chevronDown" />
+            How do I get an app password?
+          </button>
+          {helpOpen && (
+            <ol id={`${providerId}-help`}>
+              <li>
+                <strong>Gmail:</strong> turn on 2-Step Verification for your Google Account, then create an app password at <code>myaccount.google.com/apppasswords</code>. Server{' '}
+                <code>imap.gmail.com</code>, port <code>993</code>.
+              </li>
+              <li>
+                <strong>Outlook.com:</strong> turn on two-step verification at <code>account.microsoft.com/security</code>, then under Advanced security options create an app password. Server{' '}
+                <code>outlook.office365.com</code>, port <code>993</code>. School and work accounts often block app passwords; ask your IT team.
+              </li>
+              <li>
+                <strong>iCloud:</strong> create an app-specific password at <code>account.apple.com</code> under Sign-In and Security. Server <code>imap.mail.me.com</code>, port <code>993</code>.
+              </li>
+            </ol>
+          )}
+        </div>
         <div className="ep-form-foot">
           <button type="submit" className="btn btn-primary" disabled={busy || !canStore || !host.trim() || !user.trim() || !password.trim()}>
             {busy ? <Icon name="refresh" className="td-spin" /> : <Icon name="lock" />}

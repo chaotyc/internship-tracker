@@ -16,6 +16,7 @@ import {
   type SavedAnswer,
   type SearchPreferences,
 } from '@shared/profile'
+import { PaneHeader } from './PaneHeader'
 import './profile.css'
 
 // ---------------------------------------------------------------------------
@@ -106,7 +107,7 @@ function Segmented({ label, hint, value, onChange }: { label: string; hint?: str
         <span id={id}>{label}</span>
         {hint && <small>{hint}</small>}
       </div>
-      <div className="pf-segmented" role="radiogroup" aria-labelledby={id} onKeyDown={move}>
+      <div className="settings-segmented" role="radiogroup" aria-labelledby={id} onKeyDown={move}>
         {TRI.map((o) => (
           <button
             key={o.label}
@@ -442,7 +443,7 @@ function ResumeSection({
           </div>
           {resume.text ? (
             <>
-              <button type="button" className="pf-disclosure" aria-expanded={showText} onClick={() => setShowText((s) => !s)}>
+              <button type="button" className="settings-disclosure" aria-expanded={showText} onClick={() => setShowText((s) => !s)}>
                 <Icon name="chevronDown" />
                 {showText ? 'Hide extracted text' : 'Show extracted text'}
               </button>
@@ -639,6 +640,7 @@ export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<Profile
   if (loadError) {
     return (
       <div className="settings-scroll">
+        <PaneHeader title="Profile" description="What autofill puts on applications and the assistant uses to judge fit." />
         <Note tone="danger">Your profile couldn’t be loaded: {loadError}</Note>
       </div>
     )
@@ -646,6 +648,7 @@ export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<Profile
   if (!base) {
     return (
       <div className="settings-scroll">
+        <PaneHeader title="Profile" description="What autofill puts on applications and the assistant uses to judge fit." />
         <div className="pf-loading" aria-busy="true" />
       </div>
     )
@@ -667,7 +670,8 @@ export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<Profile
   return (
     <>
       <div className="settings-scroll pf" ref={rootRef} onKeyDown={onKeyDown}>
-        <header className="pf-hero">
+        <PaneHeader title="Profile" description="What autofill puts on applications and the assistant uses to judge fit." />
+        <div className="pf-hero">
           <div className="pf-avatar" aria-hidden="true">
             {initials(draft) || <Icon name="user" />}
           </div>
@@ -689,7 +693,7 @@ export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<Profile
               {encrypted ? 'Encrypted' : 'Not encrypted'}
             </span>
           )}
-        </header>
+        </div>
 
         {!encrypted && (
           <Note tone="warn">

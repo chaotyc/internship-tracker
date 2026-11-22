@@ -107,11 +107,11 @@ export function ProposalCard({ p, role, onOpenRole, onDone }: { p: EmailProposal
         </p>
       )}
       <div className="td-prop-actions">
-        <button type="button" className="btn btn-primary btn-sm" onClick={() => void apply()} disabled={applyDisabled}>
+        <button type="button" className="btn btn-primary" onClick={() => void apply()} disabled={applyDisabled}>
           <Icon name="check" />
           {busy === 'apply' ? 'Applying…' : 'Apply'}
         </button>
-        <button type="button" className="btn btn-sm" onClick={() => void dismiss()} disabled={!!busy}>
+        <button type="button" className="btn" onClick={() => void dismiss()} disabled={!!busy}>
           {busy === 'dismiss' ? 'Dismissing…' : 'Dismiss'}
         </button>
         {role && (

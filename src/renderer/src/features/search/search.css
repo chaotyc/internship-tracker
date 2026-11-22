@@ -77,17 +77,17 @@
 }
 .pop-head h3 {
   margin: 0;
-  font-size: 13.5px;
+  font-size: var(--fs-body);
   font-weight: 650;
 }
 .pop-head p {
   margin: 2px 0 0;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--ink-3);
 }
 .pop-head .icon-btn {
-  width: 26px;
-  height: 26px;
+  width: var(--h-ctl-sm);
+  height: var(--h-ctl-sm);
   margin-top: -2px;
 }
 .pop-body {
@@ -109,7 +109,7 @@
   align-items: center;
   gap: 7px;
   margin: 0;
-  font-size: 11.5px;
+  font-size: var(--fs-label);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -151,11 +151,11 @@
 }
 .pop-item-text strong {
   font-weight: 600;
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 .pop-item-text small {
   color: var(--ink-3);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -171,7 +171,7 @@
   margin: 0;
   padding: 18px 14px;
   color: var(--ink-2);
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 .pop-empty.ok svg {
   width: 16px;
@@ -194,27 +194,36 @@
   -webkit-app-region: no-drag;
 }
 .sugg-count {
-  height: 22px;
-  padding: 0 8px;
-  border: 0;
+  display: inline-flex;
+  align-items: center;
+  height: var(--h-ctl);
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--fs-meta);
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
-  transition: background 0.12s;
+  transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
 }
 .sugg-count:hover {
-  background: color-mix(in srgb, var(--accent) 18%, var(--surface));
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
 }
 .sugg-count:focus-visible {
   outline: none;
   box-shadow: var(--ring);
 }
-/* While the tray is open the pill stays put and reads as pressed; clicking it closes the tray. */
+/* While the tray is open the control stays put and reads as pressed; clicking it closes the tray. */
 .sugg-count.is-pressed {
-  background: var(--accent-soft);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 .sugg-count.is-pressed:focus-visible {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), var(--ring);
+  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--accent) 22%, transparent), var(--ring);
 }
 
 /* ---------- Autosearch progress ---------- */
@@ -223,7 +232,7 @@
   align-items: center;
   gap: 8px;
   width: 196px;
-  height: 32px;
+  height: var(--h-ctl);
   padding: 0 4px 0 10px;
   border-radius: var(--r-md);
   border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line-strong));
@@ -243,7 +252,7 @@
   gap: 5px;
   min-width: 0;
   white-space: nowrap;
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
 }
 .autosearch-phase {
   font-weight: 600;
@@ -322,14 +331,29 @@
 }
 .tray-head h2 {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 650;
   white-space: nowrap;
+}
+/* Same outlined pill in both themes; a chip fill disappears on the light tray background. */
+.tray-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  color: var(--ink-2);
+  font-size: var(--fs-label);
+  font-weight: 650;
 }
 .tray-ranked {
   flex: none;
   color: var(--ink-3);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   white-space: nowrap;
   cursor: help;
 }
@@ -341,7 +365,7 @@
 .tray-note {
   min-width: 0;
   color: var(--ink-3);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -353,8 +377,8 @@
 }
 .tray-nav .icon-btn,
 .tray-close {
-  width: 26px;
-  height: 26px;
+  width: var(--h-ctl-sm);
+  height: var(--h-ctl-sm);
 }
 .tray-nav .icon-btn:disabled {
   opacity: 0.4;
@@ -377,7 +401,16 @@
   overflow-x: auto;
   scroll-padding-inline: 18px;
   scroll-snap-type: x proximity;
-  /* Fades whichever edge has more cards past it, so a clipped card reads as "more this way". */
+  /* Fades whichever edge has more cards past it, so a clipped card reads as "more this way".
+     Only alpha matters in a mask; the stops are opaque in both themes. The fade is wide
+     enough to read against the light canvas, where white cards barely contrast. */
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    var(--ink) var(--fade-start),
+    var(--ink) calc(100% - var(--fade-end)),
+    transparent 100%
+  );
   mask-image: linear-gradient(
     to right,
     transparent 0,
@@ -387,10 +420,10 @@
   );
 }
 .tray-scroll.fade-start {
-  --fade-start: 40px;
+  --fade-start: 72px;
 }
 .tray-scroll.fade-end {
-  --fade-end: 56px;
+  --fade-end: 120px;
 }
 .tray-state {
   display: flex;
@@ -401,7 +434,7 @@
   border: 1.5px dashed var(--line-strong);
   border-radius: var(--r-lg);
   color: var(--ink-2);
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 .tray-state > svg {
   width: 16px;
@@ -446,24 +479,23 @@
 }
 .sugg-company {
   font-weight: 600;
-  font-size: 13px;
+  font-size: var(--fs-title);
   line-height: 1.25;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* Titles may wrap to two lines. */
+/* One line so cards line up; the term suffix is stripped and the full title is in the tooltip. */
 .sugg-title {
+  display: block;
   margin-top: 1px;
   color: var(--ink-2);
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   line-height: 1.35;
   text-decoration: none;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
   overflow: hidden;
-  overflow-wrap: anywhere;
+  text-overflow: ellipsis;
 }
 .sugg-title:hover {
   color: var(--accent);
@@ -476,7 +508,7 @@
   gap: 8px;
   min-width: 0;
   color: var(--ink-3);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   line-height: 1.35;
 }
 .sugg-meta-text {
@@ -496,7 +528,7 @@
   min-height: calc(2 * 1.4em);
   margin: 0;
   color: var(--ink-2);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -511,8 +543,8 @@
 }
 .sugg-open {
   margin-left: auto;
-  width: 26px;
-  height: 26px;
+  width: var(--h-ctl-sm);
+  height: var(--h-ctl-sm);
 }
 .sugg-open svg {
   width: 14px;
@@ -562,7 +594,7 @@
 .watch-input input {
   flex: 1;
   min-width: 0;
-  height: 32px;
+  height: var(--h-ctl);
   border: 0;
   padding: 0;
   outline: none;
@@ -577,7 +609,7 @@
 }
 .watch-note {
   margin: -4px 0 0;
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
   color: var(--ink-2);
 }
 .watch-note.error {
@@ -597,7 +629,7 @@
   border: 1.5px dashed var(--line-strong);
   border-radius: var(--r-md);
   color: var(--ink-3);
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
   text-align: center;
 }
 .watch-list {
@@ -633,7 +665,7 @@
 }
 .watch-name a {
   color: var(--ink-3);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   text-decoration: none;
   white-space: nowrap;
   overflow: hidden;
@@ -662,7 +694,7 @@
   padding: 0 7px;
   border-radius: 99px;
   border: 1px solid var(--line);
-  font-size: 11px;
+  font-size: var(--fs-label);
   font-weight: 550;
   color: var(--ink-2);
   background: var(--surface-sunken);
@@ -691,7 +723,7 @@
 }
 .watch-group h4 {
   margin: 2px 0 0;
-  font-size: 11.5px;
+  font-size: var(--fs-label);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -712,13 +744,12 @@
   border-radius: 99px;
   background: var(--surface);
   color: var(--ink);
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
   font-weight: 500;
   transition: border-color 0.12s, background 0.12s, box-shadow 0.12s;
 }
 .watch-pill .monogram {
   border-radius: 50%;
-  font-size: 8.5px !important;
 }
 .watch-pill-plus {
   width: 13px;
@@ -740,7 +771,7 @@
 /* Last check per board, under its link. */
 .watch-check {
   color: var(--ink-3);
-  font-size: 11.5px;
+  font-size: var(--fs-meta);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -821,7 +852,7 @@
 }
 .src-switch-text small {
   font-weight: 400;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   line-height: 1.4;
   color: var(--ink-3);
 }
@@ -840,7 +871,7 @@
 .sugg-source {
   min-width: 0;
   color: var(--ink-3);
-  font-size: 11.5px;
+  font-size: var(--fs-meta);
   line-height: 1.35;
   white-space: nowrap;
   overflow: hidden;

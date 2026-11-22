@@ -565,7 +565,7 @@ function ChatSkeleton() {
 /**
  * Composer control for which role the next message is about. It steers only what is
  * sent next; earlier messages keep the role they were sent with. Shows
- * "Next message about: All roles" when nothing is attached, or the role as a removable chip.
+ * "Context: All roles" when nothing is attached, or the role as a removable chip.
  */
 function ScopePicker({ roles, current, onChange }: { roles: Role[] | null; current: Role | null; onChange: (id: string | null) => void }) {
   const [open, setOpen] = useState(false)
@@ -634,7 +634,7 @@ function ScopePicker({ roles, current, onChange }: { roles: Role[] | null; curre
   return (
     <div className="chat-context" ref={rootRef}>
       <span className="chat-context-label" aria-hidden="true">
-        Next message about:
+        Context:
       </span>
       {current ? (
         <span className="chip chat-context-chip" title={`Next message is about ${roleLabel(current)}`}>
@@ -645,7 +645,7 @@ function ScopePicker({ roles, current, onChange }: { roles: Role[] | null; curre
             onClick={() => (open ? close(false) : show())}
             aria-haspopup="listbox"
             aria-expanded={open}
-            aria-label={`Next message about ${roleLabel(current)}. Change role`}
+            aria-label={`Context for the next message: ${roleLabel(current)}. Change role`}
           >
             {roleLabel(current)}
           </button>
@@ -662,7 +662,7 @@ function ScopePicker({ roles, current, onChange }: { roles: Role[] | null; curre
           aria-haspopup="listbox"
           aria-expanded={open}
           title="Ask about a specific role"
-          aria-label="Next message about all roles. Change role"
+          aria-label="Context for the next message: all roles. Change role"
         >
           All roles
           <Icon name="chevronDown" />

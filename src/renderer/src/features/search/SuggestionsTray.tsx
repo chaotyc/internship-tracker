@@ -17,6 +17,21 @@ export function sourceLine(s: Pick<Suggestion, 'source' | 'board' | 'trackName'>
   return [from, s.trackName && `${s.trackName} track`].filter(Boolean).join(' · ')
 }
 
+const SEASON = '(?:summer|fall|autumn|winter|spring)'
+const TERM = `(?:${SEASON}\\s+(?:'?\\d{2}|\\d{4})|\\d{4}\\s+${SEASON})(?:\\s+(?:internships?|interns?|co-?ops?))?`
+const TERM_SUFFIX = new RegExp(`\\s*(?:[-–—|:,]\\s*${TERM}|[(\\[]\\s*${TERM}\\s*[)\\]])\\s*$`, 'i')
+
+/** Drops a trailing term like " – Summer 2027" or "(Summer 2027)" so titles fit one line; the full title stays in the tooltip. */
+export function displayTitle(title: string): string {
+  const short = title.replace(TERM_SUFFIX, '').trim()
+  return short || title
+}
+
+/** Posted age first so freshness survives truncation, then location and pay: "2d ago · San Jose, CA · $50–60/hr". */
+export function metaLine(s: Pick<Suggestion, 'postedAt' | 'location' | 'pay'>): string {
+  return [s.postedAt && ago(s.postedAt), s.location, s.pay].filter(Boolean).join(' · ')
+}
+
 /** Same four-step scale as the board's fit meter. */
 export function fitLevel(score: number): number {
   return score >= 85 ? 4 : score >= 70 ? 3 : score >= 50 ? 2 : 1
@@ -140,7 +155,7 @@ export function SuggestionsTray({ open, onClose }: { open: boolean; onClose: () 
           <Icon name="sparkle" />
         </span>
         <h2>Suggested for you</h2>
-        {items && items.length > 0 && <span className="chip tabular">{items.length}</span>}
+        {items && items.length > 0 && <span className="tray-count tabular">{items.length}</span>}
         {ranking && (
           <span className="tray-ranked" title={ranking.title}>
             {ranking.text}
@@ -189,7 +204,8 @@ export function SuggestionsTray({ open, onClose }: { open: boolean; onClose: () 
           className={`tray-scroll${fade.start ? ' fade-start' : ''}${fade.end ? ' fade-end' : ''}`}
         >
           {items.map((s) => {
-            const meta = [s.location, s.postedAt && `Posted ${ago(s.postedAt)}`, s.pay].filter(Boolean).join(' · ')
+            const meta = metaLine(s)
+            const metaTitle = [s.postedAt && `Posted ${ago(s.postedAt)}`, s.location, s.pay].filter(Boolean).join(' · ')
             const from = sourceLine(s)
             return (
               <article key={s.id} className="sugg" aria-label={`${s.company}, ${s.title}`}>
@@ -200,14 +216,14 @@ export function SuggestionsTray({ open, onClose }: { open: boolean; onClose: () 
                       {s.company}
                     </div>
                     <a className="sugg-title" href={s.link} target="_blank" rel="noreferrer" title={`${s.title} — open posting`}>
-                      {s.title}
+                      {displayTitle(s.title)}
                     </a>
                   </div>
                 </div>
                 <div className="sugg-meta">
                   <MatchMeter score={s.score} rankedBy={s.rankedBy} />
                   {meta && (
-                    <span className="sugg-meta-text" title={meta}>
+                    <span className="sugg-meta-text" title={metaTitle}>
                       {meta}
                     </span>
                   )}

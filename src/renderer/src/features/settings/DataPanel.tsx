@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Icon } from '@renderer/components/Icon'
 import { api } from '@renderer/lib/api'
 import type { ProfileStatus } from '@shared/profile'
+import { PaneHeader } from './PaneHeader'
 import './data.css'
 
 function fileManager(platform: string | undefined): string {
@@ -92,6 +93,7 @@ export function DataPanel() {
 
   return (
     <div className="dp">
+      <PaneHeader title="Data & privacy" description="Everything stays in one folder on this computer. Export it or erase it." />
       <section className="settings-section" aria-labelledby="dp-where">
         <h3 id="dp-where">Where your data lives</h3>
         <p>Your board, profile, chats and resume are kept in one folder on this computer. There’s no account and no cloud copy.</p>
@@ -114,15 +116,19 @@ export function DataPanel() {
               ) : (
                 <code className="dp-path-name">…</code>
               )}
-              <small>
-                {status?.demo
-                  ? 'Demo mode: this session uses a temporary database and nothing is written here.'
-                  : 'tracker.sqlite holds your board and profile; resumes/ holds the copy of your resume.'}
-              </small>
+              <small>tracker.sqlite holds your board and profile; resumes/ holds the copy of your resume.</small>
             </div>
             <button type="button" className="btn btn-sm" onClick={reveal} disabled={!status}>
               Show in {fileManager(platform)}
             </button>
+          </div>
+        )}
+        {status?.demo && (
+          <div className="dp-demo" role="status">
+            <Icon name="alert" />
+            <span>
+              <strong>Demo mode.</strong> This session uses a temporary database, so nothing you do here is written to this folder.
+            </span>
           </div>
         )}
         {revealError && (

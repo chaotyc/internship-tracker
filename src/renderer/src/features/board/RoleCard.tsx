@@ -59,6 +59,17 @@ function DeadlineChip({ deadline }: { deadline: string }) {
   )
 }
 
+/** True when a note mostly repeats the next step, so the card doesn't say it twice. */
+function similar(a: string, b: string): boolean {
+  const words = (s: string) => new Set(s.toLowerCase().match(/[a-z0-9]{3,}/g) ?? [])
+  const wa = words(a)
+  const wb = words(b)
+  if (!wa.size || !wb.size) return false
+  let shared = 0
+  for (const w of wb) if (wa.has(w)) shared++
+  return shared / wb.size >= 0.6
+}
+
 function nextTone(due: string): string {
   const d = daysUntil(due)
   if (d == null) return ''
@@ -87,11 +98,11 @@ export function RoleCard({ role, ghost, ...rest }: Props) {
   const meta = [role.location, role.pay].filter(Boolean).join(' · ')
   const live = role.liveness?.status
   const saved = role.stage === 'saved'
-  const active = role.stage === 'interviewing' || role.stage === 'offer'
   const finished = role.stage === 'rejected' || role.stage === 'closed'
   // Deadlines matter in every open stage (offer and interview deadlines most of all).
   const alerts = (saved && (live === 'closed' || live === 'expiring')) || (!finished && !!role.deadline)
   const showFit = !finished && !!role.fit
+  const hasNext = !!role.nextStep && !role.nextStep.done && !finished
   return (
     <article
       className={`card${ghost ? ' is-ghost' : ''}${live === 'closed' && saved ? ' is-stale' : ''}${finished ? ' is-finished' : ''}`}
@@ -134,22 +145,11 @@ export function RoleCard({ role, ghost, ...rest }: Props) {
           </button>
         </div>
       </div>
-      {role.nextStep && !role.nextStep.done && !finished ? (
-        <div className={`card-next${nextTone(role.nextStep.due)}`}>
-          <Icon name="arrowRight" />
-          <span>
-            {role.nextStep.text || 'Next step'}
-            {role.nextStep.due && <em> · {dueLabel(role.nextStep.due, role.nextStep.time)}</em>}
-          </span>
+      {hasNext && (
+        <div className={`card-next${nextTone(role.nextStep!.due)}`}>
+          {role.nextStep!.due && <span className="card-next-due">{dueLabel(role.nextStep!.due, role.nextStep!.time)}</span>}
+          <span className="card-next-text">{role.nextStep!.text || 'Next step'}</span>
         </div>
-      ) : (
-        active &&
-        role.notes && (
-          <div className="card-next">
-            <Icon name="arrowRight" />
-            <span>{role.notes}</span>
-          </div>
-        )
       )}
       {meta && <div className="card-meta">{meta}</div>}
       {alerts && (
@@ -181,7 +181,7 @@ export function RoleCard({ role, ghost, ...rest }: Props) {
           {!saved && role.appliedOn && role.stage !== 'closed' && <span className="card-age">Applied {ago(role.appliedOn)}</span>}
         </div>
       )}
-      {(!active || (role.nextStep && !role.nextStep.done)) && !finished && role.notes && <div className="card-note">{role.notes}</div>}
+      {!finished && role.notes && !(hasNext && similar(role.notes, role.nextStep!.text)) && <div className="card-note">{role.notes}</div>}
     </article>
   )
 }

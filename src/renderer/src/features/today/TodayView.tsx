@@ -137,7 +137,7 @@ export function TodayView({ onOpenRole }: { onOpenRole: (id: string) => void }) 
       fn()
       next?.focus()
     }
-    if (e.key === 'Enter' || e.key === 'o') {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'o') {
       e.preventDefault()
       onOpenRole(item.roleId)
     } else if (step && (e.key === 'd' || e.key === 'x')) act(() => done(item))
@@ -319,8 +319,10 @@ function Row({
   const tone = section === 'overdue' ? ' is-overdue' : section === 'today' ? ' is-today' : section === 'undated' ? ' is-none' : ''
   const due = item.due ? dueLabel(item.due, item.time) : 'No date'
   const label = `${item.text}, ${item.company}, ${item.title}, ${item.kind === 'deadline' ? 'deadline ' : ''}${due}, ${stageLabel(item.stage)}`
+  // Overdue and today rows always show their actions; later rows show them on hover or focus.
+  const pinned = section === 'overdue' || section === 'today'
   return (
-    <li className="td-row" data-row tabIndex={0} aria-label={label} onKeyDown={onKeyDown} onDoubleClick={onOpen}>
+    <li className={`td-row${pinned ? ' is-pinned' : ''}`} data-row tabIndex={0} aria-label={label} onKeyDown={onKeyDown} onClick={onOpen}>
       <Monogram name={item.company} size={30} />
       <div className="td-row-main">
         <div className="td-row-step">
@@ -335,30 +337,16 @@ function Row({
       <span className="td-stage" style={stageStyle(item.stage)}>
         {stageLabel(item.stage)}
       </span>
-      <div className="td-actions">
-        {step ? (
+      {/* Fixed-width column so deadline rows (no actions) line up with step rows. Clicks here don't open the role. */}
+      <div className="td-actions" onClick={(e) => e.stopPropagation()}>
+        {step && (
           <>
-            <button type="button" className="td-act is-done" onClick={onDone} title="Mark done (D)">
+            <button type="button" className="td-act is-done" onClick={onDone} title="Mark done (D)" aria-label={`Mark done: ${item.text}`}>
               <Icon name="check" />
-              <span className="td-act-label">Done</span>
             </button>
-            <SnoozeMenu onSnooze={onSnooze} today={today} />
-          </>
-        ) : (
-          <>
-            <span className="td-act is-placeholder" aria-hidden="true">
-              <Icon name="check" />
-              <span className="td-act-label">Done</span>
-            </span>
-            <span className="td-act is-placeholder" aria-hidden="true">
-              <Icon name="clock" />
-              <span className="td-act-label">Snooze</span>
-            </span>
+            <SnoozeMenu onSnooze={onSnooze} today={today} label={item.text} />
           </>
         )}
-        <button type="button" className="td-act is-icon" onClick={onOpen} title="Open role (Enter)" aria-label={`Open ${item.company}`}>
-          <Icon name="arrowRight" />
-        </button>
       </div>
     </li>
   )
@@ -366,7 +354,7 @@ function Row({
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
-function SnoozeMenu({ onSnooze, today }: { onSnooze: (w: SnoozeKey) => void; today: string }) {
+function SnoozeMenu({ onSnooze, today, label }: { onSnooze: (w: SnoozeKey) => void; today: string; label: string }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -393,9 +381,16 @@ function SnoozeMenu({ onSnooze, today }: { onSnooze: (w: SnoozeKey) => void; tod
         }
       }}
     >
-      <button type="button" className="td-act" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)} title="Snooze (S tomorrow, W next week)">
+      <button
+        type="button"
+        className="td-act"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`Snooze: ${label}`}
+        onClick={() => setOpen((o) => !o)}
+        title="Snooze (S tomorrow, W next week)"
+      >
         <Icon name="clock" />
-        <span className="td-act-label">Snooze</span>
       </button>
       {open && (
         <div className="td-menu" role="menu">

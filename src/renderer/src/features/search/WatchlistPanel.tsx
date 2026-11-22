@@ -17,6 +17,7 @@ import { Icon } from '@renderer/components/Icon'
 import { useToast } from '@renderer/components/Toast'
 import { api } from '@renderer/lib/api'
 import { Monogram } from '@renderer/features/board/RoleCard'
+import { PaneHeader } from '@renderer/features/settings/PaneHeader'
 import './search.css'
 
 const key = boardKey
@@ -147,6 +148,7 @@ export function WatchlistPanel() {
 
   return (
     <div className="watch">
+      <PaneHeader title="Job boards" description="Companies whose public job boards autosearch scans for new roles." />
       <section className="settings-section">
         <h3>Add a company</h3>
         <p>Paste a careers page or job board link. Autosearch reads public Greenhouse, Ashby, Lever and Workday boards.</p>

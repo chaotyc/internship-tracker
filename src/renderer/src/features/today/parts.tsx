@@ -1,16 +1,13 @@
 import type { CSSProperties } from 'react'
 import { STAGES, type StageKey } from '@shared/roles'
+import { Icon } from '@renderer/components/Icon'
 
 export const stageLabel = (k: StageKey) => STAGES.find((s) => s.key === k)?.label ?? k
 export const stageStyle = (k: StageKey) => ({ ['--stage' as string]: `var(--stage-${k})` }) as CSSProperties
 
-/** Envelope icon (the shared icon set has none). */
+/** Envelope icon, from the shared set. */
 export function MailIcon(props: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
-      <path d="M4 6h16v12H4zM4 7l8 6 8-6" />
-    </svg>
-  )
+  return <Icon name="mail" {...props} />
 }
 
 export function ShieldIcon(props: { className?: string }) {

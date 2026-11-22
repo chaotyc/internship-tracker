@@ -401,7 +401,7 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
               <label className="field wide">
                 <span>Notes</span>
                 <textarea
-                  rows={3}
+                  rows={2}
                   value={form.notes}
                   placeholder="Next step, interview times, recruiter name"
                   onChange={(e) => set('notes', e.target.value)}

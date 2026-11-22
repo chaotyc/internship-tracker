@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { PROVIDER_ORDER, PROVIDERS, type AiSettings, type ProviderId, type ProviderStatus } from '@shared/ai'
 import { Icon } from '@renderer/components/Icon'
 import { api } from '@renderer/lib/api'
+import { PaneHeader } from './PaneHeader'
 import './ai-panel.css'
 
 type TestState = { state: 'running' } | { state: 'done'; ok: boolean; detail: string; at: number }
@@ -49,12 +50,22 @@ export function AiPanel() {
       .catch((e: Error) => finish({ ok: false, detail: e.message }))
   }
 
-  if (error && !statuses) return <p className="settings-empty">Couldn't load AI connections: {error}</p>
+  const header = <PaneHeader title="AI connections" description="Which AI the assistant, autofill and search use. Nothing goes to any other provider." />
+  if (error && !statuses)
+    return (
+      <div className="ai-panel">
+        {header}
+        <p className="settings-empty">Couldn't load AI connections: {error}</p>
+      </div>
+    )
   if (!statuses || !settings) {
     return (
-      <p className="settings-empty" aria-live="polite">
-        Checking for Claude Code, Codex and Gemini CLI…
-      </p>
+      <div className="ai-panel">
+        {header}
+        <p className="settings-empty" aria-live="polite">
+          Checking for Claude Code, Codex and Gemini CLI…
+        </p>
+      </div>
     )
   }
 
@@ -85,6 +96,7 @@ export function AiPanel() {
 
   return (
     <div className="ai-panel">
+      {header}
       <div className={`ai-summary${active ? '' : ' is-empty'}`} role="status">
         <span className="ai-summary-icon" aria-hidden>
           <Icon name={active ? 'sparkle' : 'alert'} />
@@ -192,14 +204,21 @@ function ProviderCard(props: {
           <span>{info.vendor}</span>
           {status.kind === 'cli' && status.available && status.version && <span className="ai-version">v{status.version}</span>}
         </div>
-        <StatusPill status={status} isActive={isActive} />
+        <StatusPill status={status} isActive={isActive} isAuto={isActive && !isDefault} />
         <span className="ai-spacer" />
         {status.available && (
           <>
-            <label className="ai-default" title="Always use this for AI features">
-              <input type="radio" name="ai-default" checked={isDefault} onChange={props.onDefault} />
-              Default
-            </label>
+            {isActive && !isDefault ? (
+              // In use without being pinned: offer to pin it rather than show an unchecked "Default".
+              <button type="button" className="btn btn-sm btn-ghost ai-make-default" title="Always use this for AI features" onClick={props.onDefault}>
+                Make default
+              </button>
+            ) : (
+              <label className="ai-default" title="Always use this for AI features">
+                <input type="radio" name="ai-default" checked={isDefault} onChange={props.onDefault} />
+                Default
+              </label>
+            )}
             <button type="button" className="btn btn-sm" onClick={props.onTest} disabled={test?.state === 'running'}>
               {test?.state === 'running' ? 'Testing…' : 'Test'}
             </button>
@@ -263,12 +282,12 @@ function ProviderCard(props: {
 }
 
 /** One pill per row: in use, ready, or what's missing. */
-function StatusPill({ status, isActive }: { status: ProviderStatus; isActive: boolean }) {
+function StatusPill({ status, isActive, isAuto }: { status: ProviderStatus; isActive: boolean; isAuto: boolean }) {
   if (isActive) {
     return (
-      <span className="chip accent ai-pill">
+      <span className="chip accent ai-pill" title={isAuto ? 'Chosen automatically: the first connection that works' : undefined}>
         <Icon name="check" />
-        In use
+        {isAuto ? 'In use · automatic' : 'In use'}
       </span>
     )
   }
