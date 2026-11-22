@@ -593,3 +593,11 @@
     box-shadow: inset 0 0 0 1px var(--line-strong), var(--shadow-1);
   }
 }
+
+/* Keep the destructive action apart from navigation in the role dialog footer. */
+.dialog-foot .btn-danger + .btn-ghost {
+  margin-left: 4px;
+  padding-left: 14px;
+  border-left: 1px solid var(--line);
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+}

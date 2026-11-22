@@ -118,7 +118,7 @@ export function todayItems(
     if (ns && !ns.done && (ns.text.trim() || ns.due))
       items.push({ ...base, kind: 'next-step', text: ns.text.trim() || 'Next step', due: isIsoDate(ns.due) ? ns.due : '', time: ns.due ? ns.time : '' })
     if (r.deadline && isIsoDate(r.deadline) && dayDiff(today, r.deadline) >= -STALE_DEADLINE_DAYS)
-      items.push({ ...base, kind: 'deadline', text: r.stage === 'saved' ? 'Application deadline' : 'Deadline', due: r.deadline, time: '' })
+      items.push({ ...base, kind: 'deadline', text: r.stage === 'saved' ? 'Submit the application' : 'Deadline', due: r.deadline, time: '' })
   }
   return items.sort(compareItems)
 }

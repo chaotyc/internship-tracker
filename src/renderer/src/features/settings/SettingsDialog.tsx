@@ -107,7 +107,6 @@ export function SettingsDialog({ open, tab, onClose }: { open: boolean; tab: Set
       onClose={() => leave('close')}
       width={900}
       title="Settings"
-      subtitle="Stored on this computer. AI features send only what they need to the provider you choose."
     >
       <div className="settings">
         <nav className="settings-nav" aria-label="Settings sections">

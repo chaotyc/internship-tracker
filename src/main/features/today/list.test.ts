@@ -23,7 +23,7 @@ describe('todayItems', () => {
       TODAY,
     )
     expect(items.map((i) => `${i.company}:${i.kind}`)).toEqual(['Vectorline:next-step', 'Offer:next-step', 'Kite:deadline', 'Offer:deadline', 'Later:next-step'])
-    expect(items.find((i) => i.company === 'Kite')!.text).toBe('Application deadline')
+    expect(items.find((i) => i.company === 'Kite')!.text).toBe('Submit the application')
     expect(items.find((i) => i.kind === 'deadline' && i.company === 'Offer')!.text).toBe('Deadline')
   })
 })

@@ -505,7 +505,7 @@ function TrackCard({ track, index, count, profileAnswers, encrypted, autoFocusNa
             })}
             {(draft.answers.length === 0 || ideas.length > 0) && (
               <div className="pf-ideas">
-                {draft.answers.length === 0 && <span className="pf-ideas-label">{ideas.length ? 'Override a saved answer' : 'None yet.'}</span>}
+                {draft.answers.length === 0 && !ideas.length && <span className="pf-ideas-label">None yet.</span>}
                 {draft.answers.length > 0 && <span className="pf-ideas-label">Also override</span>}
                 {ideas.map((a) => (
                   <button key={a.id} type="button" className="pf-idea" onClick={() => addAnswer(a.question)}>

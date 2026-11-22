@@ -102,7 +102,9 @@ export function RoleCard({ role, ghost, ...rest }: Props) {
         <Monogram name={role.company} />
         <div className="card-heading">
           <div className="card-company">{role.company}</div>
-          <div className="card-title">{role.title}</div>
+          <div className="card-title" title={role.title}>
+            {role.title}
+          </div>
         </div>
         <div className="card-tools">
           {role.link && !ghost && (
@@ -138,7 +140,7 @@ export function RoleCard({ role, ghost, ...rest }: Props) {
         </div>
       )}
       {meta.length > 0 && (
-        <div className="card-meta">
+        <div className="card-meta" title={meta.join(' · ')}>
           <div className="card-meta-inner">
             {meta.map((m, i) => (
               <span key={i}>{m}</span>

@@ -81,14 +81,11 @@ function CheckLine({ st, board, off, always = false }: { st?: BoardStatus; board
   if (off) return <span className="watch-check">Source turned off</span>
   if (st?.error) {
     const fail = boardFailure(board, st.error)
-    const parts = [
-      [fail.text, st.errorAt && since(st.errorAt)].filter(Boolean).join(' '),
-      st.lastOk && `last worked ${since(st.lastOk)}`,
-      fail.tone === 'warn' && 'Find roles will try again',
-    ]
+    const text = fail.tone === 'warn' ? `${fail.text} · will retry next run` : fail.text
+    const detail = [st.errorAt && `Failed ${since(st.errorAt)}`, st.lastOk && `last worked ${since(st.lastOk)}`, st.error].filter(Boolean).join(' · ')
     return (
-      <span className={`watch-check ${fail.tone}`} title={st.error}>
-        {parts.filter(Boolean).join(' · ')}
+      <span className={`watch-check ${fail.tone}`} title={detail}>
+        {text}
       </span>
     )
   }
@@ -256,7 +253,19 @@ export function WatchlistPanel() {
             Watching
             {list && list.length > 0 && <span className="watch-count tabular">{list.length}</span>}
           </h3>
-          {summary && <span className="watch-summary">{summary}</span>}
+          {summary && (
+            <span className="watch-summary">
+              {summary.split(/( · \d+ failed)/).map((part, i) =>
+                / failed$/.test(part) ? (
+                  <span key={i} className="watch-summary-failed">
+                    {part}
+                  </span>
+                ) : (
+                  part
+                ),
+              )}
+            </span>
+          )}
         </div>
         {list == null ? null : list.length === 0 ? (
           <p className="watch-empty">No companies yet. Add one above, or pick from the suggestions below.</p>

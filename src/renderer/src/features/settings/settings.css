@@ -181,11 +181,14 @@
    meta-size description under it. */
 .settings-section h3,
 .settings-sub {
+  /* Same group label as POSTING / PROGRESS in the role dialog and OVERDUE in Today. */
   margin: 0;
-  font-size: var(--fs-body);
-  font-weight: 600;
+  font-size: var(--fs-label);
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   line-height: 1.35;
-  color: var(--ink-2);
+  color: var(--ink-3);
 }
 .settings-section > p {
   margin: -6px 0 0;
