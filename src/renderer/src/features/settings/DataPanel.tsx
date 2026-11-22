@@ -2,7 +2,6 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Icon } from '@renderer/components/Icon'
 import { api } from '@renderer/lib/api'
 import type { ProfileStatus } from '@shared/profile'
-import { Glyph } from './ProfilePanel'
 import './data.css'
 
 function fileManager(platform: string | undefined): string {
@@ -97,7 +96,7 @@ export function DataPanel() {
         ) : (
           <div className="dp-path">
             <span className="dp-path-icon" aria-hidden="true">
-              <Glyph name="folder" />
+              <Icon name="folder" />
             </span>
             <div className="dp-path-text">
               <code title={status?.dataDir}>{status?.dataDir ?? '…'}</code>
@@ -125,7 +124,7 @@ export function DataPanel() {
         {status && (
           <div className={`dp-status ${encrypted ? 'is-ok' : 'is-warn'}`}>
             <span className="dp-status-icon" aria-hidden="true">
-              {encrypted ? <Glyph name="lock" /> : <Icon name="alert" />}
+              {encrypted ? <Icon name="lock" /> : <Icon name="alert" />}
             </span>
             <div>
               <strong>{encrypted ? `Protected by your ${keychainName(platform)}` : 'Keychain encryption is off'}</strong>
@@ -154,7 +153,7 @@ export function DataPanel() {
         <p>One JSON file with your roles, profile, saved answers, settings and chats. API keys are never included.</p>
         <div className="dp-row">
           <button type="button" className="btn" onClick={() => void exportAll()} disabled={exporting}>
-            <Glyph name="download" className="dp-btn-glyph" />
+            <Icon name="download" />
             {exporting ? 'Exporting…' : 'Export everything…'}
           </button>
           {exportMsg && (

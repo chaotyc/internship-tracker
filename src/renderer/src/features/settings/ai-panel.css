@@ -78,8 +78,9 @@
 
 .ai-card-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 8px 10px;
   min-height: 28px;
 }
 .ai-card-name {
@@ -121,18 +122,15 @@
   accent-color: var(--accent);
   cursor: inherit;
 }
-.ai-default.is-disabled {
-  color: var(--ink-4);
-  cursor: default;
+.ai-in-use {
+  flex: none;
 }
 
+/* Connection controls first, then the test result, then the model. */
 .ai-fields {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 10px 14px;
-}
-.ai-fields.has-key {
-  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 .ai-fields .field > label {
   font-size: 11.5px;
@@ -152,14 +150,14 @@
 .ai-fields input::placeholder {
   color: var(--ink-4);
 }
-/* CLI cards: one compact row. */
-.ai-fields:not(.has-key) .ai-model {
+/* Model: a compact secondary row under the connection. */
+.ai-fields .ai-model {
   flex-direction: row;
   align-items: center;
   gap: 10px;
   max-width: 340px;
 }
-.ai-fields:not(.has-key) .ai-model > label {
+.ai-fields .ai-model > label {
   flex: none;
 }
 
@@ -217,4 +215,7 @@
 }
 .ai-test.is-err {
   color: var(--danger);
+}
+.ai-test-when {
+  color: var(--ink-3);
 }

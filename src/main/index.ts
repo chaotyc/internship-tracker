@@ -21,7 +21,7 @@ function createWindow(): BrowserWindow {
     title: 'Internship Tracker',
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     trafficLightPosition: { x: 16, y: 18 },
-    backgroundColor: '#f4f5f7',
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#0c0e12' : '#f3f4f6',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -55,6 +55,8 @@ function createWindow(): BrowserWindow {
   else void win.loadFile(join(__dirname, '../renderer/index.html'), view ? { hash: `view=${view}` } : undefined)
   return win
 }
+
+app.setName('Internship Tracker')
 
 async function start(): Promise<void> {
   if (isHeadless() && process.platform === 'darwin') app.setActivationPolicy('prohibited')

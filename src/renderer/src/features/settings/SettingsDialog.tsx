@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Dialog } from '@renderer/components/Dialog'
 import { Icon, type IconName } from '@renderer/components/Icon'
 import { WatchlistPanel } from '@renderer/features/search/WatchlistPanel'
 import { AiPanel } from './AiPanel'
 import { DataPanel } from './DataPanel'
-import { ProfilePanel } from './ProfilePanel'
+import { ProfilePanel, type ProfileActions } from './ProfilePanel'
 import './settings.css'
 
 export type SettingsTab = 'profile' | 'ai' | 'boards' | 'data'
@@ -16,6 +16,9 @@ const TABS: { key: SettingsTab; label: string; icon: IconName; hint: string }[] 
   { key: 'data', label: 'Data & privacy', icon: 'database', hint: 'Export or erase' },
 ]
 
+/** Where the user was going when unsaved Profile edits stopped them. */
+type Leave = SettingsTab | 'close'
+
 export function SettingsDialog({ open, tab, onClose }: { open: boolean; tab: SettingsTab; onClose: () => void }) {
   const [active, setActive] = useState<SettingsTab>(tab)
   const [lastTab, setLastTab] = useState(tab)
@@ -23,9 +26,54 @@ export function SettingsDialog({ open, tab, onClose }: { open: boolean; tab: Set
     setLastTab(tab)
     setActive(tab)
   }
+  const [dirty, setDirty] = useState(false)
+  const [pending, setPending] = useState<Leave | null>(null)
+  const [saving, setSaving] = useState(false)
+  const profile = useRef<ProfileActions>(null)
+  const keepRef = useRef<HTMLButtonElement>(null)
   const current = TABS.find((t) => t.key === active)!
+
+  useEffect(() => {
+    if (pending) keepRef.current?.focus()
+  }, [pending])
+  // Saved another way (Cmd+S) while the prompt was up: nothing left to ask about.
+  useEffect(() => {
+    if (!dirty) setPending(null)
+  }, [dirty])
+
+  const go = (to: Leave) => {
+    setPending(null)
+    if (to === 'close') onClose()
+    else setActive(to)
+  }
+  const leave = (to: Leave) => {
+    if (to === active) return
+    if (active === 'profile' && dirty) setPending(to)
+    else go(to)
+  }
+  const saveAndLeave = async () => {
+    if (!pending || saving) return
+    setSaving(true)
+    const ok = (await profile.current?.save()) ?? false
+    setSaving(false)
+    // If the save didn't go through, stay so the user can see what needs fixing.
+    if (ok) go(pending)
+    else setPending(null)
+  }
+  const discardAndLeave = () => {
+    if (!pending) return
+    profile.current?.discard()
+    go(pending)
+  }
+
   return (
-    <Dialog open={open} onClose={onClose} width={900} title="Settings" subtitle="Everything stays on this computer.">
+    <Dialog
+      open={open}
+      onClose={() => leave('close')}
+      width={900}
+      title="Settings"
+      subtitle="Stored on this computer. AI features send only what they need to the provider you choose."
+    >
       <div className="settings">
         <nav className="settings-nav" aria-label="Settings sections">
           {TABS.map((t) => (
@@ -34,7 +82,7 @@ export function SettingsDialog({ open, tab, onClose }: { open: boolean; tab: Set
               type="button"
               className={`settings-tab${t.key === active ? ' is-active' : ''}`}
               aria-current={t.key === active ? 'page' : undefined}
-              onClick={() => setActive(t.key)}
+              onClick={() => leave(t.key)}
             >
               <Icon name={t.icon} />
               <span>
@@ -44,11 +92,36 @@ export function SettingsDialog({ open, tab, onClose }: { open: boolean; tab: Set
             </button>
           ))}
         </nav>
-        <section className="settings-pane" aria-label={current.label}>
-          {active === 'profile' && <ProfilePanel />}
-          {active === 'ai' && <AiPanel />}
-          {active === 'boards' && <WatchlistPanel />}
-          {active === 'data' && <DataPanel />}
+        <section className={`settings-pane${pending ? ' is-confirming' : ''}`} aria-label={current.label}>
+          {active === 'profile' ? (
+            <ProfilePanel actions={profile} onDirtyChange={setDirty} />
+          ) : (
+            <div key={active} className="settings-scroll">
+              {active === 'ai' && <AiPanel />}
+              {active === 'boards' && <WatchlistPanel />}
+              {active === 'data' && <DataPanel />}
+            </div>
+          )}
+          {pending && (
+            <div className="settings-confirm" role="alertdialog" aria-labelledby="settings-confirm-t" aria-describedby="settings-confirm-d">
+              <Icon name="alert" />
+              <div className="settings-confirm-text">
+                <strong id="settings-confirm-t">You have unsaved changes</strong>
+                <span id="settings-confirm-d">
+                  {pending === 'close' ? 'Save your profile before closing Settings?' : `Save your profile before going to ${TABS.find((t) => t.key === pending)!.label}?`}
+                </span>
+              </div>
+              <button ref={keepRef} type="button" className="btn btn-ghost" onClick={() => setPending(null)} disabled={saving}>
+                Keep editing
+              </button>
+              <button type="button" className="btn" onClick={discardAndLeave} disabled={saving}>
+                Discard
+              </button>
+              <button type="button" className="btn btn-primary" onClick={() => void saveAndLeave()} disabled={saving}>
+                {saving ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          )}
         </section>
       </div>
     </Dialog>

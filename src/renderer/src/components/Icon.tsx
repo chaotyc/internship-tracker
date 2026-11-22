@@ -31,6 +31,12 @@ const PATHS = {
   database: 'M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3',
   chevronDown: 'M6 9l6 6 6-6',
   arrowRight: 'M5 12h14M13 6l6 6-6 6',
+  collapse: 'M13 6l-6 6 6 6M19 6l-6 6 6 6',
+  board: 'M4 5h4v14H4zM10 5h4v10h-4zM16 5h4v6h-4z',
+  lock: 'M7 11V8a5 5 0 0 1 10 0v3M6 11h12v9H6z',
+  unlock: 'M7 11V8a5 5 0 0 1 9.6-2M6 11h12v9H6z',
+  folder: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+  download: 'M12 4v12M7 11l5 5 5-5M5 20h14',
 } as const
 
 export type IconName = keyof typeof PATHS

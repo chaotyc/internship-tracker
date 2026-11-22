@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { describeAction, visibleReply, type ChatAction, type ChatActionState, type ChatMessage } from '@shared/chat'
 import { STAGES, type Role } from '@shared/roles'
 import { Icon, type IconName } from '@renderer/components/Icon'
@@ -87,6 +87,17 @@ export function ChatPanel({ roleId, onClose, onOpenSettings }: Props) {
     if (el && pinned.current) el.scrollTop = el.scrollHeight
   }, [messages, stream, sending, error])
 
+  // Keep following the bottom when the scroller itself resizes (e.g. the composer hint appears).
+  useEffect(() => {
+    const el = listRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => {
+      if (pinned.current) el.scrollTop = el.scrollHeight
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   const autosize = () => {
     const el = inputRef.current
     if (!el) return
@@ -152,6 +163,12 @@ export function ChatPanel({ roleId, onClose, onOpenSettings }: Props) {
     })
   }
 
+  const clearBtnRef = useRef<HTMLButtonElement>(null)
+  const cancelClear = () => {
+    setConfirmClear(false)
+    requestAnimationFrame(() => clearBtnRef.current?.focus())
+  }
+
   const clear = async () => {
     setConfirmClear(false)
     try {
@@ -178,6 +195,7 @@ export function ChatPanel({ roleId, onClose, onOpenSettings }: Props) {
   const replace = (m: ChatMessage) => setMessages((cur) => cur?.map((x) => (x.id === m.id ? m : x)) ?? cur)
 
   const list = messages ?? []
+  const loading = messages === null && !loadError
   const empty = messages !== null && list.length === 0 && !sending
   const shown = visibleReply(stream)
 
@@ -185,30 +203,40 @@ export function ChatPanel({ roleId, onClose, onOpenSettings }: Props) {
     <aside className="side-panel chat" aria-label="Assistant">
       <header className="side-head chat-head">
         <h2>Assistant</h2>
-        <div className="chat-context">
-          {contextRole && (
-            <span className="chip chat-context-chip" title={`Asking about ${roleLabel(contextRole)}`}>
-              <span className="chat-context-text">{roleLabel(contextRole)}</span>
-              <button type="button" onClick={() => setContextId(null)} aria-label="Stop asking about this role">
-                <Icon name="close" />
-              </button>
-            </span>
-          )}
-        </div>
+        <ContextPicker roles={roles} current={contextRole} onChange={setContextId} />
         {list.length > 0 && (
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setConfirmClear(true)} disabled={confirmClear}>
-            Clear
+          <button
+            ref={clearBtnRef}
+            type="button"
+            className={`icon-btn chat-clear${confirmClear ? ' is-on' : ''}`}
+            onClick={() => setConfirmClear(true)}
+            aria-label="Clear conversation"
+            aria-expanded={confirmClear}
+            title="Clear conversation"
+          >
+            <Icon name="trash" />
           </button>
         )}
+        <span className="chat-head-sep" aria-hidden="true" />
         <button type="button" className="icon-btn" onClick={onClose} aria-label="Close assistant" title="Close (⌘J)">
           <Icon name="close" />
         </button>
       </header>
 
       {confirmClear && (
-        <div className="chat-confirm" role="alertdialog" aria-label="Clear conversation">
+        <div
+          className="chat-confirm"
+          role="alertdialog"
+          aria-label="Clear conversation"
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.stopPropagation()
+              cancelClear()
+            }
+          }}
+        >
           <span>Clear this conversation? This can’t be undone.</span>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setConfirmClear(false)} autoFocus>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={cancelClear} autoFocus>
             Cancel
           </button>
           <button type="button" className="btn btn-sm btn-danger is-armed" onClick={() => void clear()}>
@@ -228,7 +256,9 @@ export function ChatPanel({ roleId, onClose, onOpenSettings }: Props) {
         {loadError && (
           <InlineError message={`Couldn’t load the conversation: ${loadError}`} onRetry={load} />
         )}
-        {empty ? (
+        {loading ? (
+          <ChatSkeleton />
+        ) : empty ? (
           <EmptyState hasResume={hasResume} note={resumeNote} onPick={pickSuggestion} onAddResume={() => void addResume()} />
         ) : (
           <div className="chat-log" role="log" aria-live="polite" aria-busy={sending}>
@@ -290,9 +320,11 @@ export function ChatPanel({ roleId, onClose, onOpenSettings }: Props) {
             </button>
           )}
         </div>
-        <p className="chat-hint">
-          <span className="kbd">Enter</span> to send · <span className="kbd">Shift</span> <span className="kbd">Enter</span> for a new line
-        </p>
+        <div className="chat-hint-wrap">
+          <p className="chat-hint">
+            <span className="kbd">Enter</span> to send · <span className="kbd">Shift</span> <span className="kbd">Enter</span> for a new line
+          </p>
+        </div>
       </form>
     </aside>
   )
@@ -368,6 +400,22 @@ function AssistantMessage({
   )
 }
 
+/** Button and status wording for each kind of proposed change. */
+function actionVerbs(action: ChatAction): { apply: string; busy: string; done: string } {
+  switch (action.kind) {
+    case 'update_preferences':
+      return { apply: 'Save preferences', busy: 'Saving…', done: 'Preferences saved' }
+    case 'add_role':
+      return { apply: 'Add to board', busy: 'Adding…', done: 'Added to board' }
+    case 'move_role': {
+      const to = stageLabel(action.stage)
+      return { apply: `Move to ${to}`, busy: 'Moving…', done: `Moved to ${to}` }
+    }
+    case 'save_answers':
+      return { apply: 'Save answers', busy: 'Saving…', done: 'Answers saved' }
+  }
+}
+
 const ACTION_ICON: Record<ChatAction['kind'], IconName> = {
   add_role: 'plus',
   update_preferences: 'sparkle',
@@ -393,6 +441,7 @@ function ActionCard({
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const summary = describeAction(action, { roleName, stageLabel })
+  const verbs = actionVerbs(action)
 
   const act = async (channel: 'chat:applyAction' | 'chat:dismissAction') => {
     setBusy(true)
@@ -416,7 +465,7 @@ function ActionCard({
         {state === 'applied' && (
           <span className="chip ok">
             <Icon name="check" />
-            Applied
+            {verbs.done}
           </span>
         )}
         {state === 'dismissed' && <span className="chip">Dismissed</span>}
@@ -436,7 +485,7 @@ function ActionCard({
         <footer>
           <button type="button" className="btn btn-primary btn-sm" onClick={() => void act('chat:applyAction')} disabled={busy}>
             <Icon name="check" />
-            {busy ? 'Applying…' : 'Apply'}
+            {busy ? verbs.busy : verbs.apply}
           </button>
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => void act('chat:dismissAction')} disabled={busy}>
             Dismiss
@@ -473,6 +522,192 @@ function InlineError({ message, onRetry, action }: { message: string; onRetry: (
           Retry
         </button>
       </div>
+    </div>
+  )
+}
+
+function ChatSkeleton() {
+  return (
+    <div className="chat-skeleton" role="status" aria-live="polite">
+      <span className="visually-hidden">Loading conversation…</span>
+      <div className="chat-skel-user" aria-hidden="true">
+        <span style={{ width: '62%' }} />
+      </div>
+      <div className="chat-skel-assistant" aria-hidden="true">
+        <span style={{ width: '92%' }} />
+        <span style={{ width: '84%' }} />
+        <span style={{ width: '58%' }} />
+      </div>
+      <div className="chat-skel-user" aria-hidden="true">
+        <span style={{ width: '48%' }} />
+      </div>
+      <div className="chat-skel-assistant" aria-hidden="true">
+        <span style={{ width: '88%' }} />
+        <span style={{ width: '70%' }} />
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Header control for which role the conversation is about. Shows "About: all roles"
+ * when nothing is attached, or the attached role as a removable chip.
+ */
+function ContextPicker({ roles, current, onChange }: { roles: Role[] | null; current: Role | null; onChange: (id: string | null) => void }) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [active, setActive] = useState(0)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const listRef = useRef<HTMLUListElement>(null)
+  const uid = useId()
+  const listId = `${uid}-roles`
+
+  const options = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    const matches = (roles ?? []).filter((r) => !q || `${r.company} ${r.title}`.toLowerCase().includes(q))
+    const items: { id: string | null; role: Role | null }[] = matches.map((r) => ({ id: r.id, role: r }))
+    // "All roles" detaches the current one; offer it only when something is attached.
+    if (current && !q) items.unshift({ id: null, role: null })
+    return items
+  }, [roles, query, current])
+
+  const show = () => {
+    setQuery('')
+    setActive(0)
+    setOpen(true)
+  }
+  const close = (refocus = true) => {
+    setOpen(false)
+    if (refocus) requestAnimationFrame(() => triggerRef.current?.focus())
+  }
+  const pick = (id: string | null) => {
+    onChange(id)
+    close(false)
+  }
+
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: PointerEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) close(false)
+    }
+    document.addEventListener('pointerdown', onDown)
+    return () => document.removeEventListener('pointerdown', onDown)
+  }, [open])
+
+  useEffect(() => {
+    listRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' })
+  }, [active, open])
+
+  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setActive((i) => Math.min(i + 1, options.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActive((i) => Math.max(i - 1, 0))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      const o = options[active]
+      if (o) pick(o.id)
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      e.stopPropagation()
+      close()
+    }
+  }
+
+  return (
+    <div className="chat-context" ref={rootRef}>
+      {current ? (
+        <span className="chip chat-context-chip" title={`Asking about ${roleLabel(current)}`}>
+          <button
+            ref={triggerRef}
+            type="button"
+            className="chat-context-text"
+            onClick={() => (open ? close(false) : show())}
+            aria-haspopup="listbox"
+            aria-expanded={open}
+            aria-label={`About ${roleLabel(current)}. Change role`}
+          >
+            {roleLabel(current)}
+          </button>
+          <button type="button" className="chat-context-remove" onClick={() => onChange(null)} aria-label="Stop asking about this role">
+            <Icon name="close" />
+          </button>
+        </span>
+      ) : (
+        <button
+          ref={triggerRef}
+          type="button"
+          className="chat-context-trigger"
+          onClick={() => (open ? close(false) : show())}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          title="Ask about a specific role"
+        >
+          <span className="chat-context-label">About:</span> all roles
+          <Icon name="chevronDown" />
+        </button>
+      )}
+      {open && (
+        <div className="chat-picker">
+          <div className="chat-picker-search">
+            <Icon name="search" />
+            <input
+              autoFocus
+              type="text"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value)
+                setActive(0)
+              }}
+              onKeyDown={onKeyDown}
+              placeholder="Search your board"
+              role="combobox"
+              aria-label="Search roles"
+              aria-expanded="true"
+              aria-controls={listId}
+              aria-autocomplete="list"
+              aria-activedescendant={options[active] ? `${uid}-opt-${active}` : undefined}
+            />
+          </div>
+          <ul className="chat-picker-list" id={listId} role="listbox" aria-label="Roles" ref={listRef}>
+            {roles === null && <li className="chat-picker-note">Loading roles…</li>}
+            {roles !== null && options.length === 0 && (
+              <li className="chat-picker-note">{query.trim() ? 'No roles match.' : 'No roles on your board yet.'}</li>
+            )}
+            {options.map((o, i) => (
+              <li
+                key={o.id ?? 'all'}
+                id={`${uid}-opt-${i}`}
+                role="option"
+                aria-selected={i === active}
+                className={`chat-picker-option${i === active ? ' is-active' : ''}${o.id && o.id === current?.id ? ' is-current' : ''}`}
+                onPointerMove={() => setActive(i)}
+                onPointerDown={(e) => e.preventDefault()}
+                onClick={() => pick(o.id)}
+              >
+                {o.role ? (
+                  <>
+                    <span className="chat-picker-main">
+                      <span className="chat-picker-company">{o.role.company}</span>
+                      <span className="chat-picker-title">{o.role.title}</span>
+                    </span>
+                    <span className="chat-picker-stage">{stageLabel(o.role.stage)}</span>
+                  </>
+                ) : (
+                  <span className="chat-picker-main">
+                    <span className="chat-picker-company">All roles</span>
+                    <span className="chat-picker-title">Not about one role</span>
+                  </span>
+                )}
+                {o.id !== null && o.id === current?.id && <Icon name="check" className="chat-picker-check" />}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }

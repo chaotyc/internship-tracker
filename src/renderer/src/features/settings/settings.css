@@ -1,14 +1,22 @@
+/*
+ * Two panes at a fixed height: the nav stays put and the right pane scrolls on
+ * its own, so the dialog body itself never scrolls.
+ */
 .settings {
-  flex-shrink: 0;
   display: grid;
-  grid-template-columns: 220px 1fr;
-  gap: 20px;
-  min-height: 460px;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 0;
+  height: min(720px, calc(100vh - 170px));
+  min-height: 0;
 }
 .settings-nav {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-height: 0;
+  padding-right: 12px;
+  border-right: 1px solid var(--line);
+  overflow: hidden;
 }
 .settings-tab {
   display: flex;
@@ -45,12 +53,71 @@
   background: var(--accent-soft);
   color: var(--accent);
 }
+.settings-tab.is-active small {
+  color: color-mix(in srgb, var(--accent) 80%, var(--ink));
+}
 .settings-pane {
   min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+/* The part of the pane that scrolls. Side padding leaves room for focus rings. */
+.settings-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  padding: 3px 14px 20px 20px;
 }
+/* Optional footer pinned under the scrolling part (e.g. Profile's save bar). */
+.settings-pane-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 20px;
+  padding: 12px 14px 0 0;
+  border-top: 1px solid var(--line);
+}
+.settings-pane.is-confirming .settings-pane-foot {
+  display: none;
+}
+
+/* "You have unsaved changes": replaces the pane footer until answered. */
+.settings-confirm {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 14px 0 20px;
+  padding: 10px 10px 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--warn) 35%, var(--line));
+  border-radius: var(--r-lg);
+  background: var(--warn-soft);
+}
+.settings-confirm > svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--warn);
+}
+.settings-confirm-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.settings-confirm-text strong {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .settings-empty {
   margin: 0;
   padding: 40px 0;

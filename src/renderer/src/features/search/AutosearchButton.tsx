@@ -3,6 +3,7 @@ import type { AutosearchProgress } from '@shared/search'
 import { Icon } from '@renderer/components/Icon'
 import { useToast } from '@renderer/components/Toast'
 import { api } from '@renderer/lib/api'
+import { loadSuggestionCount, useSuggestionState } from './useSuggestionState'
 import './search.css'
 
 const PHASE: Record<AutosearchProgress['phase'], string> = {
@@ -20,6 +21,9 @@ export function AutosearchButton({ onResults }: { onResults: () => void }) {
   const [progress, setProgress] = useState<AutosearchProgress | null>(null)
   const cancelled = useRef(false)
   const summary = useRef('')
+  const { count, trayOpen } = useSuggestionState()
+
+  useEffect(loadSuggestionCount, [])
 
   useEffect(
     () =>
@@ -62,11 +66,19 @@ export function AutosearchButton({ onResults }: { onResults: () => void }) {
   }
 
   if (!running) {
+    const waiting = count ?? 0
     return (
-      <button type="button" className="btn" onClick={run} title="Find new internships on the job boards you follow">
-        <Icon name="sparkle" />
-        Autosearch
-      </button>
+      <div className="autosearch">
+        <button type="button" className="btn" onClick={run} title="Find new internships on the job boards you follow">
+          <Icon name="sparkle" />
+          Find roles
+        </button>
+        {waiting > 0 && !trayOpen && (
+          <button type="button" className="chip accent sugg-count tabular" onClick={onResults} title="Show suggested roles">
+            {waiting} suggestion{waiting === 1 ? '' : 's'}
+          </button>
+        )}
+      </div>
     )
   }
 

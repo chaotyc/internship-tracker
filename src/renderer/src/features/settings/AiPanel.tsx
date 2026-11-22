@@ -4,13 +4,16 @@ import { Icon } from '@renderer/components/Icon'
 import { api } from '@renderer/lib/api'
 import './ai-panel.css'
 
-type TestState = { state: 'running' } | { state: 'done'; ok: boolean; detail: string }
+type TestState = { state: 'running' } | { state: 'done'; ok: boolean; detail: string; at: number }
+
+/** Last finished test per provider, kept for the session so switching tabs doesn't forget it. */
+const lastTests: Partial<Record<ProviderId, TestState>> = {}
 
 /** Settings > AI connections: CLI sign-ins, API keys, models and the default. */
 export function AiPanel() {
   const [statuses, setStatuses] = useState<ProviderStatus[] | null>(null)
   const [settings, setSettings] = useState<AiSettings | null>(null)
-  const [tests, setTests] = useState<Partial<Record<ProviderId, TestState>>>({})
+  const [tests, setTests] = useState<Partial<Record<ProviderId, TestState>>>(() => ({ ...lastTests }))
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -34,11 +37,16 @@ export function AiPanel() {
   )
 
   const test = (id: ProviderId) => {
+    const finish = (r: { ok: boolean; detail: string }) => {
+      const done: TestState = { state: 'done', ...r, at: Date.now() }
+      lastTests[id] = done
+      setTests((t) => ({ ...t, [id]: done }))
+    }
     setTests((t) => ({ ...t, [id]: { state: 'running' } }))
     api
       .invoke('ai:test', { provider: id })
-      .then((r) => setTests((t) => ({ ...t, [id]: { state: 'done', ...r } })))
-      .catch((e: Error) => setTests((t) => ({ ...t, [id]: { state: 'done', ok: false, detail: e.message } })))
+      .then(finish)
+      .catch((e: Error) => finish({ ok: false, detail: e.message }))
   }
 
   if (error && !statuses) return <p className="settings-empty">Couldn't load AI connections: {error}</p>
@@ -60,6 +68,7 @@ export function AiPanel() {
       status={byId.get(id)!}
       isDefault={settings.defaultProvider === id}
       isActive={active === id}
+      isAutomatic={active === id && !chosen}
       model={settings.models[id] ?? ''}
       test={tests[id]}
       onTest={() => test(id)}
@@ -82,10 +91,15 @@ export function AiPanel() {
           <Icon name={active ? 'sparkle' : 'alert'} />
         </span>
         <p>
-          {active ? (
+          {active && chosen ? (
             <>
               AI features use <strong>{PROVIDERS[active].label}</strong>
-              <span className="ai-summary-why">{chosen ? ' · your default' : ' · first one available'}</span>
+              <span className="ai-summary-why"> · your default</span>
+            </>
+          ) : active ? (
+            <>
+              Automatic · using <strong>{PROVIDERS[active].label}</strong>
+              <span className="ai-summary-why"> · no default chosen</span>
             </>
           ) : (
             'No connection yet. Install a CLI below or paste an API key.'
@@ -122,6 +136,8 @@ function ProviderCard(props: {
   status: ProviderStatus
   isDefault: boolean
   isActive: boolean
+  /** In use because no default is chosen and it's the first available one. */
+  isAutomatic: boolean
   model: string
   test: TestState | undefined
   onTest: () => void
@@ -130,7 +146,7 @@ function ProviderCard(props: {
   onStatuses: (s: ProviderStatus[]) => void
   onError: (e: string | null) => void
 }) {
-  const { status, isDefault, isActive, model, test } = props
+  const { status, isDefault, isActive, isAutomatic, model, test } = props
   const info = PROVIDERS[status.id]
   const [draft, setDraft] = useState(model)
   const [lastModel, setLastModel] = useState(model)
@@ -157,6 +173,16 @@ function ProviderCard(props: {
       .finally(() => setBusy(false))
   }
 
+  const testLine = status.available && test?.state === 'done' && (
+    <p className={`ai-test ${test.ok ? 'is-ok' : 'is-err'}`} role="status">
+      <Icon name={test.ok ? 'check' : 'alert'} />
+      <span>
+        <span className="ai-test-when">Last test, {timeOf(test.at)}: </span>
+        {test.detail}
+      </span>
+    </p>
+  )
+
   return (
     <article className={`ai-card${isActive ? ' is-active' : ''}${missing ? ' is-missing' : ''}`} aria-label={info.label}>
       <div className="ai-card-head">
@@ -164,21 +190,31 @@ function ProviderCard(props: {
           <strong>{info.label}</strong>
           <span>{info.vendor}</span>
         </div>
-        <StatusChip status={status} />
+        <StatusChip status={status} test={test} />
         <span className="ai-spacer" />
-        <label className={`ai-default${status.available ? '' : ' is-disabled'}`} title={status.available ? 'Use this for AI features' : undefined}>
-          <input type="radio" name="ai-default" checked={isDefault} disabled={!status.available} onChange={props.onDefault} />
-          Default
-        </label>
-        <button type="button" className="btn btn-sm" onClick={props.onTest} disabled={!status.available || test?.state === 'running'}>
-          {test?.state === 'running' ? 'Testing…' : 'Test'}
-        </button>
+        {isActive && (
+          <span className="chip accent ai-in-use">
+            <Icon name="check" />
+            {isAutomatic ? 'In use · automatic' : 'In use'}
+          </span>
+        )}
+        {status.available && (
+          <>
+            <label className="ai-default" title="Always use this for AI features">
+              <input type="radio" name="ai-default" checked={isDefault} onChange={props.onDefault} />
+              Default
+            </label>
+            <button type="button" className="btn btn-sm" onClick={props.onTest} disabled={test?.state === 'running'}>
+              {test?.state === 'running' ? 'Testing…' : 'Test'}
+            </button>
+          </>
+        )}
       </div>
 
       {missing ? (
         <p className="ai-hint">{withCode(info.hint)}</p>
       ) : (
-        <div className={`ai-fields${info.kind === 'api' ? ' has-key' : ''}`}>
+        <div className="ai-fields">
           {info.kind === 'api' && (
             <div className="field">
               <label htmlFor={keyId}>API key</label>
@@ -210,6 +246,7 @@ function ProviderCard(props: {
               {!status.hasKey && <span className="hint">{info.hint}</span>}
             </div>
           )}
+          {testLine}
           <div className="field ai-model">
             <label htmlFor={modelId}>Model</label>
             <input
@@ -225,36 +262,51 @@ function ProviderCard(props: {
           </div>
         </div>
       )}
-
-      {test?.state === 'done' && (
-        <p className={`ai-test ${test.ok ? 'is-ok' : 'is-err'}`} role="status">
-          <Icon name={test.ok ? 'check' : 'alert'} />
-          <span>{test.detail}</span>
-        </p>
-      )}
     </article>
   )
 }
 
-function StatusChip({ status }: { status: ProviderStatus }) {
-  if (status.kind === 'cli') {
-    return status.available ? (
-      <span className="chip ok">
-        <Icon name="check" />
-        {status.version ? `Found · v${status.version}` : 'Found'}
+/** Installed / key saved is only half the story: a passing test is shown separately. */
+function StatusChip({ status, test }: { status: ProviderStatus; test: TestState | undefined }) {
+  const setup =
+    status.kind === 'cli' ? (
+      status.available ? (
+        <span className="chip">{status.version ? `Installed · v${status.version}` : 'Installed'}</span>
+      ) : (
+        <span className="chip">Not installed</span>
+      )
+    ) : status.hasKey ? (
+      <span className="chip">
+        <Icon name="key" />
+        Key saved
       </span>
     ) : (
-      <span className="chip">Not installed</span>
+      <span className="chip">No key</span>
     )
-  }
-  return status.hasKey ? (
-    <span className="chip ok">
-      <Icon name="key" />
-      Key saved
-    </span>
-  ) : (
-    <span className="chip">No key</span>
+  const result =
+    status.available && test?.state === 'done' ? (
+      test.ok ? (
+        <span className="chip ok">
+          <Icon name="check" />
+          Tested OK
+        </span>
+      ) : (
+        <span className="chip danger">
+          <Icon name="alert" />
+          Test failed
+        </span>
+      )
+    ) : null
+  return (
+    <>
+      {setup}
+      {result}
+    </>
   )
+}
+
+function timeOf(at: number): string {
+  return new Date(at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
 }
 
 /** Renders `backticked` spans as code. */

@@ -11,6 +11,22 @@ interface Props {
   onOpen: (id: string) => void
   onAdd: (stage: StageKey) => void
   onMove: (id: string, stage: StageKey, index: number) => void
+  /** Stage the top bar asked to show; the board scrolls to it and expands it if collapsed. */
+  focusStage: { stage: StageKey; n: number } | null
+}
+
+/** Terminal stages start as narrow lanes so the four active stages get the room. */
+const COLLAPSIBLE: StageKey[] = ['rejected', 'closed']
+const COLLAPSE_KEY = 'board.collapsed'
+
+function loadCollapsed(): Set<StageKey> {
+  try {
+    const raw = localStorage.getItem(COLLAPSE_KEY)
+    if (raw) return new Set(JSON.parse(raw) as StageKey[])
+  } catch {
+    /* storage unavailable: use the default */
+  }
+  return new Set(COLLAPSIBLE)
 }
 
 interface DragState {
@@ -37,8 +53,25 @@ export function byStage(roles: Role[]): Record<StageKey, Role[]> {
   return out
 }
 
-export function Board({ roles, query, onOpen, onAdd, onMove }: Props) {
+export function Board({ roles, query, onOpen, onAdd, onMove, focusStage }: Props) {
   const grouped = useMemo(() => byStage(roles), [roles])
+  const [collapsed, setCollapsed] = useState<Set<StageKey>>(loadCollapsed)
+  const [edges, setEdges] = useState({ left: false, right: false })
+  const [announce, setAnnounce] = useState('')
+  const toggleCollapsed = useCallback((stage: StageKey, open?: boolean) => {
+    setCollapsed((cur) => {
+      const next = new Set(cur)
+      const shouldOpen = open ?? next.has(stage)
+      if (shouldOpen) next.delete(stage)
+      else next.add(stage)
+      try {
+        localStorage.setItem(COLLAPSE_KEY, JSON.stringify([...next]))
+      } catch {
+        /* not persisted */
+      }
+      return next
+    })
+  }, [])
   const [drag, setDrag] = useState<DragState | null>(null)
   const dragRef = useRef<DragState | null>(null)
   const pending = useRef<{ id: string; x: number; y: number; pid: number; el: HTMLElement; offX: number; offY: number } | null>(
@@ -135,10 +168,16 @@ export function Board({ roles, query, onOpen, onAdd, onMove }: Props) {
       const cur = roles.find((r) => r.id === d.id)
       const curIndex = cur ? grouped[cur.stage].filter((r) => r.id !== d.id).findIndex((r) => r.order > cur.order) : -1
       const unchanged = cur && cur.stage === d.stage && (curIndex === -1 ? full.length : curIndex) === fullIndex
-      if (!unchanged) onMove(d.id, d.stage, fullIndex)
+      if (!unchanged) {
+        onMove(d.id, d.stage, fullIndex)
+        setAnnounce(`Moved ${cur?.company ?? 'role'} to ${STAGES.find((s) => s.key === d.stage)?.label}`)
+      }
     }
     const onUp = (e: PointerEvent) => {
-      if (pending.current && e.pointerId === pending.current.pid) finish(true)
+      if (!pending.current || e.pointerId !== pending.current.pid) return
+      // Only commit when released over a column; letting go anywhere else cancels.
+      const over = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest('[data-stage-body]')
+      finish(!dragRef.current || !!over)
     }
     const onCancel = (e: PointerEvent) => {
       if (pending.current && e.pointerId === pending.current.pid) finish(false)
@@ -181,18 +220,86 @@ export function Board({ roles, query, onOpen, onAdd, onMove }: Props) {
     const i = STAGE_KEYS.indexOf(role.stage) + dir
     const stage = STAGE_KEYS[i]
     if (!stage) return
+    if (collapsed.has(stage)) toggleCollapsed(stage, true)
     onMove(role.id, stage, grouped[stage].length)
+    setAnnounce(`Moved ${role.company} to ${STAGES.find((s) => s.key === stage)?.label}`)
     requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-card="${role.id}"]`)?.focus())
   }
 
+  // Fade the edges when columns continue off-screen, so overflow is visible.
+  useEffect(() => {
+    const el = boardRef.current
+    if (!el) return
+    const update = () =>
+      setEdges({ left: el.scrollLeft > 2, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 2 })
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    el.addEventListener('scroll', update, { passive: true })
+    return () => {
+      ro.disconnect()
+      el.removeEventListener('scroll', update)
+    }
+  }, [collapsed])
+
+  useEffect(() => {
+    if (!focusStage) return
+    if (collapsed.has(focusStage.stage)) toggleCollapsed(focusStage.stage, true)
+    requestAnimationFrame(() => {
+      const col = boardRef.current?.querySelector<HTMLElement>(`[data-col="${focusStage.stage}"]`)
+      if (!col) return
+      col.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' })
+      col.classList.remove('is-flash')
+      void col.offsetWidth
+      col.classList.add('is-flash')
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusStage])
+
   return (
-    <div className="board" ref={boardRef} role="list" aria-label="Application stages">
+    <div
+      className={`board${edges.left ? ' fade-left' : ''}${edges.right ? ' fade-right' : ''}`}
+      ref={boardRef}
+      role="list"
+      aria-label="Application stages"
+    >
+      <span id="card-keys-hint" className="visually-hidden">
+        Enter or Space opens the role. Shift plus left or right arrow moves it to the previous or next stage.
+      </span>
+      <div className="visually-hidden" aria-live="polite">
+        {announce}
+      </div>
       {STAGES.map((s) => {
         const all = grouped[s.key]
         const visible = all.filter((r) => matchesQuery(r, query) && r.id !== drag?.id)
         const isTarget = drag?.stage === s.key
+        if (collapsed.has(s.key)) {
+          return (
+            <section
+              key={s.key}
+              data-col={s.key}
+              className={`col is-collapsed${isTarget ? ' is-target' : ''}`}
+              style={{ ['--stage' as string]: `var(--stage-${s.key})` }}
+              role="listitem"
+            >
+              <button
+                type="button"
+                className="lane"
+                data-stage-body={s.key}
+                onClick={() => toggleCollapsed(s.key, true)}
+                aria-label={`${s.label}, ${all.length} roles. Expand`}
+                title={`Show ${s.label}`}
+              >
+                <span className="col-dot" />
+                <span className="lane-count tabular">{all.length}</span>
+                <span className="lane-label">{s.label}</span>
+              </button>
+            </section>
+          )
+        }
         return (
           <section
+            data-col={s.key}
             key={s.key}
             className={`col${isTarget ? ' is-target' : ''}`}
             style={{ ['--stage' as string]: `var(--stage-${s.key})` }}
@@ -203,9 +310,22 @@ export function Board({ roles, query, onOpen, onAdd, onMove }: Props) {
               <span className="col-dot" />
               <h2>{s.label}</h2>
               <span className="col-count tabular">{query ? `${visible.length}/${all.length}` : all.length}</span>
-              <button type="button" className="icon-btn col-add" onClick={() => onAdd(s.key)} aria-label={`Add a role to ${s.label}`}>
-                <Icon name="plus" />
-              </button>
+              <span className="col-actions">
+                {COLLAPSIBLE.includes(s.key) && (
+                  <button
+                    type="button"
+                    className="icon-btn col-add"
+                    onClick={() => toggleCollapsed(s.key, false)}
+                    aria-label={`Collapse ${s.label}`}
+                    title="Collapse"
+                  >
+                    <Icon name="collapse" />
+                  </button>
+                )}
+                <button type="button" className="icon-btn col-add" onClick={() => onAdd(s.key)} aria-label={`Add a role to ${s.label}`} title={`Add to ${s.label}`}>
+                  <Icon name="plus" />
+                </button>
+              </span>
             </header>
             <div className="col-body" data-stage-body={s.key}>
               {visible.map((r, i) => (
@@ -217,7 +337,10 @@ export function Board({ roles, query, onOpen, onAdd, onMove }: Props) {
                       if (!suppressClick.current) onOpen(r.id)
                     }}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') onOpen(r.id)
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        onOpen(r.id)
+                      }
                       else if (e.shiftKey && e.key === 'ArrowRight') {
                         e.preventDefault()
                         moveByKey(r, 1)

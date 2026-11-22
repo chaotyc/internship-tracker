@@ -11,17 +11,18 @@
   --line-strong: #cdd2db;
   --ink: #15171c;
   --ink-2: #4b5260;
-  --ink-3: #7b8292;
-  --ink-4: #a3a9b6;
+  --ink-3: #5f6675;
+  /* Decorative only (icons, rules, placeholders); never body text. */
+  --ink-4: #949aa7;
   --accent: #3554e8;
   --accent-hover: #2943cc;
   --accent-soft: #e9edfd;
   --accent-ink: #ffffff;
-  --danger: #d1453b;
+  --danger: #b8322a;
   --danger-soft: #fdecea;
-  --warn: #b86e00;
+  --warn: #8f5300;
   --warn-soft: #fdf2df;
-  --ok: #1d8a57;
+  --ok: #14703f;
   --ok-soft: #e4f5ec;
 
   --stage-saved: #8a91a0;
@@ -30,6 +31,8 @@
   --stage-offer: #1f9a62;
   --stage-rejected: #cc4b42;
   --stage-closed: #a6acb8;
+  --chip-bg: #eef0f3;
+  --scrim: rgba(15, 17, 22, 0.4);
 
   --shadow-1: 0 1px 2px rgba(21, 23, 28, 0.05), 0 1px 1px rgba(21, 23, 28, 0.03);
   --shadow-2: 0 4px 14px rgba(21, 23, 28, 0.08), 0 1px 3px rgba(21, 23, 28, 0.06);
@@ -53,16 +56,16 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --canvas: #0f1115;
-    --surface: #171a20;
-    --surface-sunken: #13161b;
-    --surface-hover: #1d2128;
-    --line: #262b34;
-    --line-strong: #343a46;
+    --canvas: #0c0e12;
+    --surface: #1a1e26;
+    --surface-sunken: #12151b;
+    --surface-hover: #212630;
+    --line: #2a303c;
+    --line-strong: #3a4150;
     --ink: #e8eaef;
     --ink-2: #b0b6c2;
-    --ink-3: #828999;
-    --ink-4: #5c6371;
+    --ink-3: #9198a7;
+    --ink-4: #646b7a;
     --accent: #6f86ff;
     --accent-hover: #8597ff;
     --accent-soft: #1f2645;
@@ -79,6 +82,8 @@
     --stage-offer: #4cc88b;
     --stage-rejected: #ef6d64;
     --stage-closed: #6b7280;
+    --chip-bg: #252a34;
+    --scrim: rgba(0, 0, 0, 0.62);
     --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
     --shadow-2: 0 6px 18px rgba(0, 0, 0, 0.45);
     --shadow-lift: 0 20px 44px rgba(0, 0, 0, 0.6);

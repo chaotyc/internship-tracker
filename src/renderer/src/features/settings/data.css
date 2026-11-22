@@ -117,10 +117,6 @@
   flex-wrap: wrap;
   gap: 10px;
 }
-.dp-btn-glyph {
-  width: 15px;
-  height: 15px;
-}
 .dp-small {
   margin: 0;
   color: var(--ink-3);

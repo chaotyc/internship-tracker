@@ -4,7 +4,7 @@ import { orderAt } from '@shared/order'
 import { Icon } from './components/Icon'
 import { useToast } from './components/Toast'
 import { api, useRoles } from './lib/api'
-import { Board, byStage } from './features/board/Board'
+import { Board, byStage, matchesQuery } from './features/board/Board'
 import { RoleDialog } from './features/board/RoleDialog'
 import { ChatPanel } from './features/chat/ChatPanel'
 import { AutosearchButton } from './features/search/AutosearchButton'
@@ -12,6 +12,8 @@ import { RefreshButton } from './features/search/RefreshButton'
 import { SuggestionsTray } from './features/search/SuggestionsTray'
 import { SettingsDialog, type SettingsTab } from './features/settings/SettingsDialog'
 import './app.css'
+
+const MOD = navigator.userAgent.includes('Mac') ? '⌘' : 'Ctrl+'
 
 export function App() {
   const toast = useToast()
@@ -21,6 +23,7 @@ export function App() {
   const [chat, setChat] = useState<{ open: boolean; roleId: string | null }>({ open: false, roleId: null })
   const [settings, setSettings] = useState<{ open: boolean; tab: SettingsTab }>({ open: false, tab: 'profile' })
   const [tray, setTray] = useState(false)
+  const [focusStage, setFocusStage] = useState<{ stage: StageKey; n: number } | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const csvRef = useRef<HTMLInputElement>(null)
 
@@ -74,6 +77,10 @@ export function App() {
     const onKey = (e: KeyboardEvent) => {
       const typing = (e.target as HTMLElement).closest('input, textarea, select, [contenteditable]')
       const modal = document.querySelector('dialog[open]')
+      if (modal && (e.metaKey || e.ctrlKey) && (e.key.toLowerCase() === 'j' || e.key === ',')) {
+        e.preventDefault()
+        return
+      }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'j') {
         e.preventDefault()
         setChat((c) => ({ ...c, open: !c.open }))
@@ -97,6 +104,7 @@ export function App() {
     return STAGES.map((s) => ({ ...s, n: g[s.key].length }))
   }, [roles])
   const active = counts.filter((c) => c.key === 'applied' || c.key === 'interviewing' || c.key === 'offer').reduce((a, c) => a + c.n, 0)
+  const visibleCount = useMemo(() => (roles ?? []).filter((r) => matchesQuery(r, query)).length, [roles, query])
   const editing: Role | null = dialog.id ? (roles?.find((r) => r.id === dialog.id) ?? null) : null
 
   return (
@@ -104,7 +112,11 @@ export function App() {
       <header className="topbar">
         <div className="brand">
           <span className="brand-mark" aria-hidden="true">
-            <Icon name="list" />
+            <svg viewBox="0 0 16 16">
+              <rect x="2" y="3" width="3.2" height="10" rx="1" />
+              <rect x="6.4" y="3" width="3.2" height="7" rx="1" />
+              <rect x="10.8" y="3" width="3.2" height="4.5" rx="1" />
+            </svg>
           </span>
           <div>
             <h1>Applications</h1>
@@ -113,11 +125,18 @@ export function App() {
             </p>
           </div>
         </div>
-        <ol className="pipeline" aria-label="Roles per stage">
+        <ol className="pipeline" aria-label="Jump to a stage">
           {counts.slice(0, 4).map((c) => (
-            <li key={c.key} style={{ ['--stage' as string]: `var(--stage-${c.key})` }}>
-              <span className="pipeline-n tabular">{c.n}</span>
-              <span className="pipeline-l">{c.label}</span>
+            <li key={c.key}>
+              <button
+                type="button"
+                style={{ ['--stage' as string]: `var(--stage-${c.key})` }}
+                onClick={() => setFocusStage((f) => ({ stage: c.key, n: (f?.n ?? 0) + 1 }))}
+                title={`Show ${c.label}`}
+              >
+                <span className="pipeline-n tabular">{c.n}</span>
+                <span className="pipeline-l">{c.label}</span>
+              </button>
             </li>
           ))}
         </ol>
@@ -132,11 +151,20 @@ export function App() {
               placeholder="Filter roles"
               aria-label="Filter roles"
             />
-            {!query && <span className="kbd">/</span>}
+            {query ? (
+              <>
+                <span className="search-count tabular">{visibleCount}</span>
+                <button type="button" className="search-clear" onClick={() => setQuery('')} aria-label="Clear filter">
+                  <Icon name="close" />
+                </button>
+              </>
+            ) : (
+              <span className="kbd">/</span>
+            )}
           </label>
           <RefreshButton />
           <AutosearchButton onResults={() => setTray(true)} />
-          <button type="button" className="btn btn-primary" onClick={() => addRole()}>
+          <button type="button" className="btn btn-primary" onClick={() => addRole()} title="Add role (N)">
             <Icon name="plus" />
             Add role
           </button>
@@ -147,7 +175,7 @@ export function App() {
             onClick={() => setChat((c) => ({ ...c, open: !c.open }))}
             aria-label="Assistant"
             aria-pressed={chat.open}
-            title="Assistant (⌘J)"
+            title={`Assistant (${MOD}J)`}
           >
             <Icon name="chat" />
           </button>
@@ -156,17 +184,16 @@ export function App() {
             className="icon-btn"
             onClick={() => setSettings({ open: true, tab: 'profile' })}
             aria-label="Settings"
-            title="Settings (⌘,)"
+            title={`Settings (${MOD},)`}
           >
             <Icon name="settings" />
           </button>
         </div>
       </header>
 
-      <SuggestionsTray open={tray} onClose={() => setTray(false)} />
-
       <div className="workspace">
         <main className="main">
+          <SuggestionsTray open={tray} onClose={() => setTray(false)} />
           {error && (
             <div className="banner error">
               <Icon name="alert" />
@@ -182,8 +209,27 @@ export function App() {
               onImport={() => csvRef.current?.click()}
               onProfile={() => setSettings({ open: true, tab: 'profile' })}
             />
+          ) : query && roles && visibleCount === 0 ? (
+            <div className="no-match">
+              <p>
+                No roles match <strong>“{query}”</strong>.
+              </p>
+              <button type="button" className="btn" onClick={() => setQuery('')}>
+                Clear filter
+              </button>
+            </div>
+          ) : !roles ? (
+            <div className="board-loading" aria-busy="true">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="skeleton-col">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+              ))}
+            </div>
           ) : (
-            <Board roles={roles ?? []} query={query} onOpen={openRole} onAdd={addRole} onMove={move} />
+            <Board roles={roles} query={query} onOpen={openRole} onAdd={addRole} onMove={move} focusStage={focusStage} />
           )}
         </main>
         {chat.open && <ChatPanel roleId={chat.roleId} onClose={() => setChat({ open: false, roleId: null })} onOpenSettings={(tab) => setSettings({ open: true, tab })} />}

@@ -1,21 +1,6 @@
 /* Settings > Profile. Builds on .settings-section, .field, .btn and .chip. */
 
-/*
- * The profile form is long: keep the settings nav in view while it scrolls.
- * .settings has an explicit min-height, so as a flex item it would otherwise
- * shrink to the dialog height and leave the nav nothing to stick within.
- */
-.settings:has(.pf, .dp) {
-  flex-shrink: 0;
-}
-.settings:has(.pf, .dp) .settings-nav {
-  position: sticky;
-  top: 0;
-  align-self: start;
-}
-.pf {
-  display: flex;
-  flex-direction: column;
+.settings-scroll.pf {
   gap: 18px;
 }
 .pf-loading {
@@ -57,16 +42,7 @@
   flex: none;
 }
 
-/* Fields: errors, unset selects */
-.pf .field select {
-  appearance: none;
-  padding-right: 30px;
-  background-image: linear-gradient(45deg, transparent 50%, var(--ink-3) 50%), linear-gradient(-45deg, transparent 50%, var(--ink-3) 50%);
-  background-position: calc(100% - 15px) 15px, calc(100% - 10px) 15px;
-  background-size: 5px 5px;
-  background-repeat: no-repeat;
-  text-overflow: ellipsis;
-}
+/* Fields: errors, unset selects. Select chrome comes from the shared .field style. */
 .pf .field select.is-unset {
   color: var(--ink-3);
 }
@@ -733,19 +709,9 @@
   flex: 1;
 }
 
-/* Sticky footer: sits on the dialog's bottom edge while the form scrolls. */
+/* Save bar: the settings pane's own footer, under the scrolling form. */
 .pf-footer {
-  position: sticky;
-  bottom: -20px;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 -20px -20px -4px;
-  padding: 12px 20px 16px 4px;
-  border-top: 1px solid var(--line);
   background: var(--surface);
-  box-shadow: 0 -10px 18px -14px rgba(0, 0, 0, 0.25);
 }
 .pf-footer-status {
   flex: 1;
@@ -766,6 +732,14 @@
 .pf-footer-status .is-dirty {
   color: var(--warn);
   font-weight: 550;
+}
+.pf-dirty-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin: 0 3.5px;
+  border-radius: 50%;
+  background: currentColor;
 }
 .pf-footer-status .is-saved {
   color: var(--ok);

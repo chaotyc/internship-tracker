@@ -11,7 +11,7 @@
   animation: dialog-in 0.16s ease-out;
 }
 .dialog::backdrop {
-  background: rgba(15, 17, 22, 0.38);
+  background: var(--scrim);
   backdrop-filter: blur(2px);
 }
 @keyframes dialog-in {
@@ -37,7 +37,7 @@
 }
 .dialog-titles h2 {
   margin: 0;
-  font: 650 17px/1.3 var(--font-display);
+  font: 650 18px/1.3 var(--font-display);
   letter-spacing: -0.01em;
   text-wrap: balance;
 }

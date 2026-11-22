@@ -39,8 +39,9 @@
   color: var(--surface);
 }
 .brand-mark svg {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
 }
 .brand h1 {
   margin: 0;
@@ -54,6 +55,8 @@
   white-space: nowrap;
 }
 .pipeline {
+  flex: none;
+  white-space: nowrap;
   display: flex;
   align-items: center;
   margin: 0;
@@ -62,13 +65,24 @@
 }
 .pipeline li {
   display: flex;
+  padding: 0 3px;
+}
+.pipeline button {
+  display: flex;
   align-items: baseline;
   gap: 5px;
-  padding: 0 12px;
-  border-left: 1px solid var(--line);
+  padding: 5px 8px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
 }
-.pipeline li:first-child {
-  border-left: 0;
+.pipeline button:hover {
+  background: var(--surface-sunken);
+}
+@media (max-width: 1320px) {
+  .pipeline {
+    display: none;
+  }
 }
 .pipeline-n {
   font: 650 15px/1 var(--font-display);
@@ -134,6 +148,73 @@
 }
 .search input::placeholder {
   color: var(--ink-3);
+}
+.search-count {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.search-clear {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ink-3);
+}
+.search-clear:hover {
+  background: var(--surface-sunken);
+  color: var(--ink);
+}
+.search-clear svg {
+  width: 12px;
+  height: 12px;
+}
+@media (max-width: 1180px) {
+  .search {
+    width: 170px;
+  }
+}
+.no-match {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--ink-2);
+}
+.no-match p {
+  margin: 0;
+}
+.board-loading {
+  flex: 1;
+  display: flex;
+  gap: 12px;
+  padding: 14px 18px;
+}
+.skeleton-col {
+  flex: 1 1 0;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 40px 8px 8px;
+  border-radius: var(--r-lg);
+  background: var(--surface-sunken);
+}
+.skeleton-col span {
+  height: 84px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  opacity: 0.7;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.35;
+  }
 }
 .workspace {
   flex: 1;
@@ -343,4 +424,80 @@
 .field .is-filled {
   border-color: color-mix(in srgb, var(--accent) 60%, var(--line-strong));
   background: color-mix(in srgb, var(--accent) 5%, var(--surface));
+}
+.role-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.dialog-head .af-btn {
+  margin-top: 2px;
+}
+.dialog-head .af-btn,
+.link-row .af-btn {
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: var(--accent);
+}
+.dialog-head .af-btn:hover:not(:disabled),
+.link-row .af-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+  border-color: transparent;
+}
+.manual-link {
+  align-self: flex-start;
+  margin-top: -4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 13px;
+}
+.manual-link:hover {
+  text-decoration: underline;
+}
+.more {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.more summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.more summary::-webkit-details-marker {
+  display: none;
+}
+.more summary svg {
+  width: 14px;
+  height: 14px;
+  transform: rotate(-90deg);
+  transition: transform 0.15s;
+}
+.more[open] summary svg {
+  transform: none;
+}
+.more summary small {
+  font-weight: 400;
+  color: var(--ink-3);
+}
+.more[open] summary {
+  margin-bottom: 12px;
+}
+.discard-bar {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+.foot-hint {
+  font-size: 12px;
+  color: var(--ink-3);
+  margin-right: 4px;
 }

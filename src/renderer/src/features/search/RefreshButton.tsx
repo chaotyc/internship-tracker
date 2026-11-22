@@ -58,15 +58,16 @@ export function RefreshButton() {
     <div className="pop-wrap" ref={wrap}>
       <button
         type="button"
-        className={`btn${open ? ' is-pressed' : ''}`}
+        className={`icon-btn refresh-btn${open ? ' is-pressed' : ''}`}
         onClick={run}
         disabled={running}
         aria-haspopup="dialog"
         aria-expanded={open}
-        title="Check whether saved postings are still open"
+        aria-busy={running}
+        aria-label={running ? 'Checking saved postings…' : 'Check saved postings'}
+        title={running ? 'Checking saved postings…' : 'Check saved postings'}
       >
         <Icon name="refresh" className={running ? 'spin' : undefined} />
-        {running ? 'Checking…' : 'Refresh'}
       </button>
       {open && result && (
         <div className="popover refresh-pop" role="dialog" aria-label="Refresh results">

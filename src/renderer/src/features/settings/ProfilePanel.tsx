@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useId, useImperativeHandle, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode, type Ref } from 'react'
 import { Icon } from '@renderer/components/Icon'
 import { api } from '@renderer/lib/api'
 import {
@@ -20,32 +20,6 @@ import './profile.css'
 
 // ---------------------------------------------------------------------------
 // Small pieces
-
-/** Glyphs this panel needs that the shared icon set doesn't have. Same 24px stroke style. */
-const GLYPHS = {
-  lock: 'M7 11V8a5 5 0 0 1 10 0v3M6 11h12v9H6z',
-  unlock: 'M7 11V8a5 5 0 0 1 9.6-2M6 11h12v9H6z',
-  folder: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
-  download: 'M12 4v12M7 11l5 5 5-5M5 20h14',
-  dot: 'M12 11.5h.01',
-} as const
-
-export function Glyph({ name, className }: { name: keyof typeof GLYPHS; className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={name === 'dot' ? 7 : 1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d={GLYPHS[name]} />
-    </svg>
-  )
-}
 
 function Section({ id, title, hint, aside, children }: { id: string; title: string; hint?: ReactNode; aside?: ReactNode; children: ReactNode }) {
   return (
@@ -240,7 +214,7 @@ function Switch({ checked, onChange, label, hint }: { checked: boolean; onChange
 function Note({ tone, children }: { tone: 'warn' | 'info' | 'danger'; children: ReactNode }) {
   return (
     <div className={`pf-note pf-note-${tone}`} role={tone === 'info' ? undefined : 'status'}>
-      {tone === 'info' ? <Glyph name="lock" /> : <Icon name="alert" />}
+      {tone === 'info' ? <Icon name="lock" /> : <Icon name="alert" />}
       <div>{children}</div>
     </div>
   )
@@ -513,7 +487,14 @@ function completion(p: Profile): { done: number; total: number } {
   return { done: checks.filter(Boolean).length, total: checks.length }
 }
 
-export function ProfilePanel() {
+/** What Settings can ask the panel to do when the user leaves with unsaved edits. */
+export interface ProfileActions {
+  /** Resolves true once saved; false if there were errors to fix or the save failed. */
+  save: () => Promise<boolean>
+  discard: () => void
+}
+
+export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<ProfileActions>; onDirtyChange?: (dirty: boolean) => void } = {}) {
   const [base, setBase] = useState<Profile | null>(null)
   const [draft, setDraft] = useState<Profile>(EMPTY_PROFILE)
   const [status, setStatus] = useState<ProfileStatus | null>(null)
@@ -530,6 +511,13 @@ export function ProfilePanel() {
   const dirty = base !== null && comparable(base) !== comparable(draft)
   const dirtyRef = useRef(dirty)
   dirtyRef.current = dirty
+
+  const onDirtyRef = useRef(onDirtyChange)
+  onDirtyRef.current = onDirtyChange
+  useEffect(() => {
+    onDirtyRef.current?.(dirty)
+  }, [dirty])
+  useEffect(() => () => onDirtyRef.current?.(false), [])
 
   const load = useCallback(() => {
     api
@@ -581,8 +569,9 @@ export function ProfilePanel() {
     error: err(k),
   })
 
-  const save = async () => {
-    if (!dirty || saving) return
+  const save = async (): Promise<boolean> => {
+    if (!dirty) return true
+    if (saving) return false
     if (errorCount) {
       setShowAll(true)
       requestAnimationFrame(() => {
@@ -590,7 +579,7 @@ export function ProfilePanel() {
         el?.scrollIntoView({ block: 'center', behavior: 'smooth' })
         el?.focus({ preventScroll: true })
       })
-      return
+      return false
     }
     setSaving(true)
     setSaveError(null)
@@ -601,8 +590,10 @@ export function ProfilePanel() {
       setTouched(new Set())
       setShowAll(false)
       setJustSaved(true)
+      return true
     } catch (e) {
       setSaveError((e as Error).message)
+      return false
     } finally {
       setSaving(false)
     }
@@ -614,6 +605,7 @@ export function ProfilePanel() {
     setShowAll(false)
     setSaveError(null)
   }
+  useImperativeHandle(actions, () => ({ save, discard }))
 
   const onResumeImported = (r: ResumeImport) => {
     setBase((b) => (b ? { ...b, resume: r.profile.resume } : b))
@@ -624,8 +616,20 @@ export function ProfilePanel() {
     setDraft((d) => ({ ...d, resume: p.resume }))
   }
 
-  if (loadError) return <Note tone="danger">Your profile couldn’t be loaded: {loadError}</Note>
-  if (!base) return <div className="pf-loading" aria-busy="true" />
+  if (loadError) {
+    return (
+      <div className="settings-scroll">
+        <Note tone="danger">Your profile couldn’t be loaded: {loadError}</Note>
+      </div>
+    )
+  }
+  if (!base) {
+    return (
+      <div className="settings-scroll">
+        <div className="pf-loading" aria-busy="true" />
+      </div>
+    )
+  }
 
   const encrypted = status?.encrypted ?? true
   const { done, total } = completion(draft)
@@ -633,339 +637,339 @@ export function ProfilePanel() {
   const demoAnswered = Object.values(draft.demographics).filter(Boolean).length
   const where = [draft.city, draft.region, draft.country].filter(Boolean).join(', ')
 
+  const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+      e.preventDefault()
+      void save()
+    }
+  }
+
   return (
-    <div
-      className="pf"
-      ref={rootRef}
-      onKeyDown={(e) => {
-        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
-          e.preventDefault()
-          void save()
-        }
-      }}
-    >
-      <header className="pf-hero">
-        <div className="pf-avatar" aria-hidden="true">
-          {initials(draft) || <Icon name="user" />}
-        </div>
-        <div className="pf-hero-text">
-          <strong>{name || 'Your profile'}</strong>
-          <span>{[draft.email, where].filter(Boolean).join(' · ') || 'Fill in what you’d put on an application. Every field is optional.'}</span>
-          <div className="pf-progress" title={`${done} of ${total} essentials filled in`}>
-            <div className="pf-progress-bar" aria-hidden="true">
-              <i style={{ width: `${(done / total) * 100}%` }} />
-            </div>
-            <small>
-              {done === total ? 'Ready for autofill' : `${done} of ${total} essentials`}
-            </small>
+    <>
+      <div className="settings-scroll pf" ref={rootRef} onKeyDown={onKeyDown}>
+        <header className="pf-hero">
+          <div className="pf-avatar" aria-hidden="true">
+            {initials(draft) || <Icon name="user" />}
           </div>
-        </div>
-        {status && (
-          <span className={`chip ${encrypted ? 'ok' : 'warn'} pf-lock-chip`}>
-            <Glyph name={encrypted ? 'lock' : 'unlock'} />
-            {encrypted ? 'Encrypted on this computer' : 'Not encrypted'}
-          </span>
+          <div className="pf-hero-text">
+            <strong>{name || 'Your profile'}</strong>
+            <span>{[draft.email, where].filter(Boolean).join(' · ') || 'Fill in what you’d put on an application. Every field is optional.'}</span>
+            <div className="pf-progress" title={`${done} of ${total} essentials filled in`}>
+              <div className="pf-progress-bar" aria-hidden="true">
+                <i style={{ width: `${(done / total) * 100}%` }} />
+              </div>
+              <small>
+                {done === total ? 'Ready for autofill' : `${done} of ${total} essentials`}
+              </small>
+            </div>
+          </div>
+          {status && (
+            <span className={`chip ${encrypted ? 'ok' : 'warn'} pf-lock-chip`}>
+              <Icon name={encrypted ? 'lock' : 'unlock'} />
+              {encrypted ? 'Encrypted on this computer' : 'Not encrypted'}
+            </span>
+          )}
+        </header>
+
+        {!encrypted && (
+          <Note tone="warn">
+            <strong>Your keychain isn’t available.</strong> Your name, contact details, links, education and preferences are saved unencrypted on
+            this computer. Saved answers and demographics are turned off until the keychain is available, so they’re never stored in the clear.
+          </Note>
         )}
-      </header>
 
-      {!encrypted && (
-        <Note tone="warn">
-          <strong>Your keychain isn’t available.</strong> Your name, contact details, links, education and preferences are saved unencrypted on
-          this computer. Saved answers and demographics are turned off until the keychain is available, so they’re never stored in the clear.
-        </Note>
-      )}
+        <Section id="name" title="Name" hint="Use your legal name as it appears on official documents. Applications that ask for a preferred name get that instead.">
+          <div className="grid-3">
+            <TextField label="Legal first name" autoComplete="given-name" {...text('legalFirstName')} />
+            <TextField label="Legal last name" autoComplete="family-name" {...text('legalLastName')} />
+            <TextField label="Preferred name" placeholder="Optional" autoComplete="nickname" {...text('preferredName')} />
+          </div>
+        </Section>
 
-      <Section id="name" title="Name" hint="Use your legal name as it appears on official documents. Applications that ask for a preferred name get that instead.">
-        <div className="grid-3">
-          <TextField label="Legal first name" autoComplete="given-name" {...text('legalFirstName')} />
-          <TextField label="Legal last name" autoComplete="family-name" {...text('legalLastName')} />
-          <TextField label="Preferred name" placeholder="Optional" autoComplete="nickname" {...text('preferredName')} />
-        </div>
-      </Section>
+        <Section id="contact" title="Contact" hint="Where recruiters reach you.">
+          <div className="grid-2">
+            <TextField label="Email" type="email" inputMode="email" autoComplete="email" placeholder="name@example.com" {...text('email')} />
+            <TextField label="Phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="+1 555 010 0199" {...text('phone')} />
+          </div>
+          <div className="grid-3">
+            <TextField label="City" autoComplete="address-level2" {...text('city')} />
+            <TextField label="State or region" autoComplete="address-level1" {...text('region')} />
+            <TextField label="Country" autoComplete="country-name" {...text('country')} />
+          </div>
+        </Section>
 
-      <Section id="contact" title="Contact" hint="Where recruiters reach you.">
-        <div className="grid-2">
-          <TextField label="Email" type="email" inputMode="email" autoComplete="email" placeholder="name@example.com" {...text('email')} />
-          <TextField label="Phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="+1 555 010 0199" {...text('phone')} />
-        </div>
-        <div className="grid-3">
-          <TextField label="City" autoComplete="address-level2" {...text('city')} />
-          <TextField label="State or region" autoComplete="address-level1" {...text('region')} />
-          <TextField label="Country" autoComplete="country-name" {...text('country')} />
-        </div>
-      </Section>
+        <Section id="links" title="Links" hint="Paste a full link or just the address; https:// is added for you.">
+          <div className="grid-2">
+            <TextField label="LinkedIn" type="url" inputMode="url" placeholder="linkedin.com/in/your-name" {...text('linkedin')} />
+            <TextField label="GitHub" type="url" inputMode="url" placeholder="github.com/your-name" {...text('github')} />
+            <TextField label="Website or portfolio" type="url" inputMode="url" placeholder="yourname.dev" {...text('website')} />
+            <TextField label="Google Scholar" type="url" inputMode="url" placeholder="scholar.google.com/citations?user=…" {...text('scholar')} />
+          </div>
+        </Section>
 
-      <Section id="links" title="Links" hint="Paste a full link or just the address; https:// is added for you.">
-        <div className="grid-2">
-          <TextField label="LinkedIn" type="url" inputMode="url" placeholder="linkedin.com/in/your-name" {...text('linkedin')} />
-          <TextField label="GitHub" type="url" inputMode="url" placeholder="github.com/your-name" {...text('github')} />
-          <TextField label="Website or portfolio" type="url" inputMode="url" placeholder="yourname.dev" {...text('website')} />
-          <TextField label="Google Scholar" type="url" inputMode="url" placeholder="scholar.google.com/citations?user=…" {...text('scholar')} />
-        </div>
-      </Section>
-
-      <Section
-        id="education"
-        title="Education"
-        hint="Most recent first. An expected graduation date is fine."
-        aside={
-          draft.education.length > 0 && (
+        <Section
+          id="education"
+          title="Education"
+          hint="Most recent first. An expected graduation date is fine."
+          aside={
+            draft.education.length > 0 && (
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => {
+                  update((p) => ({ ...p, education: [...p.education, { ...EMPTY_EDUCATION }] }))
+                  setFocusKey(`edu-${draft.education.length}`)
+                }}
+              >
+                <Icon name="plus" />
+                Add school
+              </button>
+            )
+          }
+        >
+          <datalist id="pf-degrees">
+            {DEGREES.map((d) => (
+              <option key={d} value={d} />
+            ))}
+          </datalist>
+          {draft.education.length === 0 ? (
             <button
               type="button"
-              className="btn btn-sm"
+              className="pf-empty-add"
               onClick={() => {
-                update((p) => ({ ...p, education: [...p.education, { ...EMPTY_EDUCATION }] }))
-                setFocusKey(`edu-${draft.education.length}`)
+                update((p) => ({ ...p, education: [{ ...EMPTY_EDUCATION }] }))
+                setFocusKey('edu-0')
               }}
             >
               <Icon name="plus" />
-              Add school
+              Add a school
             </button>
-          )
-        }
-      >
-        <datalist id="pf-degrees">
-          {DEGREES.map((d) => (
-            <option key={d} value={d} />
-          ))}
-        </datalist>
-        {draft.education.length === 0 ? (
-          <button
-            type="button"
-            className="pf-empty-add"
-            onClick={() => {
-              update((p) => ({ ...p, education: [{ ...EMPTY_EDUCATION }] }))
-              setFocusKey('edu-0')
-            }}
-          >
-            <Icon name="plus" />
-            Add a school
-          </button>
-        ) : (
-          draft.education.map((e, i) => (
-            <div key={i} className="pf-card">
-              <div className="pf-card-head">
-                <span>{e.school || (i === 0 ? 'School' : `School ${i + 1}`)}</span>
+          ) : (
+            draft.education.map((e, i) => (
+              <div key={i} className="pf-card">
+                <div className="pf-card-head">
+                  <span>{e.school || (i === 0 ? 'School' : `School ${i + 1}`)}</span>
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    aria-label={`Remove ${e.school || 'this school'}`}
+                    title="Remove"
+                    onClick={() => update((p) => ({ ...p, education: p.education.filter((_, j) => j !== i) }))}
+                  >
+                    <Icon name="trash" />
+                  </button>
+                </div>
+                <div className="grid-2">
+                  <TextField
+                    wide
+                    label="School"
+                    value={e.school}
+                    onChange={setEdu(i, 'school')}
+                    onBlur={touch(`education.${i}.school`)}
+                    error={err(`education.${i}.school`)}
+                    autoFocus={focusKey === `edu-${i}`}
+                  />
+                  <TextField label="Degree" list="pf-degrees" placeholder="B.S." value={e.degree} onChange={setEdu(i, 'degree')} />
+                  <TextField label="Field of study" placeholder="Computer Science" value={e.field} onChange={setEdu(i, 'field')} />
+                </div>
+                <div className="grid-3">
+                  <TextField
+                    label="Start"
+                    type="month"
+                    value={e.startDate}
+                    onChange={setEdu(i, 'startDate')}
+                    onBlur={touch(`education.${i}.startDate`)}
+                    error={err(`education.${i}.startDate`)}
+                  />
+                  <TextField
+                    label="End or expected"
+                    type="month"
+                    value={e.endDate}
+                    onChange={setEdu(i, 'endDate')}
+                    onBlur={touch(`education.${i}.endDate`)}
+                    error={err(`education.${i}.endDate`)}
+                  />
+                  <TextField
+                    label="GPA"
+                    inputMode="decimal"
+                    placeholder="3.8/4.0"
+                    value={e.gpa}
+                    onChange={setEdu(i, 'gpa')}
+                    onBlur={touch(`education.${i}.gpa`)}
+                    error={err(`education.${i}.gpa`)}
+                  />
+                </div>
+              </div>
+            ))
+          )}
+        </Section>
+
+        <Section id="auth" title="Work authorization" hint="Asked on almost every US application. “Not set” leaves the question for you to answer each time.">
+          <div className="pf-tri-list">
+            <Segmented label="Authorized to work in the US" value={draft.authorizedToWorkUS} onChange={set('authorizedToWorkUS')} />
+            <Segmented
+              label="Will need visa sponsorship"
+              hint="Now or in the future, e.g. for an H-1B after graduating."
+              value={draft.needsSponsorship}
+              onChange={set('needsSponsorship')}
+            />
+          </div>
+        </Section>
+
+        <ResumeSection resume={draft.resume} onImported={onResumeImported} onRemoved={onResumeRemoved} />
+
+        <Section id="prefs" title="What you’re looking for" hint="Autosearch and the assistant use this to find and rank roles. Press Enter or a comma after each item.">
+          <ChipInput label="Target roles" placeholder="e.g. ML inference intern" values={draft.preferences.targetRoles} onChange={setPref('targetRoles')} />
+          <ChipInput label="Locations" placeholder="e.g. San Francisco Bay Area" values={draft.preferences.locations} onChange={setPref('locations')} />
+          <Switch
+            label="Remote roles are fine"
+            hint="Include remote postings wherever you’re located."
+            checked={draft.preferences.remoteOk}
+            onChange={setPref('remoteOk')}
+          />
+          <div className="grid-2">
+            <ChipInput label="Keywords to look for" placeholder="e.g. CUDA, compilers" values={draft.preferences.keywords} onChange={setPref('keywords')} />
+            <ChipInput
+              label="Skip postings that mention"
+              placeholder="e.g. sales"
+              values={draft.preferences.excludeKeywords}
+              onChange={setPref('excludeKeywords')}
+              tone="muted"
+            />
+            <TextField label="Term" placeholder="Summer 2027" value={draft.preferences.term} onChange={setPref('term')} />
+            <TextField label="Minimum pay" placeholder="$35/hr" hint="Roles that clearly pay less are ranked lower." value={draft.preferences.minPay} onChange={setPref('minPay')} />
+          </div>
+          <div className="field">
+            <label htmlFor="pf-notes">Anything else</label>
+            <textarea
+              id="pf-notes"
+              rows={3}
+              placeholder="Team size, industries, what you want to learn… The assistant reads this."
+              value={draft.preferences.notes}
+              onChange={(e) => setPref('notes')(e.target.value)}
+            />
+          </div>
+        </Section>
+
+        <Section
+          id="answers"
+          title="Saved answers"
+          hint="Answers to questions that come up again and again. The assistant and autofill reuse them, and you can edit them here."
+          aside={
+            encrypted &&
+            draft.answers.length > 0 && (
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => {
+                  update((p) => ({ ...p, answers: [...p.answers, { id: newAnswerId(), question: '', answer: '' }] }))
+                  setFocusKey(`ans-${draft.answers.length}-q`)
+                }}
+              >
+                <Icon name="plus" />
+                Add answer
+              </button>
+            )
+          }
+        >
+          {!encrypted ? (
+            <Note tone="warn">Saved answers need the keychain so they’re stored encrypted. Unlock or set up your keychain to use them.</Note>
+          ) : draft.answers.length === 0 ? (
+            <div className="pf-ideas">
+              <span>Start with a common one:</span>
+              {ANSWER_IDEAS.map((q) => (
+                <button
+                  key={q}
+                  type="button"
+                  className="pf-idea"
+                  onClick={() => {
+                    update((p) => ({ ...p, answers: [...p.answers, { id: newAnswerId(), question: q, answer: '' }] }))
+                    setFocusKey(`ans-${draft.answers.length}-a`)
+                  }}
+                >
+                  <Icon name="plus" />
+                  {q}
+                </button>
+              ))}
+              <button
+                type="button"
+                className="pf-idea"
+                onClick={() => {
+                  update((p) => ({ ...p, answers: [...p.answers, { id: newAnswerId(), question: '', answer: '' }] }))
+                  setFocusKey(`ans-0-q`)
+                }}
+              >
+                <Icon name="plus" />
+                Your own question
+              </button>
+            </div>
+          ) : (
+            draft.answers.map((a: SavedAnswer, i) => (
+              <div key={a.id || i} className="pf-card pf-answer">
+                <div className="pf-answer-fields">
+                  <TextField
+                    label="Question"
+                    placeholder="e.g. Why do you want to work here?"
+                    value={a.question}
+                    onChange={setAnswer(i, 'question')}
+                    onBlur={touch(`answers.${i}.question`)}
+                    error={err(`answers.${i}.question`)}
+                    autoFocus={focusKey === `ans-${i}-q`}
+                  />
+                  <div className="field">
+                    <label htmlFor={`pf-ans-${i}`}>Answer</label>
+                    <textarea
+                      id={`pf-ans-${i}`}
+                      rows={2}
+                      value={a.answer}
+                      onChange={(e) => setAnswer(i, 'answer')(e.target.value)}
+                      autoFocus={focusKey === `ans-${i}-a`}
+                    />
+                  </div>
+                </div>
                 <button
                   type="button"
                   className="icon-btn"
-                  aria-label={`Remove ${e.school || 'this school'}`}
+                  aria-label={`Remove answer${a.question ? ` to “${a.question}”` : ''}`}
                   title="Remove"
-                  onClick={() => update((p) => ({ ...p, education: p.education.filter((_, j) => j !== i) }))}
+                  onClick={() => update((p) => ({ ...p, answers: p.answers.filter((_, j) => j !== i) }))}
                 >
                   <Icon name="trash" />
                 </button>
               </div>
+            ))
+          )}
+        </Section>
+
+        <section className="settings-section pf-section pf-demo" aria-labelledby="pf-demo">
+          <button type="button" className="pf-demo-toggle" aria-expanded={demoOpen} aria-controls="pf-demo-body" onClick={() => setDemoOpen((o) => !o)}>
+            <span>
+              <h3 id="pf-demo">
+                Voluntary demographics <span className="chip">Optional</span>
+              </h3>
+              <small>{demoAnswered ? `${demoAnswered} of 6 answered` : 'Not filled in. Applications will ask you each time.'}</small>
+            </span>
+            <Icon name="chevronDown" />
+          </button>
+          {demoOpen && (
+            <div id="pf-demo-body" className="pf-demo-body">
+              <Note tone="info">
+                These only fill the same voluntary questions on applications, and they stay encrypted on this computer. The assistant never sees them.
+              </Note>
+              {!encrypted && <Note tone="warn">Demographics need the keychain so they’re stored encrypted, so they’re turned off on this computer.</Note>}
               <div className="grid-2">
-                <TextField
-                  wide
-                  label="School"
-                  value={e.school}
-                  onChange={setEdu(i, 'school')}
-                  onBlur={touch(`education.${i}.school`)}
-                  error={err(`education.${i}.school`)}
-                  autoFocus={focusKey === `edu-${i}`}
-                />
-                <TextField label="Degree" list="pf-degrees" placeholder="B.S." value={e.degree} onChange={setEdu(i, 'degree')} />
-                <TextField label="Field of study" placeholder="Computer Science" value={e.field} onChange={setEdu(i, 'field')} />
-              </div>
-              <div className="grid-3">
-                <TextField
-                  label="Start"
-                  type="month"
-                  value={e.startDate}
-                  onChange={setEdu(i, 'startDate')}
-                  onBlur={touch(`education.${i}.startDate`)}
-                  error={err(`education.${i}.startDate`)}
-                />
-                <TextField
-                  label="End or expected"
-                  type="month"
-                  value={e.endDate}
-                  onChange={setEdu(i, 'endDate')}
-                  onBlur={touch(`education.${i}.endDate`)}
-                  error={err(`education.${i}.endDate`)}
-                />
-                <TextField
-                  label="GPA"
-                  inputMode="decimal"
-                  placeholder="3.8/4.0"
-                  value={e.gpa}
-                  onChange={setEdu(i, 'gpa')}
-                  onBlur={touch(`education.${i}.gpa`)}
-                  error={err(`education.${i}.gpa`)}
-                />
+                <ChoiceSelect label="Gender" value={draft.demographics.gender} options={DEMOGRAPHIC_FIELDS[0]!.options} onChange={setDemo('gender')} disabled={!encrypted} />
+                <PronounsField value={draft.demographics.pronouns} onChange={setDemo('pronouns')} disabled={!encrypted} />
+                {DEMOGRAPHIC_FIELDS.slice(1).map((f) => (
+                  <ChoiceSelect key={f.key} label={f.label} value={draft.demographics[f.key]} options={f.options} onChange={setDemo(f.key)} disabled={!encrypted} />
+                ))}
               </div>
             </div>
-          ))
-        )}
-      </Section>
+          )}
+        </section>
+      </div>
 
-      <Section id="auth" title="Work authorization" hint="Asked on almost every US application. “Not set” leaves the question for you to answer each time.">
-        <div className="pf-tri-list">
-          <Segmented label="Authorized to work in the US" value={draft.authorizedToWorkUS} onChange={set('authorizedToWorkUS')} />
-          <Segmented
-            label="Will need visa sponsorship"
-            hint="Now or in the future, e.g. for an H-1B after graduating."
-            value={draft.needsSponsorship}
-            onChange={set('needsSponsorship')}
-          />
-        </div>
-      </Section>
-
-      <ResumeSection resume={draft.resume} onImported={onResumeImported} onRemoved={onResumeRemoved} />
-
-      <Section id="prefs" title="What you’re looking for" hint="Autosearch and the assistant use this to find and rank roles. Press Enter or a comma after each item.">
-        <ChipInput label="Target roles" placeholder="e.g. ML inference intern" values={draft.preferences.targetRoles} onChange={setPref('targetRoles')} />
-        <ChipInput label="Locations" placeholder="e.g. San Francisco Bay Area" values={draft.preferences.locations} onChange={setPref('locations')} />
-        <Switch
-          label="Remote roles are fine"
-          hint="Include remote postings wherever you’re located."
-          checked={draft.preferences.remoteOk}
-          onChange={setPref('remoteOk')}
-        />
-        <div className="grid-2">
-          <ChipInput label="Keywords to look for" placeholder="e.g. CUDA, compilers" values={draft.preferences.keywords} onChange={setPref('keywords')} />
-          <ChipInput
-            label="Skip postings that mention"
-            placeholder="e.g. sales"
-            values={draft.preferences.excludeKeywords}
-            onChange={setPref('excludeKeywords')}
-            tone="muted"
-          />
-          <TextField label="Term" placeholder="Summer 2027" value={draft.preferences.term} onChange={setPref('term')} />
-          <TextField label="Minimum pay" placeholder="$35/hr" hint="Roles that clearly pay less are ranked lower." value={draft.preferences.minPay} onChange={setPref('minPay')} />
-        </div>
-        <div className="field">
-          <label htmlFor="pf-notes">Anything else</label>
-          <textarea
-            id="pf-notes"
-            rows={3}
-            placeholder="Team size, industries, what you want to learn… The assistant reads this."
-            value={draft.preferences.notes}
-            onChange={(e) => setPref('notes')(e.target.value)}
-          />
-        </div>
-      </Section>
-
-      <Section
-        id="answers"
-        title="Saved answers"
-        hint="Answers to questions that come up again and again. The assistant and autofill reuse them, and you can edit them here."
-        aside={
-          encrypted &&
-          draft.answers.length > 0 && (
-            <button
-              type="button"
-              className="btn btn-sm"
-              onClick={() => {
-                update((p) => ({ ...p, answers: [...p.answers, { id: newAnswerId(), question: '', answer: '' }] }))
-                setFocusKey(`ans-${draft.answers.length}-q`)
-              }}
-            >
-              <Icon name="plus" />
-              Add answer
-            </button>
-          )
-        }
-      >
-        {!encrypted ? (
-          <Note tone="warn">Saved answers need the keychain so they’re stored encrypted. Unlock or set up your keychain to use them.</Note>
-        ) : draft.answers.length === 0 ? (
-          <div className="pf-ideas">
-            <span>Start with a common one:</span>
-            {ANSWER_IDEAS.map((q) => (
-              <button
-                key={q}
-                type="button"
-                className="pf-idea"
-                onClick={() => {
-                  update((p) => ({ ...p, answers: [...p.answers, { id: newAnswerId(), question: q, answer: '' }] }))
-                  setFocusKey(`ans-${draft.answers.length}-a`)
-                }}
-              >
-                <Icon name="plus" />
-                {q}
-              </button>
-            ))}
-            <button
-              type="button"
-              className="pf-idea"
-              onClick={() => {
-                update((p) => ({ ...p, answers: [...p.answers, { id: newAnswerId(), question: '', answer: '' }] }))
-                setFocusKey(`ans-0-q`)
-              }}
-            >
-              <Icon name="plus" />
-              Your own question
-            </button>
-          </div>
-        ) : (
-          draft.answers.map((a: SavedAnswer, i) => (
-            <div key={a.id || i} className="pf-card pf-answer">
-              <div className="pf-answer-fields">
-                <TextField
-                  label="Question"
-                  placeholder="e.g. Why do you want to work here?"
-                  value={a.question}
-                  onChange={setAnswer(i, 'question')}
-                  onBlur={touch(`answers.${i}.question`)}
-                  error={err(`answers.${i}.question`)}
-                  autoFocus={focusKey === `ans-${i}-q`}
-                />
-                <div className="field">
-                  <label htmlFor={`pf-ans-${i}`}>Answer</label>
-                  <textarea
-                    id={`pf-ans-${i}`}
-                    rows={2}
-                    value={a.answer}
-                    onChange={(e) => setAnswer(i, 'answer')(e.target.value)}
-                    autoFocus={focusKey === `ans-${i}-a`}
-                  />
-                </div>
-              </div>
-              <button
-                type="button"
-                className="icon-btn"
-                aria-label={`Remove answer${a.question ? ` to “${a.question}”` : ''}`}
-                title="Remove"
-                onClick={() => update((p) => ({ ...p, answers: p.answers.filter((_, j) => j !== i) }))}
-              >
-                <Icon name="trash" />
-              </button>
-            </div>
-          ))
-        )}
-      </Section>
-
-      <section className="settings-section pf-section pf-demo" aria-labelledby="pf-demo">
-        <button type="button" className="pf-demo-toggle" aria-expanded={demoOpen} aria-controls="pf-demo-body" onClick={() => setDemoOpen((o) => !o)}>
-          <span>
-            <h3 id="pf-demo">
-              Voluntary demographics <span className="chip">Optional</span>
-            </h3>
-            <small>{demoAnswered ? `${demoAnswered} of 6 answered` : 'Not filled in. Applications will ask you each time.'}</small>
-          </span>
-          <Icon name="chevronDown" />
-        </button>
-        {demoOpen && (
-          <div id="pf-demo-body" className="pf-demo-body">
-            <Note tone="info">
-              These only fill the same voluntary questions on applications, and they stay encrypted on this computer. The assistant never sees them.
-            </Note>
-            {!encrypted && <Note tone="warn">Demographics need the keychain so they’re stored encrypted, so they’re turned off on this computer.</Note>}
-            <div className="grid-2">
-              <ChoiceSelect label="Gender" value={draft.demographics.gender} options={DEMOGRAPHIC_FIELDS[0]!.options} onChange={setDemo('gender')} disabled={!encrypted} />
-              <PronounsField value={draft.demographics.pronouns} onChange={setDemo('pronouns')} disabled={!encrypted} />
-              {DEMOGRAPHIC_FIELDS.slice(1).map((f) => (
-                <ChoiceSelect key={f.key} label={f.label} value={draft.demographics[f.key]} options={f.options} onChange={setDemo(f.key)} disabled={!encrypted} />
-              ))}
-            </div>
-          </div>
-        )}
-      </section>
-
-      <footer className={`pf-footer${dirty ? ' is-dirty' : ''}`}>
+      <footer className={`settings-pane-foot pf-footer${dirty ? ' is-dirty' : ''}`} onKeyDown={onKeyDown}>
         <span className="pf-footer-status" role="status" aria-live="polite">
           {saving ? (
             'Saving…'
@@ -981,7 +985,7 @@ export function ProfilePanel() {
             </span>
           ) : dirty ? (
             <span className="is-dirty">
-              <Glyph name="dot" />
+              <i className="pf-dirty-dot" aria-hidden="true" />
               Unsaved changes
             </span>
           ) : justSaved ? (
@@ -991,7 +995,7 @@ export function ProfilePanel() {
             </span>
           ) : (
             <span>
-              <Glyph name="lock" />
+              <Icon name="lock" />
               {encrypted ? 'All changes saved, encrypted on this computer' : 'All changes saved on this computer'}
             </span>
           )}
@@ -1003,6 +1007,6 @@ export function ProfilePanel() {
           {saving ? 'Saving…' : 'Save changes'}
         </button>
       </footer>
-    </div>
+    </>
   )
 }
