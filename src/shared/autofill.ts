@@ -4,11 +4,24 @@ export interface AutofillField {
 }
 
 export interface AutofillReport {
+  roleId: string
   url: string
   filled: AutofillField[]
   /** Required fields left for the user, e.g. an essay or a question with no saved answer. */
   needsYou: string[]
   resumeAttached: boolean
+  /** True when the profile had nothing to fill from; no window was opened. */
+  profileEmpty: boolean
+  /** Short notes for the user, e.g. why the resume wasn't attached. */
+  notes: string[]
+}
+
+export type AutofillStep = 'opening' | 'filling' | 'resume' | 'done' | 'failed'
+
+export interface AutofillProgress {
+  roleId: string
+  step: AutofillStep
+  message: string
 }
 
 export interface AutofillChannels {
@@ -19,4 +32,5 @@ export interface AutofillChannels {
 
 export interface AutofillEvents {
   'autofill:report': AutofillReport
+  'autofill:progress': AutofillProgress
 }

@@ -1,0 +1,176 @@
+/* Autofill: the button in the role dialog and its result popover. */
+
+@keyframes af-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes af-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.af-btn {
+  /* Same width idle and busy, so the link field doesn't jump. */
+  min-width: 172px;
+  justify-content: center;
+}
+.af-btn.is-running:disabled {
+  opacity: 1;
+  color: var(--ink-2);
+  background: var(--surface-sunken);
+}
+.af-spinner {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-top-color: var(--accent);
+  animation: af-spin 0.8s linear infinite;
+}
+
+/* Popover lives in the top layer, above the modal dialog; positioned from the button in JS. */
+.af-pop {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  width: 340px;
+  max-height: min(440px, calc(100vh - 120px));
+  overflow: auto;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-lift);
+  font: 13px/1.45 var(--font-ui);
+}
+.af-pop:popover-open {
+  animation: af-in 0.14s ease-out;
+}
+.af-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 10px 10px 14px;
+}
+.af-mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-md);
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+.af-mark svg {
+  width: 15px;
+  height: 15px;
+}
+.af-mark.is-warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.af-mark.is-danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.af-title {
+  flex: 1;
+  min-width: 0;
+}
+.af-title strong {
+  display: block;
+  font: 650 14px/1.3 var(--font-display);
+  letter-spacing: -0.005em;
+}
+.af-title p {
+  margin: 3px 0 0;
+  color: var(--ink-2);
+  font-size: 12.5px;
+}
+.af-close {
+  width: 26px;
+  height: 26px;
+  margin: -3px 0 0;
+}
+.af-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 14px 12px 52px;
+}
+.af-needs {
+  border-top: 1px solid var(--line);
+  padding: 10px 14px 12px;
+}
+.af-needs h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.af-needs h4 span {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  background: var(--warn-soft);
+  color: var(--warn);
+  letter-spacing: 0;
+}
+.af-needs ul,
+.af-notes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.af-needs li {
+  position: relative;
+  padding: 3px 0 3px 14px;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.af-needs li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: var(--warn);
+}
+.af-more {
+  margin: 4px 0 0 14px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.af-notes {
+  border-top: 1px solid var(--line);
+  padding: 10px 14px 12px;
+  display: grid;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.af-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 14px 14px;
+}
