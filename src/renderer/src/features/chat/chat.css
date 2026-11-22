@@ -745,7 +745,8 @@
   background: var(--accent-hover);
 }
 .chat-send:disabled {
-  opacity: 0.35;
+  background: var(--surface-sunken);
+  color: var(--ink-4);
   cursor: default;
 }
 .chat-send svg {

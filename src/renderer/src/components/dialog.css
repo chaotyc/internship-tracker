@@ -66,6 +66,6 @@
 
 /* Content continues below: the same 40px fade Settings uses. */
 .dialog-body.has-more {
-  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent);
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent);
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent);
 }

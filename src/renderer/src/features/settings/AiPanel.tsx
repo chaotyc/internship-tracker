@@ -283,6 +283,7 @@ function ProviderCard(props: {
               onBlur={() => draft.trim() !== model && props.onModel(draft)}
               onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
             />
+            {!draft.trim() && <span className="hint">Using the default model. Enter a model name to pick another.</span>}
           </div>
           )}
         </div>

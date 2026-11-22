@@ -92,12 +92,9 @@
   padding: 12px 14px;
   border-radius: var(--r-lg);
 }
+/* Reassurance is a plain row; only warnings get a tinted box. */
 .dp-status.is-ok {
-  border: 1px solid color-mix(in srgb, var(--ok) 22%, var(--line));
-  background: color-mix(in srgb, var(--ok) 8%, var(--surface));
-}
-.dp-status.is-ok strong {
-  color: var(--ok);
+  padding: 2px 0;
 }
 .dp-status.is-warn {
   background: var(--warn-soft);
@@ -113,6 +110,7 @@
 }
 .dp-status.is-ok .dp-status-icon {
   color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 12%, var(--surface));
 }
 .dp-status.is-warn .dp-status-icon {
   color: var(--warn);

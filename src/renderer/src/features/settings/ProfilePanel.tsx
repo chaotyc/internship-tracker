@@ -586,7 +586,8 @@ export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<Profile
     update((p) => ({ ...p, answers: p.answers.map((a, j) => (j === i ? { ...a, [k]: v } : a)) }))
 
   const text = (k: 'legalFirstName' | 'legalLastName' | 'preferredName' | 'email' | 'phone' | 'city' | 'region' | 'country' | 'linkedin' | 'github' | 'website' | 'scholar') => ({
-    value: draft[k],
+    // Links show without the https:// prefix (added back when saving) so the address fits.
+    value: k === 'linkedin' || k === 'github' || k === 'website' || k === 'scholar' ? draft[k].replace(/^https:\/\//i, '') : draft[k],
     onChange: set(k),
     onBlur: touch(k),
     error: err(k),
