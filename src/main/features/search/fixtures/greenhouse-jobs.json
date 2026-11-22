@@ -1,0 +1,27 @@
+{
+  "jobs": [
+    {
+      "id": 4001001,
+      "title": "Photonics Engineering Intern - Summer 2027",
+      "absolute_url": "https://job-boards.greenhouse.io/acmephotonics/jobs/4001001",
+      "location": { "name": "Mountain View, CA" },
+      "company_name": "Acme Photonics",
+      "first_published": "2026-11-10T09:00:00-08:00",
+      "updated_at": "2026-11-12T09:00:00-08:00",
+      "application_deadline": null,
+      "content": "&lt;p&gt;Acme builds optical interconnects.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Simulate silicon photonics devices&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Hourly rate: $48 &amp;mdash; $56 USD&lt;/p&gt;",
+      "departments": [{ "id": 1, "name": "Internships" }]
+    },
+    {
+      "id": 4001002,
+      "title": "Senior Optical Engineer",
+      "absolute_url": "https://job-boards.greenhouse.io/acmephotonics/jobs/4001002",
+      "location": { "name": "Boston, MA" },
+      "company_name": "Acme Photonics",
+      "first_published": "2026-09-01T09:00:00-08:00",
+      "content": "&lt;p&gt;Lead our optics team.&lt;/p&gt;",
+      "departments": [{ "id": 2, "name": "Engineering" }]
+    }
+  ],
+  "meta": { "total": 2 }
+}

@@ -1,0 +1,12 @@
+{
+  "id": 4001001,
+  "title": "Photonics Engineering Intern - Summer 2027",
+  "absolute_url": "https://job-boards.greenhouse.io/acmephotonics/jobs/4001001",
+  "location": { "name": "Mountain View, CA" },
+  "company_name": "Acme Photonics",
+  "first_published": "2026-11-10T09:00:00-08:00",
+  "application_deadline": "2026-12-15T23:59:00-08:00",
+  "content": "&lt;p&gt;Acme builds optical interconnects.&lt;/p&gt;",
+  "departments": [{ "id": 1, "name": "Internships" }],
+  "pay_input_ranges": [{ "min_cents": 4800, "max_cents": 5600, "currency_type": "USD", "title": "Hourly Rate" }]
+}

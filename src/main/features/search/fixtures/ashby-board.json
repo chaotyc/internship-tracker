@@ -1,0 +1,28 @@
+{
+  "apiVersion": "1",
+  "jobs": [
+    {
+      "id": "0b9e7c1a-1111-4c2d-9e3f-5a6b7c8d9e01",
+      "title": "Inference Kernels Intern",
+      "department": "Engineering",
+      "team": "Inference",
+      "location": "San Jose, CA",
+      "secondaryLocations": [{ "location": "Remote (US)" }],
+      "isRemote": true,
+      "isListed": true,
+      "publishedAt": "2026-11-15T18:00:00.000+00:00",
+      "jobUrl": "https://jobs.ashbyhq.com/acmechips/0b9e7c1a-1111-4c2d-9e3f-5a6b7c8d9e01",
+      "descriptionPlain": "Write CUDA kernels for transformer inference.",
+      "compensation": { "compensationTierSummary": "$50 – $60 per hour", "scrapeableCompensationSalarySummary": null }
+    },
+    {
+      "id": "0b9e7c1a-2222-4c2d-9e3f-5a6b7c8d9e02",
+      "title": "Hidden Role",
+      "isListed": false,
+      "location": "San Jose, CA",
+      "jobUrl": "https://jobs.ashbyhq.com/acmechips/0b9e7c1a-2222-4c2d-9e3f-5a6b7c8d9e02",
+      "descriptionPlain": "Unlisted.",
+      "compensation": null
+    }
+  ]
+}

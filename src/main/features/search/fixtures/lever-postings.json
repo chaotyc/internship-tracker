@@ -1,0 +1,14 @@
+[
+  {
+    "id": "5c4d3e2f-aaaa-4bbb-8ccc-1d2e3f4a5b6c",
+    "text": "Quantum Hardware Intern",
+    "hostedUrl": "https://jobs.lever.co/acmequantum/5c4d3e2f-aaaa-4bbb-8ccc-1d2e3f4a5b6c",
+    "createdAt": 1793000000000,
+    "categories": { "location": "Berkeley, CA", "allLocations": ["Berkeley, CA"], "team": "Hardware", "commitment": "Intern" },
+    "workplaceType": "onsite",
+    "descriptionPlain": "Characterize superconducting qubits.",
+    "lists": [{ "text": "What you'll do", "content": "<li>Run cryogenic measurements</li>" }],
+    "additionalPlain": "",
+    "salaryRange": { "min": 40, "max": 50, "currency": "USD", "interval": "per-hour-wage" }
+  }
+]
