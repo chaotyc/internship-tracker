@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { Icon } from '@renderer/components/Icon'
 import { api } from '@renderer/lib/api'
-import { Monogram } from '@renderer/features/board/RoleCard'
 import { PaneHeader } from '@renderer/features/settings/PaneHeader'
 import { ChipInput, fullDate, Note, words } from '@renderer/features/settings/ProfilePanel'
 import {
@@ -25,7 +24,7 @@ const NAME_REQUIRED = 'Give this track a name.'
 // ---------------------------------------------------------------------------
 // Resume for one track
 
-function TrackResume({ track, onProfile }: { track: ApplicationTrack; onProfile: (p: Profile) => void }) {
+function TrackResume({ track, onProfile, onRemove }: { track: ApplicationTrack; onProfile: (p: Profile) => void; onRemove: () => void }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [warning, setWarning] = useState<string | null>(null)
@@ -92,6 +91,10 @@ function TrackResume({ track, onProfile }: { track: ApplicationTrack; onProfile:
                 <Icon name="upload" />
                 {busy ? 'Reading…' : 'Replace'}
               </button>
+              <button type="button" className="btn btn-sm btn-ghost btn-danger" onClick={onRemove} disabled={busy} aria-label={`Remove the resume from ${track.name || 'this track'}`}>
+                <Icon name="trash" />
+                Remove
+              </button>
             </div>
           </div>
           {resume.text ? (
@@ -128,7 +131,7 @@ function TrackResume({ track, onProfile }: { track: ApplicationTrack; onProfile:
 }
 
 // ---------------------------------------------------------------------------
-// "⋯" menu: reorder, remove the resume and delete, out of the way until needed
+// "⋯" menu: reorder and delete, out of the way until needed
 
 interface MenuItem {
   label: string
@@ -365,24 +368,31 @@ function TrackCard({ track, index, count, profileAnswers, encrypted, autoFocusNa
   return (
     <article ref={cardRef} className={`trk-card${isDefault ? ' is-default' : ''}`} aria-labelledby={`${uid}-name`} onBlur={(e) => !e.currentTarget.contains(e.relatedTarget as Node | null) && void flush()}>
       <header className="trk-card-head">
-        <span className="trk-badge">
-          <Monogram name={draft.name} size={34} />
+        {/* The same neutral file tile for every track, so it can't read as a company logo. */}
+        <span className="trk-badge" aria-hidden="true">
+          <Icon name="file" />
         </span>
         <div className="trk-title">
-          <input
-            ref={nameRef}
-            id={`${uid}-name`}
-            className={`trk-name${nameErr ? ' is-invalid' : ''}`}
-            value={draft.name}
-            maxLength={80}
-            aria-label="Track name"
-            aria-invalid={nameErr ? true : undefined}
-            aria-describedby={nameErr ? `${uid}-name-err` : undefined}
-            title="Rename"
-            placeholder="Name this track"
-            onChange={(e) => edit((d) => ({ ...d, name: e.target.value }))}
-            onKeyDown={(e) => e.key === 'Enter' && (e.currentTarget.blur(), void flush())}
-          />
+          {/* Clicking the pencil focuses the name, like clicking the name itself. */}
+          <label className="trk-name-row">
+            <input
+              ref={nameRef}
+              id={`${uid}-name`}
+              className={`trk-name${nameErr ? ' is-invalid' : ''}`}
+              value={draft.name}
+              maxLength={80}
+              aria-label="Track name"
+              aria-invalid={nameErr ? true : undefined}
+              aria-describedby={nameErr ? `${uid}-name-err` : undefined}
+              title="Rename"
+              placeholder="Name this track"
+              onChange={(e) => edit((d) => ({ ...d, name: e.target.value }))}
+              onKeyDown={(e) => e.key === 'Enter' && (e.currentTarget.blur(), void flush())}
+            />
+            <svg className="trk-pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" />
+            </svg>
+          </label>
           {nameErr && (
             <small id={`${uid}-name-err`} className="pf-error trk-name-error">
               {nameErr}
@@ -414,7 +424,6 @@ function TrackCard({ track, index, count, profileAnswers, encrypted, autoFocusNa
             items={[
               { label: 'Move up', onSelect: () => onMove(-1), disabled: index === 0 },
               { label: 'Move down', onSelect: () => onMove(1), disabled: index === count - 1 },
-              ...(track.resume ? [{ label: 'Remove resume…', onSelect: () => setConfirming({ kind: 'resume' }), danger: true }] : []),
               { label: 'Delete track…', onSelect: () => void askDelete(), danger: true },
             ]}
           />
@@ -451,7 +460,7 @@ function TrackCard({ track, index, count, profileAnswers, encrypted, autoFocusNa
         </div>
       )}
 
-      <TrackResume track={track} onProfile={onProfile} />
+      <TrackResume track={track} onProfile={onProfile} onRemove={() => setConfirming({ kind: 'resume' })} />
 
       <div className="trk-grid">
         <ChipInput

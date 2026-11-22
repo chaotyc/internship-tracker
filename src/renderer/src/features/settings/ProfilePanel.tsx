@@ -46,7 +46,7 @@ interface FieldProps {
   onBlur?: () => void
   hint?: ReactNode
   placeholder?: string
-  type?: 'text' | 'email' | 'tel' | 'url' | 'month'
+  type?: 'text' | 'email' | 'tel' | 'url'
   wide?: boolean
   autoComplete?: string
   inputMode?: 'text' | 'decimal' | 'email' | 'tel' | 'url'
@@ -82,6 +82,63 @@ function TextField({ label, value, onChange, error, onBlur, hint, wide, ...rest 
           {hint}
         </small>
       ) : null}
+    </div>
+  )
+}
+
+const MONTHS = Array.from({ length: 12 }, (_, i) => [String(i + 1).padStart(2, '0'), new Date(2000, i, 1).toLocaleString(undefined, { month: 'short' })] as const)
+
+/**
+ * Month + Year selects for a YYYY-MM value; both empty stores ''. A half-picked date
+ * is stored as "2027-" or "-05" so validation asks for the other half instead of the
+ * pick vanishing.
+ */
+function MonthField({ label, value, onChange, onBlur, error }: { label: string; value: string; onChange: (v: string) => void; onBlur?: () => void; error?: string }) {
+  const id = useId()
+  const m = /^(\d{4})?-(\d{2})?$/.exec(value)
+  const year = m?.[1] ?? ''
+  const month = m?.[2] ?? ''
+  const set = (y: string, mo: string) => onChange(y || mo ? `${y}-${mo}` : '')
+  const now = new Date().getFullYear()
+  const years: string[] = []
+  for (let y = now + 8; y >= now - 30; y--) years.push(String(y))
+  if (year && !years.includes(year)) years.push(year)
+  const invalid = error ? true : undefined
+  const describedBy = error ? `${id}-d` : undefined
+  return (
+    <div
+      className={`field${error ? ' has-error' : ''}`}
+      role="group"
+      aria-labelledby={`${id}-l`}
+      onBlur={(e) => onBlur && !e.currentTarget.contains(e.relatedTarget as Node | null) && onBlur()}
+    >
+      <label id={`${id}-l`} htmlFor={id}>
+        {label}
+      </label>
+      <div className="pf-month">
+        <select id={id} aria-label={`${label} month`} value={month} onChange={(e) => set(year, e.target.value)} className={month ? undefined : 'is-unset'} aria-invalid={invalid} aria-describedby={describedBy}>
+          <option value="">Month</option>
+          {MONTHS.map(([v, l]) => (
+            <option key={v} value={v}>
+              {l}
+            </option>
+          ))}
+        </select>
+        <select aria-label={`${label} year`} value={year} onChange={(e) => set(e.target.value, month)} className={year ? undefined : 'is-unset'} aria-invalid={invalid} aria-describedby={describedBy}>
+          <option value="">Year</option>
+          {years.map((y) => (
+            <option key={y} value={y}>
+              {y}
+            </option>
+          ))}
+        </select>
+      </div>
+      {error && (
+        <small id={`${id}-d`} className="pf-error">
+          <Icon name="alert" />
+          {error}
+        </small>
+      )}
     </div>
   )
 }
@@ -631,7 +688,7 @@ export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<Profile
   if (loadError) {
     return (
       <div className="settings-scroll">
-        <PaneHeader title="Profile" description="What autofill puts on applications and the assistant uses to judge fit." />
+        <PaneHeader title="Profile" description="Used by autofill on applications, and by the assistant to judge fit." />
         <Note tone="danger">Your profile couldn’t be loaded: {loadError}</Note>
       </div>
     )
@@ -639,7 +696,7 @@ export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<Profile
   if (!base) {
     return (
       <div className="settings-scroll">
-        <PaneHeader title="Profile" description="What autofill puts on applications and the assistant uses to judge fit." />
+        <PaneHeader title="Profile" description="Used by autofill on applications, and by the assistant to judge fit." />
         <div className="pf-loading" aria-busy="true" />
       </div>
     )
@@ -661,7 +718,7 @@ export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<Profile
   return (
     <>
       <div className="settings-scroll pf" ref={rootRef} onKeyDown={onKeyDown}>
-        <PaneHeader title="Profile" description="What autofill puts on applications and the assistant uses to judge fit." />
+        <PaneHeader title="Profile" description="Used by autofill on applications, and by the assistant to judge fit." />
         <div className="pf-hero">
           <div className="pf-avatar" aria-hidden="true">
             {initials(draft) || <Icon name="user" />}
@@ -793,17 +850,15 @@ export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<Profile
                   <TextField label="Field of study" placeholder="Computer Science" value={e.field} onChange={setEdu(i, 'field')} />
                 </div>
                 <div className="grid-3">
-                  <TextField
+                  <MonthField
                     label="Start"
-                    type="month"
                     value={e.startDate}
                     onChange={setEdu(i, 'startDate')}
                     onBlur={touch(`education.${i}.startDate`)}
                     error={err(`education.${i}.startDate`)}
                   />
-                  <TextField
+                  <MonthField
                     label="End or expected"
-                    type="month"
                     value={e.endDate}
                     onChange={setEdu(i, 'endDate')}
                     onBlur={touch(`education.${i}.endDate`)}

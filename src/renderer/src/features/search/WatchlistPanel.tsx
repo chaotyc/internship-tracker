@@ -199,7 +199,7 @@ export function WatchlistPanel() {
 
   return (
     <div className="watch">
-      <PaneHeader title="Job boards" description="Companies Find roles checks for new postings." />
+      <PaneHeader title="Job boards" description="Find roles checks these companies for new postings." />
       <section className="settings-section">
         <h3>Add a company</h3>
         <p>Paste a careers page or job board link. Find roles reads public Greenhouse, Ashby, Lever and Workday boards.</p>

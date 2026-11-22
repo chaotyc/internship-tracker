@@ -53,6 +53,10 @@
   flex-direction: column;
   gap: 16px;
 }
+/* Content handles its own padding (Settings). */
+.dialog-body.is-flush {
+  padding: 0;
+}
 .dialog-foot {
   display: flex;
   align-items: center;

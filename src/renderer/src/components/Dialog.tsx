@@ -11,10 +11,12 @@ interface Props {
   children: ReactNode
   footer?: ReactNode
   headerExtra?: ReactNode
+  /** No body padding: the content lays out its own edges (Settings' full-height nav). */
+  flush?: boolean
 }
 
 /** Native <dialog> as a modal sheet. Escape and the backdrop close it. */
-export function Dialog({ open, onClose, title, subtitle, width = 620, children, footer, headerExtra }: Props) {
+export function Dialog({ open, onClose, title, subtitle, width = 620, children, footer, headerExtra, flush = false }: Props) {
   const ref = useRef<HTMLDialogElement>(null)
   const body = useRef<HTMLDivElement>(null)
   // True while the body has more content below, so the footer can show it sits over scrolled content.
@@ -66,7 +68,7 @@ export function Dialog({ open, onClose, title, subtitle, width = 620, children, 
               <Icon name="close" />
             </button>
           </header>
-          <div className={`dialog-body${more ? ' has-more' : ''}`} ref={body}>
+          <div className={`dialog-body${flush ? ' is-flush' : ''}${more ? ' has-more' : ''}`} ref={body}>
             {children}
           </div>
           {footer && <footer className={`dialog-foot${more ? ' has-more' : ''}`}>{footer}</footer>}

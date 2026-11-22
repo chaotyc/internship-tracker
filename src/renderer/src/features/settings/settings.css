@@ -4,17 +4,21 @@
  */
 .settings {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  /* 240px of nav plus the 20px left edge the flush dialog body no longer pads. */
+  grid-template-columns: 260px minmax(0, 1fr);
   gap: 0;
-  height: min(720px, calc(100vh - 170px));
+  /* The dialog body is flush, so the nav divider runs to the dialog's bottom edge;
+     the edges below replace the body padding. */
+  height: min(744px, calc(100vh - 146px));
   min-height: 0;
+  padding-top: 4px;
 }
 .settings-nav {
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-height: 0;
-  padding-right: 12px;
+  padding: 0 12px 20px 20px;
   border-right: 1px solid var(--line);
   overflow: hidden;
 }
@@ -66,22 +70,43 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+  padding: 0 20px 20px 0;
 }
-/* The part of the pane that scrolls. Side padding leaves room for focus rings. */
+/* The part of the pane that scrolls. Side padding leaves room for focus rings; the
+   right side is 4px plus a stable 10px scrollbar gutter, so panes that overflow and
+   panes that don't line up. scroll-padding keeps focused controls clear of the fade. */
 .settings-scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  scrollbar-gutter: stable;
+  scroll-padding-bottom: 48px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 3px 14px 24px 20px;
+  padding: 3px 4px 24px 20px;
+}
+/* A thin thumb that stays visible (macOS overlay scrollbars hide until you scroll). */
+.settings-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+.settings-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.settings-scroll::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: var(--line-strong) padding-box;
+}
+.settings-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: var(--ink-4);
 }
 /* Set by SettingsDialog while content continues below the fold. The mask only
-   uses alpha, so the colour is irrelevant. */
+   uses alpha, so the colour is irrelevant. The second layer keeps the 10px
+   scrollbar strip on the right unfaded. */
 .settings-scroll.has-more {
-  -webkit-mask-image: linear-gradient(to bottom, var(--ink) calc(100% - 40px), transparent);
-  mask-image: linear-gradient(to bottom, var(--ink) calc(100% - 40px), transparent);
+  -webkit-mask: linear-gradient(to bottom, var(--ink) calc(100% - 40px), transparent), linear-gradient(var(--ink), var(--ink)) right / 10px 100% no-repeat;
+  mask: linear-gradient(to bottom, var(--ink) calc(100% - 40px), transparent), linear-gradient(var(--ink), var(--ink)) right / 10px 100% no-repeat;
 }
 /* Optional footer pinned under the scrolling part (e.g. Profile's save bar). */
 .settings-pane-foot {

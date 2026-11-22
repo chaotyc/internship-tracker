@@ -141,7 +141,8 @@
   flex-direction: column;
   gap: 10px;
 }
-.ai-fields .field > label {
+.ai-fields .field > label,
+.ai-model-label > label {
   font-size: var(--fs-meta);
   color: var(--ink-3);
 }
@@ -158,6 +159,32 @@
 }
 .ai-fields input::placeholder {
   color: var(--ink-4);
+}
+/* Model label with a short-lived "Saved" after the override commits. */
+.ai-model-label {
+  display: flex;
+  min-height: 18px;
+  align-items: center;
+  gap: 8px;
+}
+.ai-model-label > label {
+  font-weight: 600;
+}
+.ai-saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--ok);
+  font-size: var(--fs-meta);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.ai-saved.is-on {
+  opacity: 1;
+}
+.ai-saved svg {
+  width: 12px;
+  height: 12px;
 }
 /* Model: full width of the card body, like the API key field. */
 .ai-fields .ai-model input {

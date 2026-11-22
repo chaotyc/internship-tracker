@@ -15,6 +15,16 @@
   }
 }
 
+/* Education Start / End: Month + Year selects side by side. */
+.pf-month {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+.pf-month select {
+  flex: 1 1 0;
+  min-width: 0;
+}
 .pf .grid-3 {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -50,18 +60,13 @@
 .pf .field textarea::placeholder {
   color: var(--ink-4);
 }
-.pf .field input[type='month'] {
-  font-variant-numeric: tabular-nums;
-}
-.pf .field input[type='month']::-webkit-calendar-picker-indicator {
-  opacity: 0.55;
-  filter: var(--pf-picker-filter, none);
-}
 .pf .field.has-error input,
+.pf .field.has-error select,
 .pf .field.has-error textarea {
   border-color: var(--danger);
 }
-.pf .field.has-error input:focus {
+.pf .field.has-error input:focus,
+.pf .field.has-error select:focus {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 22%, transparent);
 }
 .pf-error {
@@ -641,11 +646,6 @@
   font-weight: 550;
 }
 
-@media (prefers-color-scheme: dark) {
-  .pf {
-    --pf-picker-filter: invert(1);
-  }
-}
 
 .pf-progress.is-ready {
   display: inline-flex;

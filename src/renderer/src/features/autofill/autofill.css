@@ -12,10 +12,24 @@
   }
 }
 
+.af-slot {
+  display: inline-flex;
+}
+/* Holds the button's space while support is being checked; removed if the link can't be autofilled. */
+.af-slot.is-pending {
+  visibility: hidden;
+}
 .af-btn {
   /* Same width idle and busy, so the link field doesn't jump. */
   min-width: 172px;
   justify-content: center;
+}
+/* Blocked (unsaved link or track) or still checking: the flat neutral disabled look. */
+.af-slot .af-btn:disabled:not(.is-running) {
+  opacity: 1;
+  background: var(--surface-sunken);
+  border-color: transparent;
+  color: var(--ink-3);
 }
 .af-btn.is-running:disabled {
   opacity: 1;

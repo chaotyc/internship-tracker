@@ -17,6 +17,11 @@ function keychainName(platform: string | undefined): string {
   return 'system keyring'
 }
 
+/** Shows the home folder as "~" (macOS, Linux and Windows user folders), so the path fits on one line. */
+function tildePath(path: string): string {
+  return path.replace(/^(\/Users\/[^/]+|\/home\/[^/]+|[A-Za-z]:\\Users\\[^\\]+)(?=[\\/]|$)/, '~')
+}
+
 /** Splits a path so the end (separator + last folder) stays visible while the start truncates. */
 function splitPath(path: string): [string, string] {
   const trimmed = path.replace(/[\\/]+$/, '')
@@ -110,8 +115,8 @@ export function DataPanel() {
             <div className="dp-path-text">
               {status ? (
                 <code className="dp-path-name" title={status.dataDir}>
-                  <span className="dp-path-start">{splitPath(status.dataDir)[0]}</span>
-                  <span className="dp-path-end">{splitPath(status.dataDir)[1]}</span>
+                  <span className="dp-path-start">{splitPath(tildePath(status.dataDir))[0]}</span>
+                  <span className="dp-path-end">{splitPath(tildePath(status.dataDir))[1]}</span>
                 </code>
               ) : (
                 <code className="dp-path-name">…</code>

@@ -10,9 +10,10 @@ import { ShieldIcon, sinceLabel } from './parts'
 import '@renderer/features/settings/profile.css'
 import './today.css'
 
+// No Outlook.com: Microsoft stopped accepting passwords and app passwords over IMAP (OAuth only) in Sept 2024.
+// A server that isn't a preset's (including an old Outlook one) shows as Other.
 const PRESETS = [
   { label: 'Gmail', host: 'imap.gmail.com' },
-  { label: 'Outlook', host: 'outlook.office365.com' },
   { label: 'iCloud', host: 'imap.mail.me.com' },
   { label: 'Fastmail', host: 'imap.fastmail.com' },
 ]
@@ -72,6 +73,7 @@ export function EmailPanel() {
       <section className="settings-section">
         <h3>Inbox</h3>
         <p>Connect read-only to pick up new recruiter emails automatically.</p>
+        <p>Outlook.com doesn't allow app passwords. Paste or drop Outlook emails instead.</p>
         {status.connected ? <Connected status={status} onStatus={setStatus} onSettings={saveSettings} /> : <ConnectForm onConnected={setStatus} canStore={status.canStoreSecrets} />}
       </section>
 
@@ -183,7 +185,7 @@ function ConnectForm({ onConnected, canStore }: { onConnected: (s: EmailStatus) 
   const [serverOpen, setServerOpen] = useState(false)
   const providerId = useId()
   const found = PRESETS.findIndex((p) => p.host === host)
-  // The last option is Custom: always the one chosen when the server isn't a preset's.
+  // The last option is Other: always the one chosen when the server isn't a preset's.
   const choice = custom || found < 0 ? PRESETS.length : found
   const pick = (i: number) => {
     if (i === PRESETS.length) return setCustom(true)
@@ -191,7 +193,7 @@ function ConnectForm({ onConnected, canStore }: { onConnected: (s: EmailStatus) 
     setHost(PRESETS[i]!.host)
     setPort('993')
   }
-  // Presets know their server, so it stays folded away; Custom shows it.
+  // Presets know their server, so it stays folded away; Other shows it.
   const showServer = choice === PRESETS.length || serverOpen
   // Arrow keys move the choice, like any radio group.
   const movePreset = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -222,7 +224,7 @@ function ConnectForm({ onConnected, canStore }: { onConnected: (s: EmailStatus) 
       <div className="field ep-provider">
         <span id={providerId}>Mail provider</span>
         <div className="settings-segmented" role="radiogroup" aria-labelledby={providerId} onKeyDown={movePreset}>
-          {[...PRESETS.map((p) => p.label), 'Custom'].map((label, i) => (
+          {[...PRESETS.map((p) => p.label), 'Other'].map((label, i) => (
             <button
               key={label}
               type="button"
@@ -298,10 +300,6 @@ function ConnectForm({ onConnected, canStore }: { onConnected: (s: EmailStatus) 
               <li>
                 <strong>Gmail:</strong> turn on 2-Step Verification for your Google Account, then create an app password at <code>myaccount.google.com/apppasswords</code>. Server{' '}
                 <code>imap.gmail.com</code>, port <code>993</code>.
-              </li>
-              <li>
-                <strong>Outlook.com:</strong> turn on two-step verification at <code>account.microsoft.com/security</code>, then under Advanced security options create an app password. Server{' '}
-                <code>outlook.office365.com</code>, port <code>993</code>. School and work accounts often block app passwords; ask your IT team.
               </li>
               <li>
                 <strong>iCloud:</strong> create an app-specific password at <code>account.apple.com</code> under Sign-In and Security. Server <code>imap.mail.me.com</code>, port <code>993</code>.

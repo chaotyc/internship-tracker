@@ -98,7 +98,12 @@ a:hover {
   opacity: 0.45;
 }
 input[type='date'].is-empty {
-  color: var(--ink-4);
+  color: var(--ink-3);
+}
+/* Empty selects ("No time") read as readable text too; the second selector outranks feature rules. */
+select.is-empty,
+.ns-row > select.is-empty:not([multiple]) {
+  color: var(--ink-3);
 }
 input[type='date']::-webkit-calendar-picker-indicator {
   opacity: 0.55;
@@ -396,7 +401,7 @@ select.input {
   color: var(--ink-3);
 }
 .date-btn.is-empty {
-  color: var(--ink-4);
+  color: var(--ink-3);
 }
 .date-clear {
   position: absolute;

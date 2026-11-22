@@ -85,6 +85,38 @@ function nextTone(due: string): string {
   return d < 0 ? ' is-overdue' : d === 0 ? ' is-today' : ''
 }
 
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+/**
+ * Today and overdue steps keep their own emphasised label line; future dates sit inline
+ * ("Tue · Finish the application") so the block stays short.
+ */
+function NextStep({ step }: { step: NonNullable<Role['nextStep']> }) {
+  const d = step.due ? daysUntil(step.due) : null
+  const text = step.text || 'Next step'
+  if (d != null && d > 0) {
+    return (
+      <div className="card-next is-inline">
+        <span className="card-next-text">
+          <span className="card-next-due">{capitalize(dueLabel(step.due, step.time))}</span>
+          <span className="card-next-sep" aria-hidden="true">
+            {' · '}
+          </span>
+          {text}
+        </span>
+      </div>
+    )
+  }
+  return (
+    <div className={`card-next${nextTone(step.due)}`}>
+      <span className="card-next-due">{step.due ? dueLabel(step.due, step.time) : 'Next step'}</span>
+      <span className="card-next-text">{text}</span>
+    </div>
+  )
+}
+
 export function RoleCard({ role, ghost, ...rest }: Props) {
   const meta = [role.location, role.pay].filter(Boolean)
   const live = role.liveness?.status
@@ -139,12 +171,7 @@ export function RoleCard({ role, ghost, ...rest }: Props) {
           </button>
         </div>
       </div>
-      {hasNext && (
-        <div className={`card-next${nextTone(role.nextStep!.due)}`}>
-          <span className="card-next-due">{role.nextStep!.due ? dueLabel(role.nextStep!.due, role.nextStep!.time) : 'Next step'}</span>
-          <span className="card-next-text">{role.nextStep!.text || 'Next step'}</span>
-        </div>
-      )}
+      {hasNext && <NextStep step={role.nextStep!} />}
       {meta.length > 0 && (
         <div className="card-meta" title={meta.join(' · ')}>
           <div className="card-meta-inner">

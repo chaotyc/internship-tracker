@@ -1,17 +1,25 @@
-/* Settings > Data & privacy. */
+/* Settings > Data & privacy. Tighter than other panes so "Delete everything"
+   starts above the fold on a 900px-tall window. */
 .dp {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 12px;
+}
+.dp .settings-section {
+  gap: 10px;
+}
+.dp .settings-section:not(.dp-danger) {
+  padding-bottom: 12px;
 }
 .dp .settings-section > p {
+  margin-top: -4px;
   text-wrap: pretty;
 }
 .dp-path {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   background: var(--surface-hover);
@@ -131,7 +139,7 @@
 .dp-facts {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   margin: 0;
   padding: 0;
   list-style: none;

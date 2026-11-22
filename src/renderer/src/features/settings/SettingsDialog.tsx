@@ -107,6 +107,7 @@ export function SettingsDialog({ open, tab, onClose }: { open: boolean; tab: Set
       onClose={() => leave('close')}
       width={900}
       title="Settings"
+      flush
     >
       <div className="settings">
         <nav className="settings-nav" aria-label="Settings sections">

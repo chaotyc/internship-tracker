@@ -16,7 +16,7 @@ import {
 import { Icon } from '@renderer/components/Icon'
 import { useToast } from '@renderer/components/Toast'
 import { api, useRoles } from '@renderer/lib/api'
-import { deadlineTone, dueLabel, shortDate } from '@renderer/lib/format'
+import { deadlineTone, dueLabel, plural, shortDate } from '@renderer/lib/format'
 import { Monogram } from '@renderer/features/board/RoleCard'
 import { EmailDrop } from './EmailDrop'
 import { ProposalCard } from './ProposalCard'
@@ -54,6 +54,8 @@ export function TodayView({
   const [incoming, setIncoming] = useState<{ raw: string; n: number } | null>(null)
   const [leaving, setLeaving] = useState<Set<string>>(new Set())
   const [today, setToday] = useState(localIso())
+  // With several pending proposals, one at a time opens into its full card.
+  const [openProposal, setOpenProposal] = useState<string | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const dragDepth = useRef(0)
 
@@ -226,6 +228,12 @@ export function TodayView({
               {items != null && (
                 <>
                   {' · '}
+                  {proposals.length > 0 && (
+                    <>
+                      <strong>{plural(proposals.length, 'email update')}</strong>
+                      {' · '}
+                    </>
+                  )}
                   {overdue > 0 && (
                     <>
                       <strong className="is-overdue">{overdue} overdue</strong>
@@ -239,7 +247,7 @@ export function TodayView({
             </p>
           </div>
           <div className="td-head-actions">
-            <button type="button" className={`btn btn-sm${pasteOpen ? ' btn-ghost' : ''}`} onClick={() => setPasteOpen((o) => !o)} aria-expanded={pasteOpen}>
+            <button type="button" className={`btn${pasteOpen ? ' btn-ghost' : ''}`} onClick={() => setPasteOpen((o) => !o)} aria-expanded={pasteOpen}>
               <MailIcon className="td-btn-icon" />
               {pasteOpen ? 'Hide email box' : 'Add an email'}
             </button>
@@ -274,7 +282,14 @@ export function TodayView({
             {shownProposals.length > 0 && (
               <div className="td-proposals">
                 {shownProposals.map((p) => (
-                  <ProposalCard key={p.id} p={p} role={byId.get(p.roleId) ?? null} onOpenRole={onOpenRole} onDone={(id) => setProposals((cur) => cur.filter((x) => x.id !== id))} />
+                  <ProposalCard
+                    key={p.id}
+                    p={p}
+                    role={byId.get(p.roleId) ?? null}
+                    onOpenRole={onOpenRole}
+                    onDone={(id) => setProposals((cur) => cur.filter((x) => x.id !== id))}
+                    collapse={shownProposals.length > 1 ? { expanded: openProposal === p.id, onToggle: () => setOpenProposal((cur) => (cur === p.id ? null : p.id)) } : undefined}
+                  />
                 ))}
               </div>
             )}
@@ -305,7 +320,7 @@ export function TodayView({
               </div>
             )}
             {sections.map((s) => (
-              <section key={s.key} className={`td-section is-${s.key}`} aria-labelledby={`td-h-${s.key}`} style={{ marginBottom: 20 }}>
+              <section key={s.key} className={`td-section is-${s.key}`} aria-labelledby={`td-h-${s.key}`}>
                 <div className="td-section-head">
                   <h3 id={`td-h-${s.key}`}>{s.label}</h3>
                   <span className="td-count tabular">{s.items.length}</span>

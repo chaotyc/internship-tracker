@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { FITS, STAGES, type NextStep, type Role, type RoleInput, type StageKey } from '@shared/roles'
 import { normalizeLink } from '@shared/profile'
 import { NextStepField } from '@renderer/features/today/NextStepField'
@@ -91,8 +91,17 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
   const [pendingLeave, setPendingLeave] = useState<null | 'close' | 'assistant'>(null)
   const [saveError, setSaveError] = useState('')
   const confirmClose = pendingLeave !== null
+  /** Bumped whenever the dialog opens, closes or switches role, so a late posting read is dropped. */
+  const sessionRef = useRef(0)
+  /** Fields the user edited while a posting read was in flight; the read never overwrites them. */
+  const editedRef = useRef<Set<string>>(new Set())
+  const formRef = useRef(form)
+  formRef.current = form
 
   useEffect(() => {
+    sessionRef.current++
+    editedRef.current = new Set()
+    setReading(false)
     if (!open) return
     const start = role ? pick(role) : { ...EMPTY, stage: initialStage }
     setForm(start)
@@ -118,6 +127,7 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => {
     setForm((f) => ({ ...f, [k]: v }))
+    editedRef.current.add(k)
     setPendingLeave(null)
     setSaveError('')
     if (k === 'company' || k === 'title') setErrors((e) => ({ ...e, [k]: undefined }))
@@ -160,31 +170,39 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
       return
     }
     if (url !== form.link) setForm((f) => ({ ...f, link: url }))
+    const session = sessionRef.current
+    editedRef.current = new Set()
+    // Only apply the result to the dialog, role and link that asked for it.
+    const stillCurrent = () => sessionRef.current === session && webLink(formRef.current.link) === url
     setReading(true)
     setReadNote({ text: 'Reading the posting…', tone: '' })
     try {
       const draft = await api.invoke('search:fromLink', { url })
+      if (!stillCurrent()) return
+      const edited = editedRef.current
+      const applied = draft.filled.filter((k) => !edited.has(k))
       setForm((f) => {
         const next = { ...f }
-        for (const k of draft.filled) {
+        for (const k of applied) {
           const v = (draft.role as Record<string, unknown>)[k]
           if (typeof v === 'string' && v && k in next) (next as unknown as Record<string, unknown>)[k] = v
         }
         return next
       })
-      setFilled(new Set(draft.filled))
-      if (draft.filled.some((k) => DETAIL_KEYS.includes(k as keyof Form))) setMoreOpen(true)
+      setFilled(new Set(applied))
+      if (applied.some((k) => DETAIL_KEYS.includes(k as keyof Form))) setMoreOpen(true)
       setManual(true)
       setReadNote({
         text:
           draft.warning ||
-          `Filled ${draft.filled.length} field${draft.filled.length === 1 ? '' : 's'} from the posting. Check them, then save.`,
+          `Filled ${applied.length} field${applied.length === 1 ? '' : 's'} from the posting. Check them, then save.`,
         tone: draft.warning ? 'warn' : '',
       })
     } catch (e) {
+      if (!stillCurrent()) return
       setReadNote({ text: (e as Error).message, tone: 'error' })
     } finally {
-      setReading(false)
+      if (sessionRef.current === session) setReading(false)
     }
   }
 
@@ -279,7 +297,19 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
           {reading ? 'Reading…' : role ? 'Re-read posting' : 'Fill in from link'}
         </button>
       </section>
-      {readNote.text && <p className={`read-note ${readNote.tone}`}>{readNote.text}</p>}
+      {readNote.text && (
+        <p className={`read-note ${readNote.tone}`}>
+          {readNote.text}
+          {readNote.tone === 'error' && !showForm && (
+            <>
+              {' '}
+              <button type="button" className="manual-link read-note-action" onClick={() => setManual(true)}>
+                Enter details manually
+              </button>
+            </>
+          )}
+        </p>
+      )}
       {linkChanged && role?.link !== undefined && linkOk && <p className="read-note">Save to use Autofill with the new link.</p>}
       {!showForm && (
         <button type="button" className="manual-link" onClick={() => setManual(true)}>
@@ -366,7 +396,7 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
           <textarea
             rows={2}
             value={form.notes}
-            placeholder="Next step, interview times, recruiter name"
+            placeholder="Recruiter name, referral, interview prep"
             onChange={(e) => set('notes', e.target.value)}
           />
         </label>
@@ -393,7 +423,15 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
         )
       }
       subtitle={role ? undefined : 'Paste the posting link and the details fill in for you.'}
-      headerExtra={role && role.link && !linkChanged && !trackChanged ? <AutofillButton roleId={role.id} link={role.link} /> : undefined}
+      headerExtra={
+        role && role.link ? (
+          <AutofillButton
+            roleId={role.id}
+            link={role.link}
+            blockedReason={linkChanged || trackChanged ? 'Save changes to autofill with the new link/track' : undefined}
+          />
+        ) : undefined
+      }
       footer={
         !showForm && !confirmClose ? undefined : confirmClose ? (
           <div className="discard-bar" role="alert">

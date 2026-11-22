@@ -2,7 +2,7 @@ import { useRef } from 'react'
 import type { NextStep } from '@shared/roles'
 import { addDays, localIso } from '@shared/today'
 import { Icon } from '@renderer/components/Icon'
-import { daysUntil, plural } from '@renderer/lib/format'
+import { ago, daysUntil } from '@renderer/lib/format'
 import './today.css'
 
 const EMPTY: NextStep = { text: '', due: '', time: '', done: false, source: 'manual' }
@@ -19,6 +19,16 @@ function fullDate(iso: string): string {
   if (Number.isNaN(d.getTime())) return iso
   const sameYear = d.getFullYear() === new Date().getFullYear()
   return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', ...(sameYear ? {} : { year: 'numeric' }) })
+}
+
+/** "today", "tomorrow", "in 3 days" or "2d ago", matching DateField's suffix. */
+function relative(iso: string): string {
+  const n = daysUntil(iso)
+  if (n == null) return ''
+  if (n === 0) return 'today'
+  if (n === 1) return 'tomorrow'
+  if (n < 0) return ago(iso)
+  return `in ${n} days`
 }
 
 /** "2pm" or "2:30pm" for an HH:MM string. */
@@ -63,15 +73,8 @@ export function NextStepField({ value, onChange }: { value: NextStep | null; onC
   ]
   const has = !!(v.text || v.due)
   const d = v.due ? daysUntil(v.due) : null
-  // The date and time fields (and the Today / Tomorrow chips) already say when; only add a
-  // readout when it says something they don't: how far off or how overdue the step is.
-  const status = v.done
-    ? { tone: 'is-done', text: 'Done' }
-    : d == null || d === 0 || d === 1
-      ? null
-      : d < 0
-        ? { tone: 'is-overdue', text: `${plural(-d, 'day')} overdue` }
-        : { tone: '', text: `In ${plural(d, 'day')}` }
+  // The date button says how far off the step is ("· in 3 days", "· 2d ago"), like DateField; overdue reads red.
+  const overdue = !v.done && d != null && d < 0
 
   return (
     <div className={`field wide ns${v.done ? ' is-done' : ''}`} role="group" aria-labelledby="ns-label">
@@ -82,7 +85,14 @@ export function NextStepField({ value, onChange }: { value: NextStep | null; onC
         <div className="date-field">
           <button type="button" className={`date-btn${v.due ? '' : ' is-empty'}`} onClick={openPicker} aria-label={v.due ? `Next step date, ${fullDate(v.due)}` : 'Next step date'}>
             <Icon name="calendar" />
-            <span>{v.due ? fullDate(v.due) : 'Add a date'}</span>
+            {v.due ? (
+              <span>
+                {fullDate(v.due)}
+                <small className={overdue ? 'is-overdue' : undefined}> · {relative(v.due)}</small>
+              </span>
+            ) : (
+              <span>Add a date</span>
+            )}
           </button>
           {v.due && (
             <button type="button" className="date-clear" onClick={() => set({ due: '' })} aria-label="Clear next step date">
@@ -103,33 +113,32 @@ export function NextStepField({ value, onChange }: { value: NextStep | null; onC
         </select>
       </div>
       <div className="ns-tools">
-        {chips.map((c) => (
-          <button
-            key={c.label}
-            type="button"
-            className="ns-chip"
-            title={c.title}
-            aria-pressed={c.label !== '+1 week' && v.due === c.due}
-            onClick={() => set({ due: c.due })}
-          >
-            {c.label}
-          </button>
-        ))}
-        {(status || (has && SOURCE_NOTE[v.source])) && <span className="ns-sep" aria-hidden="true" />}
-        {status && (
-          <span className={`ns-status ${status.tone}`} aria-live="polite">
-            {status.text}
-          </span>
-        )}
-        {has && SOURCE_NOTE[v.source] && <span className="ns-src">· {SOURCE_NOTE[v.source]}</span>}
         {has && (
-          <span className="ns-end">
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => onChange({ ...v, done: !v.done })}>
-              <Icon name={v.done ? 'refresh' : 'check'} />
-              {v.done ? 'Reopen' : 'Mark done'}
-            </button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => onChange({ ...v, done: !v.done })}>
+            <Icon name={v.done ? 'refresh' : 'check'} />
+            {v.done ? 'Reopen' : 'Mark done'}
+          </button>
+        )}
+        {v.done && (
+          <span className="ns-status is-done" aria-live="polite">
+            Done
           </span>
         )}
+        {has && SOURCE_NOTE[v.source] && <span className="ns-src">{SOURCE_NOTE[v.source]}</span>}
+        <span className="ns-chips">
+          {chips.map((c) => (
+            <button
+              key={c.label}
+              type="button"
+              className="ns-chip"
+              title={c.title}
+              aria-pressed={c.label !== '+1 week' && v.due === c.due}
+              onClick={() => set({ due: c.due })}
+            >
+              {c.label}
+            </button>
+          ))}
+        </span>
       </div>
     </div>
   )

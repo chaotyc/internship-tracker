@@ -197,8 +197,8 @@ export function App() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Escape' && (setQuery(''), e.currentTarget.blur())}
-              placeholder="Filter roles"
-              aria-label="Filter roles"
+              placeholder={view === 'today' ? 'Filter Today' : 'Filter roles'}
+              aria-label={view === 'today' ? 'Filter Today' : 'Filter roles'}
             />
             {query ? (
               <>

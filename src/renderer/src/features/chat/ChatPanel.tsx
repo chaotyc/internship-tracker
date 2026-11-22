@@ -6,6 +6,7 @@ import { api, useRoles } from '@renderer/lib/api'
 import type { SettingsTab } from '@renderer/features/settings/SettingsDialog'
 import { renderMarkdown } from './markdown'
 import { useScrollFade } from './useScrollFade'
+import { chatRun, useChatRun } from './chatStore'
 import './chat.css'
 
 const SUGGESTIONS: { label: string; prompt: string; send: boolean }[] = [
@@ -37,10 +38,10 @@ export function ChatPanel({ roleId, onClose, onOpenSettings }: Props) {
   const { roles } = useRoles()
   const [messages, setMessages] = useState<ChatMessage[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [draft, setDraft] = useState('')
-  const [sending, setSending] = useState(false)
-  const [stream, setStream] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  // The request, live reply and draft outlive the panel, so closing the sidebar mid-reply loses nothing.
+  const { draft, sending, stream, error, settled } = useChatRun()
+  const setDraft = chatRun.setDraft
+  const setError = chatRun.setError
   const [confirmClear, setConfirmClear] = useState(false)
   const [hasResume, setHasResume] = useState<boolean | null>(null)
   const [resumeNote, setResumeNote] = useState<string | null>(null)
@@ -78,12 +79,18 @@ export function ChatPanel({ roleId, onClose, onOpenSettings }: Props) {
         .catch(() => setHasResume(null))
     checkResume()
     const offProfile = api.on('profile:changed', checkResume)
-    const offDelta = api.on('chat:delta', ({ text }) => setStream(text))
     return () => {
       offProfile()
-      offDelta()
     }
   }, [load])
+
+  // Reload the history when a reply settles (the mount load above covers replies that settled while closed).
+  const seenSettled = useRef(settled)
+  useEffect(() => {
+    if (settled === seenSettled.current) return
+    seenSettled.current = settled
+    load()
+  }, [settled, load])
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -117,9 +124,6 @@ export function ChatPanel({ roleId, onClose, onOpenSettings }: Props) {
   /** Sends `text`, or with `retry` re-answers the last stored user message using the role it was about. */
   const run = async (text: string, retry = false) => {
     const roleIdForSend = retry ? lastUserRoleId(messages) : (contextRole?.id ?? null)
-    setError(null)
-    setSending(true)
-    setStream('')
     pinned.current = true
     if (!retry) {
       const optimistic: ChatMessage = {
@@ -132,15 +136,7 @@ export function ChatPanel({ roleId, onClose, onOpenSettings }: Props) {
       }
       setMessages((m) => [...(m ?? []), optimistic])
     }
-    try {
-      await api.invoke('chat:send', { text, roleId: roleIdForSend, retry })
-    } catch (e) {
-      setError((e as Error).message)
-    } finally {
-      setSending(false)
-      setStream('')
-      load()
-    }
+    await chatRun.send(text, roleIdForSend, retry)
   }
 
   const send = (text = draft) => {

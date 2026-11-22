@@ -74,16 +74,19 @@ export function AutosearchButton({ onResults }: { onResults: () => void }) {
           <Icon name="sparkle" />
           Find roles
         </button>
-        <button
-          type="button"
-          className={`btn autosearch-sugg tabular${waiting > 0 ? ' has-items' : ''}${trayOpen ? ' is-pressed' : ''}`}
-          onClick={trayOpen ? requestTrayClose : onResults}
-          aria-pressed={trayOpen}
-          aria-label={label}
-          title={label}
-        >
-          {count == null ? '' : `${count} new`}
-        </button>
+        {/* The count half shows only when there's something waiting or the tray is open; otherwise one rounded button. */}
+        {(waiting > 0 || trayOpen) && (
+          <button
+            type="button"
+            className={`btn autosearch-sugg tabular${waiting > 0 ? ' has-items' : ''}${trayOpen ? ' is-pressed' : ''}`}
+            onClick={trayOpen ? requestTrayClose : onResults}
+            aria-pressed={trayOpen}
+            aria-label={label}
+            title={label}
+          >
+            {`${waiting} new`}
+          </button>
+        )}
       </div>
     )
   }

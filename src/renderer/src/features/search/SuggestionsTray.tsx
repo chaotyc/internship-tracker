@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type Ref } from 'react'
+import { useCallback, useEffect, useRef, useState, type Ref, type RefObject } from 'react'
 import { BOARD_LABELS, type Suggestion } from '@shared/search'
 import { Icon } from '@renderer/components/Icon'
 import { useToast } from '@renderer/components/Toast'
@@ -23,10 +23,20 @@ const SEASON = '(?:summer|fall|autumn|winter|spring)'
 const TERM = `(?:${SEASON}\\s+(?:'?\\d{2}|\\d{4})|\\d{4}\\s+${SEASON})(?:\\s+(?:internships?|interns?|co-?ops?))?`
 const TERM_SUFFIX = new RegExp(`\\s*(?:[-–—|:,]\\s*${TERM}|[(\\[]\\s*${TERM}\\s*[)\\]])\\s*$`, 'i')
 
+const TERM_CORE = new RegExp(`${SEASON}\\s+(?:\\d{4}|'?\\d{2})|\\d{4}\\s+${SEASON}`, 'i')
+
 /** Drops a trailing term like " – Summer 2027" or "(Summer 2027)" so titles fit one line; the full title stays in the tooltip. */
 export function displayTitle(title: string): string {
   const short = title.replace(TERM_SUFFIX, '').trim()
   return short || title
+}
+
+/** The term displayTitle() dropped, as "Summer 2027", so the card can still show it; '' when nothing was dropped. */
+export function titleTerm(title: string): string {
+  const suffix = title.match(TERM_SUFFIX)?.[0]
+  if (!suffix || !title.replace(TERM_SUFFIX, '').trim()) return ''
+  const core = suffix.match(TERM_CORE)?.[0] ?? ''
+  return core.replace(/\s+/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
 }
 
 /** Posted age first so freshness survives, then location, then pay: ["2d ago", "San Jose, CA", "$50–60/hr"]. */
@@ -65,7 +75,8 @@ function FitText({ as: Tag = 'span', className, candidates, title }: { as?: 'spa
 
 /** One suggestion card. */
 function SuggestionCard({ s, busy, act }: { s: Suggestion; busy: boolean; act: (s: Suggestion, kind: 'add' | 'dismiss') => void }) {
-  const place = [s.location, s.pay].filter(Boolean)
+  const term = titleTerm(s.title)
+  const place = [term, s.location, s.pay].filter(Boolean)
   const from = sourceLine(s)
   const title = useFitText<HTMLAnchorElement>(wordCandidates(displayTitle(s.title)))
   return (
@@ -93,9 +104,9 @@ function SuggestionCard({ s, busy, act }: { s: Suggestion; busy: boolean; act: (
       <div className="sugg-place" title={place.join(' · ') || undefined}>
         {place.length > 0 ? (
           <div className="sugg-place-inner">
-            {place.map((m, i) => (
-              <span key={i}>{m}</span>
-            ))}
+            {term && <span className="sugg-term">{term}</span>}
+            {s.location && <span className="sugg-loc">{s.location}</span>}
+            {s.pay && <span>{s.pay}</span>}
           </div>
         ) : (
           '\u00a0'
@@ -104,7 +115,7 @@ function SuggestionCard({ s, busy, act }: { s: Suggestion; busy: boolean; act: (
       <FitText as="p" className="sugg-reason" candidates={wordCandidates(s.reason)} title={s.reason} />
       {from ? <FitText as="div" className="sugg-source" candidates={wordCandidates(from)} title={from} /> : <div className="sugg-source">{'\u00a0'}</div>}
       <div className="sugg-actions">
-        <button type="button" className="btn btn-sm" disabled={busy} onClick={() => act(s, 'add')}>
+        <button type="button" className="btn btn-sm sugg-add" disabled={busy} onClick={() => act(s, 'add')}>
           <Icon name="plus" />
           Add to Saved
         </button>
@@ -138,6 +149,38 @@ function rankingLabel(items: Suggestion[]): { text: string; title: string } | nu
     : { text: 'Ranked by keywords', title: 'Match estimates come from keyword overlap with your preferences.' }
 }
 
+/**
+ * Sets --sugg-w on the tray to the board's open column width, so tray cards line up with the
+ * columns below. Columns flex with the window, the assistant and collapsed stages, so it's measured.
+ */
+function useBoardColumnWidth(trayRef: RefObject<HTMLElement | null>, active: boolean) {
+  useEffect(() => {
+    const tray = trayRef.current
+    const main = tray?.parentElement
+    if (!active || !tray || !main || typeof ResizeObserver === 'undefined') return
+    const measure = () => {
+      const col = main.querySelector<HTMLElement>('.board .col:not(.is-collapsed)')
+      if (col) tray.style.setProperty('--sugg-w', `${col.getBoundingClientRect().width}px`)
+      else tray.style.removeProperty('--sugg-w')
+    }
+    const ro = new ResizeObserver(measure)
+    const attach = () => {
+      ro.disconnect()
+      ro.observe(main)
+      main.querySelectorAll('.board .col').forEach((c) => ro.observe(c))
+      measure()
+    }
+    attach()
+    // The board mounts after loading and swaps with Today; re-attach when it does.
+    const mo = new MutationObserver(attach)
+    mo.observe(main, { childList: true })
+    return () => {
+      ro.disconnect()
+      mo.disconnect()
+    }
+  }, [trayRef, active])
+}
+
 /** Roles Find roles turned up, ready to add to Saved or dismiss. */
 export function SuggestionsTray({ open, onClose }: { open: boolean; onClose: () => void }) {
   const toast = useToast()
@@ -145,7 +188,9 @@ export function SuggestionsTray({ open, onClose }: { open: boolean; onClose: () 
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<Set<string>>(new Set())
   const scroller = useRef<HTMLDivElement>(null)
+  const trayRef = useRef<HTMLElement>(null)
   const fade = useEdgeFade(scroller, [items, open, error])
+  useBoardColumnWidth(trayRef, open)
   const { closeRequests } = useSuggestionState()
   const seenClose = useRef(closeRequests)
 
@@ -215,7 +260,7 @@ export function SuggestionsTray({ open, onClose }: { open: boolean; onClose: () 
   const ranking = items?.length ? rankingLabel(items) : null
 
   return (
-    <section className="tray" aria-label="Suggested roles">
+    <section ref={trayRef} className="tray" aria-label="Suggested roles">
       <header className="tray-head">
         <span className="tray-icon" aria-hidden="true">
           <Icon name="sparkle" />

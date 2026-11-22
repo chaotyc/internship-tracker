@@ -40,6 +40,22 @@ describe('todayItems', () => {
     expect(items.find((i) => i.company === 'Offer')!.deadline).toBe('2026-11-26')
   })
 
+  it('drops the deadline of a Saved role whose posting closed, like the board, but keeps its next step', () => {
+    const closed = { status: 'closed' }
+    const items = todayItems(
+      [
+        { ...role('Closed', 'saved', null, TODAY), liveness: closed },
+        { ...role('ClosedStep', 'saved', step('Ask the recruiter', TODAY), TODAY), liveness: closed },
+        // Only Saved roles: an applied role keeps its deadline even if the posting came down.
+        { ...role('Applied', 'applied', null, TODAY), liveness: closed },
+      ],
+      TODAY,
+    )
+    expect(items.map((i) => `${i.company}:${i.kind}`)).toEqual(['ClosedStep:next-step', 'Applied:deadline'])
+    expect(items.find((i) => i.company === 'ClosedStep')!.deadline).toBeUndefined()
+    expect(attentionCount(items, 0, TODAY)).toBe(2)
+  })
+
   it('folds the deadline only when the step and deadline fall in the same section', () => {
     const items = todayItems(
       [

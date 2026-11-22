@@ -50,7 +50,7 @@ export function AiPanel() {
       .catch((e: Error) => finish({ ok: false, detail: e.message }))
   }
 
-  const description = 'Which AI the assistant, Fill in from link, Find roles and email matching use. Nothing goes to any other provider.'
+  const description = 'Choose the AI behind the assistant, Fill in from link, Find roles and email matching. Nothing goes to any other provider.'
   const header = <PaneHeader title="AI connections" description={description} />
   if (error && !statuses)
     return (
@@ -174,6 +174,13 @@ function ProviderCard(props: {
   }
   const [key, setKey] = useState('')
   const [busy, setBusy] = useState(false)
+  // Brief "Saved" next to the Model label after the override commits: shown, then faded, then gone.
+  const [modelSaved, setModelSaved] = useState<'off' | 'on' | 'fading'>('off')
+  useEffect(() => {
+    if (modelSaved === 'off') return
+    const t = setTimeout(() => setModelSaved(modelSaved === 'on' ? 'fading' : 'off'), modelSaved === 'on' ? 1700 : 300)
+    return () => clearTimeout(t)
+  }, [modelSaved])
   const modelId = `ai-model-${status.id}`
   const keyId = `ai-key-${status.id}`
   const missing = info.kind === 'cli' && !status.available
@@ -224,7 +231,7 @@ function ProviderCard(props: {
             <span>{info.vendor}</span>
             {status.kind === 'cli' && status.available && status.version && <span className="ai-version">v{status.version}</span>}
           </span>
-          {isAuto && <span className="chip ok ai-pill">Auto-selected</span>}
+          {isAuto && <span className="chip accent ai-pill">Auto-selected</span>}
           {!status.available && <span className="chip ai-pill is-muted">{status.kind === 'cli' ? 'Not installed' : 'No key'}</span>}
         </label>
         {status.available && (
@@ -273,7 +280,17 @@ function ProviderCard(props: {
           )}
           {isActive && (
           <div className="field ai-model">
-            <label htmlFor={modelId}>Model</label>
+            <div className="ai-model-label">
+              <label htmlFor={modelId}>Model</label>
+              <span className={`ai-saved${modelSaved === 'on' ? ' is-on' : ''}`} role="status">
+                {modelSaved !== 'off' && (
+                  <>
+                    <Icon name="check" />
+                    Saved
+                  </>
+                )}
+              </span>
+            </div>
             <input
               id={modelId}
               value={draft}
@@ -281,7 +298,11 @@ function ProviderCard(props: {
               autoComplete="off"
               placeholder={info.modelPlaceholder}
               onChange={(e) => setDraft(e.target.value)}
-              onBlur={() => draft.trim() !== model && props.onModel(draft)}
+              onBlur={() => {
+                if (draft.trim() === model) return
+                props.onModel(draft)
+                setModelSaved('on')
+              }}
               onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
             />
             {!draft.trim() && <span className="hint">Using the default model. Enter a model name to pick another.</span>}

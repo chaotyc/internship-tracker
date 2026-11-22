@@ -16,10 +16,14 @@ const STEP_LABEL: Partial<Record<AutofillStep, string>> = {
   resume: 'Attaching resume…',
 }
 
-/** Shown in the role dialog when the posting is a Greenhouse, Ashby or Lever application. Fills it in its own window; never submits. */
-export function AutofillButton({ roleId, link }: { roleId: string; link: string }) {
-  const [board, setBoard] = useState<AutofillBoard | ''>('')
-  const supported = board !== ''
+/**
+ * Shown in the role dialog when the posting is a Greenhouse, Ashby or Lever application. Fills it in its own window; never submits.
+ * `blockedReason` keeps it in place but disabled (e.g. unsaved link or track changes), with the reason as its tooltip.
+ */
+export function AutofillButton({ roleId, link, blockedReason }: { roleId: string; link: string; blockedReason?: string }) {
+  // null until the first check answers: the slot is reserved so the header doesn't shift.
+  const [board, setBoard] = useState<AutofillBoard | '' | null>(null)
+  const supported = !!board
   const [state, setState] = useState<State>({ kind: 'idle' })
   const btnRef = useRef<HTMLButtonElement>(null)
   const popRef = useRef<HTMLDivElement>(null)
@@ -40,7 +44,10 @@ export function AutofillButton({ roleId, link }: { roleId: string; link: string 
     }
   }, [link])
 
-  useEffect(() => setState({ kind: 'idle' }), [roleId])
+  useEffect(() => {
+    setState({ kind: 'idle' })
+    setBoard(null)
+  }, [roleId])
 
   useEffect(
     () =>
@@ -97,23 +104,32 @@ export function AutofillButton({ roleId, link }: { roleId: string; link: string 
     window.dispatchEvent(new CustomEvent('app:open-settings', { detail: 'profile' }))
   }
 
-  if (!supported) return null
+  if (board === '') return null
   const running = state.kind === 'running'
+  const blocked = !running && !!blockedReason
 
   return (
     <>
-      <button
-        ref={btnRef}
-        type="button"
-        className={`btn af-btn${running ? ' is-running' : ''}`}
-        onClick={() => void run()}
-        disabled={running}
-        aria-busy={running}
-        title={`Opens the ${board ? BOARD_NAMES[board] : ''} application in its own window and fills it from your profile. You review and submit.`}
-      >
-        {running ? <span className="af-spinner" aria-hidden="true" /> : <Icon name="wand" />}
-        {running ? STEP_LABEL[state.step] ?? 'Working…' : 'Autofill application'}
-      </button>
+      {/* The wrapper carries the tooltip, since a disabled button gets no hover events. */}
+      <span className={`af-slot${supported ? '' : ' is-pending'}`} title={blocked ? blockedReason : undefined} aria-hidden={supported ? undefined : true}>
+        <button
+          ref={btnRef}
+          type="button"
+          className={`btn af-btn${running ? ' is-running' : ''}`}
+          onClick={() => void run()}
+          disabled={running || blocked || !supported}
+          aria-busy={running}
+          tabIndex={supported ? undefined : -1}
+          title={
+            blocked
+              ? undefined
+              : `Opens the ${board ? BOARD_NAMES[board] : ''} application in its own window and fills it from your profile. You review and submit.`
+          }
+        >
+          {running ? <span className="af-spinner" aria-hidden="true" /> : <Icon name="wand" />}
+          {running ? STEP_LABEL[state.step] ?? 'Working…' : 'Autofill application'}
+        </button>
+      </span>
       <div ref={popRef} popover="auto" className="af-pop" role="dialog" aria-label="Autofill result">
         {state.kind === 'done' && state.report.profileEmpty && <EmptyProfile onOpenSettings={openSettings} onClose={() => popRef.current?.hidePopover()} />}
         {state.kind === 'done' && !state.report.profileEmpty && <Result report={state.report} onClose={() => popRef.current?.hidePopover()} />}

@@ -87,14 +87,22 @@
   align-items: flex-start;
   gap: 10px;
 }
-/* Every track gets the same monogram tile; the Default chip marks the default. */
+/* Every track gets the same neutral file tile (not a letter monogram, which reads as a
+   company); the Default chip marks the default. */
 .trk-badge {
   flex: none;
-  display: flex;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
   margin-top: 1px;
-}
-.trk-badge .monogram {
   border-radius: var(--r-md);
+  background: var(--surface-sunken);
+  color: var(--ink-3);
+}
+.trk-badge svg {
+  width: 18px;
+  height: 18px;
 }
 .trk-title {
   flex: 1;
@@ -152,6 +160,35 @@
 .trk-name.is-invalid:focus {
   border-color: var(--danger);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 22%, transparent);
+}
+/* The name sizes to its text so a pencil can follow it: faint at rest, stronger on hover or focus. */
+.trk-name-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  margin-left: -6px;
+  cursor: text;
+}
+.trk-name-row .trk-name {
+  width: auto;
+  min-width: 6ch;
+  max-width: calc(100% - 18px);
+  margin-left: 0;
+  field-sizing: content;
+}
+.trk-pencil {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  color: var(--ink-4);
+  opacity: 0.6;
+  transition: opacity 0.12s, color 0.12s;
+}
+.trk-name-row:hover .trk-pencil,
+.trk-name-row:focus-within .trk-pencil {
+  opacity: 1;
+  color: var(--ink-3);
 }
 .trk-name-error {
   margin: 2px 0 3px;

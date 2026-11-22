@@ -107,9 +107,10 @@ export function groupToday(items: TodayItem[], today: string): TodaySection[] {
   return TODAY_SECTIONS.map((s) => ({ ...s, items: by.get(s.key)!.sort(compareItems) })).filter((s) => s.items.length)
 }
 
-/** What the Today view lists for a set of roles. Finished roles (rejected, closed) never appear. */
+/** What the Today view lists for a set of roles. Finished roles (rejected, closed) never appear.
+ * Like the board, a Saved role whose posting has closed shows no application deadline (its next step stays). */
 export function todayItems(
-  roles: { id: string; company: string; title: string; stage: StageKey; deadline: string; nextStep: NextStep | null }[],
+  roles: { id: string; company: string; title: string; stage: StageKey; deadline: string; nextStep: NextStep | null; liveness?: { status: string } | null }[],
   today: string,
 ): TodayItem[] {
   const items: TodayItem[] = []
@@ -119,7 +120,8 @@ export function todayItems(
     const ns = r.nextStep
     const hasStep = !!ns && !ns.done && !!(ns.text.trim() || ns.due)
     const stepDue = hasStep && isIsoDate(ns!.due) ? ns!.due : ''
-    const deadline = r.deadline && isIsoDate(r.deadline) && dayDiff(today, r.deadline) >= -STALE_DEADLINE_DAYS ? r.deadline : ''
+    const postingClosed = r.stage === 'saved' && r.liveness?.status === 'closed'
+    const deadline = !postingClosed && r.deadline && isIsoDate(r.deadline) && dayDiff(today, r.deadline) >= -STALE_DEADLINE_DAYS ? r.deadline : ''
     // One row per role when its dated step comes first and both land in the same section: the deadline
     // rides along on that row. Otherwise the deadline gets its own row, so per-section counts stay right.
     const fold = !!deadline && !!stepDue && stepDue <= deadline && sectionOf({ due: stepDue }, today) === sectionOf({ due: deadline }, today)

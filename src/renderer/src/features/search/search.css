@@ -201,6 +201,9 @@
 .autosearch-main {
   flex: 1;
   justify-content: center;
+}
+/* Squared off only when the "N new" half sits beside it. */
+.autosearch-main:not(:only-child) {
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
 }
@@ -393,7 +396,8 @@
   --fade-start: 0px;
   --fade-end: 0px;
   display: flex;
-  gap: 10px;
+  /* Same gap and side padding as the board, so cards line up with the columns below. */
+  gap: 12px;
   padding: 8px 18px 10px;
   overflow-x: auto;
   scroll-padding-inline: 18px;
@@ -415,6 +419,11 @@
     var(--ink) calc(100% - var(--fade-end)),
     transparent 100%
   );
+}
+.app.has-panel .tray-scroll {
+  gap: 6px;
+  padding-inline: 12px;
+  scroll-padding-inline: 12px;
 }
 .tray-scroll.fade-start {
   --fade-start: 72px;
@@ -444,7 +453,8 @@
 }
 
 .sugg {
-  flex: 0 0 316px;
+  /* --sugg-w is the board's open column width (set in SuggestionsTray); --col-w until the board shows. */
+  flex: 0 0 var(--sugg-w, var(--col-w));
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -534,7 +544,7 @@
 .sugg-place-inner > span {
   white-space: nowrap;
 }
-.sugg-place-inner > span:first-child {
+.sugg-place-inner > .sugg-loc {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -560,6 +570,21 @@
   align-items: center;
   gap: 4px;
   padding-top: 2px;
+}
+/* Same soft accent as "Autofill application". */
+.sugg-add {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+}
+.sugg-add:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 28%, transparent);
+}
+.sugg-add:disabled {
+  background: var(--surface-sunken);
+  border-color: transparent;
+  color: var(--ink-3);
 }
 .sugg-open {
   margin-left: auto;
@@ -719,12 +744,14 @@
   transform: translateY(-50%);
   opacity: 0;
 }
+/* Only hovering the row or tabbing to the remove button itself swaps them; focusing
+   the company link leaves the badge in place. */
 .watch-list li:hover .icon-btn,
-.watch-list li:focus-within .icon-btn {
+.watch-list li:has(.icon-btn:focus-visible) .icon-btn {
   opacity: 1;
 }
 .watch-list li:hover .board-badge,
-.watch-list li:focus-within .board-badge {
+.watch-list li:has(.icon-btn:focus-visible) .board-badge {
   visibility: hidden;
 }
 .watch-list .icon-btn:hover {
@@ -896,7 +923,7 @@
   transition: opacity 0.12s;
 }
 .watch-list li:hover > .icon-btn,
-.watch-list li:focus-within > .icon-btn {
+.watch-list li:has(> .icon-btn:focus-visible) > .icon-btn {
   opacity: 1;
 }
 @media (pointer: coarse) {
