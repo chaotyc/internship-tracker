@@ -4,6 +4,7 @@ import { orderAt } from '@shared/order'
 import { Icon } from './components/Icon'
 import { useToast } from './components/Toast'
 import { api, useRoles } from './lib/api'
+import { plural } from './lib/format'
 import { Board, byStage, matchesQuery } from './features/board/Board'
 import { RoleDialog } from './features/board/RoleDialog'
 import { ChatPanel } from './features/chat/ChatPanel'
@@ -71,6 +72,16 @@ export function App() {
     if (view === 'role' && roles?.length) setDialog((d) => (d.open ? d : { open: true, id: roles.find((r) => r.stage === 'interviewing')?.id ?? roles[0]!.id, stage: 'saved' }))
   }, [roles])
 
+  // Features outside the shell (e.g. autofill inside the role dialog) ask for Settings with an event.
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      setDialog((d) => ({ ...d, open: false }))
+      setSettings({ open: true, tab: ((e as CustomEvent).detail as SettingsTab) ?? 'profile' })
+    }
+    window.addEventListener('app:open-settings', onOpen)
+    return () => window.removeEventListener('app:open-settings', onOpen)
+  }, [])
+
   // Keyboard: / filter, N add, ⌘J assistant, ⌘, settings.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -120,7 +131,7 @@ export function App() {
           <div>
             <h1>Applications</h1>
             <p className="tabular">
-              {roles ? `${roles.length} roles · ${active} in progress` : 'Loading…'}
+              {roles ? `${plural(roles.length, 'role')} · ${active} in progress` : 'Loading…'}
             </p>
           </div>
         </div>

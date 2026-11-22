@@ -40,8 +40,17 @@ export function hueFor(name: string): number {
   return h
 }
 
+export function plural(n: number, word: string): string {
+  return `${n} ${word}${n === 1 ? '' : 's'}`
+}
+
 export function monogram(name: string): string {
-  const words = name.replace(/\(.*?\)/g, '').trim().split(/\s+/).filter(Boolean)
+  const words = name
+    .replace(/\(.*?\)/g, '')
+    .replace(/[^\p{L}\p{N}\s]+/gu, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
   if (!words.length) return '?'
   if (words.length === 1) return words[0]!.slice(0, 2).toUpperCase()
   return (words[0]![0]! + words[1]![0]!).toUpperCase()

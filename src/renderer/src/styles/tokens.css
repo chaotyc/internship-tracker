@@ -20,6 +20,8 @@
   --accent-ink: #ffffff;
   --danger: #b8322a;
   --danger-soft: #fdecea;
+  /* Solid red fills behind white text (armed delete, error toast). */
+  --danger-fill: #c0392f;
   --warn: #8f5300;
   --warn-soft: #fdf2df;
   --ok: #14703f;
@@ -72,6 +74,7 @@
     --accent-ink: #0d1020;
     --danger: #f06b61;
     --danger-soft: #3a1c1a;
+    --danger-fill: #c0392f;
     --warn: #e8a33c;
     --warn-soft: #382a14;
     --ok: #4cc88b;

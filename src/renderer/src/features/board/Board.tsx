@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { STAGES, STAGE_KEYS, type Role, type StageKey } from '@shared/roles'
 import { Icon } from '@renderer/components/Icon'
+import { plural } from '@renderer/lib/format'
 import { RoleCard } from './RoleCard'
 import './board.css'
 
@@ -310,7 +311,7 @@ export function Board({ roles, query, onOpen, onAdd, onMove, focusStage }: Props
                 className="lane"
                 data-stage-body={s.key}
                 onClick={() => toggleCollapsed(s.key, true)}
-                aria-label={`${s.label}, ${all.length} roles. Expand`}
+                aria-label={`${s.label}, ${plural(all.length, 'role')}. Expand`}
                 title={`Show ${s.label}`}
               >
                 <span className="col-dot" />
@@ -326,7 +327,7 @@ export function Board({ roles, query, onOpen, onAdd, onMove, focusStage }: Props
             key={s.key}
             className={`col${isTarget ? ' is-target' : ''}`}
             style={{ ['--stage' as string]: `var(--stage-${s.key})` }}
-            aria-label={`${s.label}, ${all.length} roles`}
+            aria-label={`${s.label}, ${plural(all.length, 'role')}`}
             role="listitem"
           >
             <header className="col-head">

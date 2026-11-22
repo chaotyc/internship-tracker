@@ -122,8 +122,8 @@ input[type='date']::-webkit-calendar-picker-indicator {
   color: var(--danger);
 }
 .btn-danger.is-armed {
-  background: var(--danger);
-  border-color: var(--danger);
+  background: var(--danger-fill);
+  border-color: var(--danger-fill);
   color: #fff;
 }
 .btn-sm {

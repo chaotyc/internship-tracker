@@ -92,8 +92,8 @@ export function AutofillButton({ roleId, link }: { roleId: string; link: string 
 
   const openSettings = () => {
     popRef.current?.hidePopover()
-    // Same shortcut the app uses for Settings (⌘, / Ctrl+,), which opens on the Profile tab.
-    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: ',', metaKey: true, ctrlKey: true, bubbles: true }))
+    // App closes the role dialog and opens Settings on the Profile tab.
+    window.dispatchEvent(new CustomEvent('app:open-settings', { detail: 'profile' }))
   }
 
   if (!supported) return null

@@ -25,7 +25,7 @@
   animation: toast-in 0.18s ease-out;
 }
 .toast-error {
-  background: var(--danger);
+  background: var(--danger-fill);
   color: #fff;
 }
 .toast button {

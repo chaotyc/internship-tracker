@@ -184,6 +184,7 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
     if (!role) return
     if (!armed) {
       setArmed(true)
+      setTimeout(() => setArmed(false), 3500)
       return
     }
     try {
