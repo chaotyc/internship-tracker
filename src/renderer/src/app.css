@@ -538,15 +538,20 @@
   color: var(--danger);
 }
 .form-group {
-  margin: 4px 0 -4px;
+  margin: 12px 0 -4px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
   font-size: var(--fs-label);
   font-weight: 650;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ink-3);
 }
-.form-group:first-child {
-  margin-top: 0;
+/* The first group opens the form: no rule, and a little space before its first field label. */
+.role-form > .form-group:first-child {
+  margin: 0 0 2px;
+  padding-top: 0;
+  border-top: 0;
 }
 .next-step-row {
   display: grid;
@@ -569,4 +574,13 @@
 }
 .track-row:empty {
   display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  /* The raised segment needs more than a 1.1:1 step on dark surfaces. */
+  .view-switch button.is-on,
+  .settings-segmented button.is-on {
+    background: var(--surface-hover);
+    box-shadow: inset 0 0 0 1px var(--line-strong), var(--shadow-1);
+  }
 }

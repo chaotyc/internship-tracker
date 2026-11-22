@@ -117,7 +117,7 @@ export function ProposalCard({ p, role, onOpenRole, onDone }: { p: EmailProposal
         <button type="button" className="btn" onClick={() => void dismiss()} disabled={!!busy}>
           {busy === 'dismiss' ? 'Dismissing…' : 'Dismiss'}
         </button>
-        {!applyDisabled && <span className="td-prop-hint">Nothing changes until you update the role</span>}
+        {!applyDisabled && <span className="td-prop-hint">Nothing changes until you click Update role</span>}
         {role && (
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => onOpenRole(role.id)}>
             Open role

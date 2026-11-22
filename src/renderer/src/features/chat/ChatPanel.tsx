@@ -492,7 +492,7 @@ function ActionCard({
           <button type="button" className="btn" onClick={() => void act('chat:dismissAction')} disabled={busy}>
             Dismiss
           </button>
-          <span className="chat-action-hint">Nothing changes until you confirm</span>
+          <span className="chat-action-hint">Nothing changes until you click {verbs.apply}</span>
         </div>
       )}
     </section>

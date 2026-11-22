@@ -46,7 +46,7 @@ export function EmailPanel() {
     }
   }
 
-  const header = <PaneHeader title="Email updates" description="Recruiter emails become proposed updates in Today. Nothing changes until you update the role." />
+  const header = <PaneHeader title="Email updates" description="Recruiter emails become proposed updates in Today, for you to review." />
   if (loadError)
     return (
       <>

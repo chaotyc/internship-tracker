@@ -224,7 +224,7 @@ function ProviderCard(props: {
             <span>{info.vendor}</span>
             {status.kind === 'cli' && status.available && status.version && <span className="ai-version">v{status.version}</span>}
           </span>
-          {isAuto && <span className="chip ai-pill">Detected</span>}
+          {isAuto && <span className="chip ok ai-pill">Detected</span>}
           {!status.available && <span className="chip ai-pill is-muted">{status.kind === 'cli' ? 'Not installed' : 'No key'}</span>}
         </label>
         {status.available && (

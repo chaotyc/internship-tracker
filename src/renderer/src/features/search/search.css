@@ -502,7 +502,7 @@
 .sugg-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
   min-width: 0;
   color: var(--ink-3);
   font-size: var(--fs-meta);
@@ -563,7 +563,7 @@
 }
 .sugg-fit:not(:last-child)::after {
   content: '·';
-  margin-left: 8px;
+  margin-left: 0;
   color: var(--ink-4);
   font-weight: 400;
 }
@@ -887,4 +887,9 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* The bordered watch list already closes its section; no second rule under it. */
+.settings-section:has(> .watch-list) {
+  border-bottom: 0;
 }

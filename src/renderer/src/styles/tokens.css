@@ -84,12 +84,12 @@
     --accent-soft: #1f2645;
     --accent-ink: #0d1020;
     --danger: #f06b61;
-    --danger-soft: #3a1c1a;
+    --danger-soft: color-mix(in srgb, var(--danger) 11%, var(--surface));
     --danger-fill: #c0392f;
     --warn: #e8a33c;
-    --warn-soft: #382a14;
+    --warn-soft: color-mix(in srgb, var(--warn) 11%, var(--surface));
     --ok: #4cc88b;
-    --ok-soft: #15301f;
+    --ok-soft: color-mix(in srgb, var(--ok) 11%, var(--surface));
     --stage-saved: #8f96a5;
     --stage-applied: #6a9bf7;
     --stage-interviewing: #e6a63e;

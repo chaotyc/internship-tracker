@@ -80,16 +80,11 @@ button {
   cursor: default;
 }
 .btn-primary:disabled {
-  opacity: 0.4;
-}
-@media (prefers-color-scheme: dark) {
-  /* A faded accent still reads as clickable on dark; show disabled as a sunken, neutral button. */
-  .btn-primary:disabled {
-    opacity: 1;
-    background: var(--surface-sunken);
-    border-color: var(--line);
-    color: var(--ink-4);
-  }
+  /* Still the main action, just not ready: a faint accent tint with muted text, in both themes. */
+  opacity: 1;
+  background: color-mix(in srgb, var(--accent) 22%, var(--surface));
+  border-color: transparent;
+  color: var(--ink-4);
 }
 .btn-ghost:disabled {
   opacity: 0.45;

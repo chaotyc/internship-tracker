@@ -365,3 +365,8 @@
 .trk-mid-end {
   flex: none;
 }
+
+/* The label sits on its own line so the answer chips wrap as one group. */
+.pf-ideas .pf-ideas-label {
+  flex-basis: 100%;
+}

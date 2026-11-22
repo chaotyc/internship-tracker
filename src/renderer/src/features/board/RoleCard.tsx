@@ -85,8 +85,8 @@ export function RoleCard({ role, ghost, ...rest }: Props) {
   const saved = role.stage === 'saved'
   const finished = role.stage === 'rejected' || role.stage === 'closed'
   // Deadlines matter in every open stage (offer and interview deadlines most of all).
-  const alerts = saved && (live === 'closed' || live === 'expiring')
   const showDeadline = !finished && !!role.deadline && !(saved && live === 'closed')
+  const alerts = (saved && (live === 'closed' || live === 'expiring')) || showDeadline
   const showFit = !finished && !!role.fit
   const hasNext = !!role.nextStep && !role.nextStep.done && !finished
   return (
@@ -139,9 +139,11 @@ export function RoleCard({ role, ghost, ...rest }: Props) {
       )}
       {meta.length > 0 && (
         <div className="card-meta">
-          {meta.map((m, i) => (
-            <span key={i}>{m}</span>
-          ))}
+          <div className="card-meta-inner">
+            {meta.map((m, i) => (
+              <span key={i}>{m}</span>
+            ))}
+          </div>
         </div>
       )}
       {alerts && (
@@ -152,6 +154,7 @@ export function RoleCard({ role, ghost, ...rest }: Props) {
               Posting closed
             </span>
           )}
+          {showDeadline && <DeadlineChip deadline={role.deadline} />}
           {saved && live === 'expiring' && !role.deadline && (
             <span className="chip warn" title={role.liveness.detail}>
               <Icon name="clock" />
@@ -160,7 +163,7 @@ export function RoleCard({ role, ghost, ...rest }: Props) {
           )}
         </div>
       )}
-      {(showFit || role.appliedOn || showDeadline || (saved && role.source === 'autosearch')) && (
+      {(showFit || role.appliedOn || (saved && role.source === 'autosearch')) && (
         <div className="card-foot">
           {showFit && <FitMeter fit={role.fit} />}
           {saved && role.source === 'autosearch' && (
@@ -170,7 +173,6 @@ export function RoleCard({ role, ghost, ...rest }: Props) {
             </span>
           )}
           {!saved && role.appliedOn && role.stage !== 'closed' && <span className="card-age">Applied {ago(role.appliedOn)}</span>}
-          {showDeadline && <DeadlineChip deadline={role.deadline} />}
         </div>
       )}
       {!finished && role.notes && !(hasNext && similar(role.notes, role.nextStep!.text)) && <div className="card-note">{role.notes}</div>}
