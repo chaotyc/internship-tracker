@@ -12,6 +12,8 @@ export interface TodayItem {
   due: string
   /** HH:MM or '' */
   time: string
+  /** The role's posting deadline, shown beside a next step due on or before it (instead of a separate row). */
+  deadline?: string
 }
 
 export type TodaySectionKey = 'overdue' | 'today' | 'week' | 'later' | 'undated'
@@ -115,10 +117,22 @@ export function todayItems(
     if (r.stage === 'rejected' || r.stage === 'closed') continue
     const base = { roleId: r.id, company: r.company, title: r.title, stage: r.stage }
     const ns = r.nextStep
-    if (ns && !ns.done && (ns.text.trim() || ns.due))
-      items.push({ ...base, kind: 'next-step', text: ns.text.trim() || 'Next step', due: isIsoDate(ns.due) ? ns.due : '', time: ns.due ? ns.time : '' })
-    if (r.deadline && isIsoDate(r.deadline) && dayDiff(today, r.deadline) >= -STALE_DEADLINE_DAYS)
-      items.push({ ...base, kind: 'deadline', text: r.stage === 'saved' ? 'Submit the application' : 'Deadline', due: r.deadline, time: '' })
+    const hasStep = !!ns && !ns.done && !!(ns.text.trim() || ns.due)
+    const stepDue = hasStep && isIsoDate(ns!.due) ? ns!.due : ''
+    const deadline = r.deadline && isIsoDate(r.deadline) && dayDiff(today, r.deadline) >= -STALE_DEADLINE_DAYS ? r.deadline : ''
+    // One row per role when its dated step comes first: the deadline rides along on that row.
+    const fold = !!deadline && !!stepDue && stepDue <= deadline
+    if (hasStep)
+      items.push({
+        ...base,
+        kind: 'next-step',
+        text: ns!.text.trim() || 'Next step',
+        due: stepDue,
+        time: stepDue ? ns!.time : '',
+        ...(fold ? { deadline } : {}),
+      })
+    if (deadline && !fold)
+      items.push({ ...base, kind: 'deadline', text: r.stage === 'saved' ? 'Application due' : 'Deadline', due: deadline, time: '' })
   }
   return items.sort(compareItems)
 }

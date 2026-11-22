@@ -22,9 +22,16 @@ describe('todayItems', () => {
       ],
       TODAY,
     )
-    expect(items.map((i) => `${i.company}:${i.kind}`)).toEqual(['Vectorline:next-step', 'Offer:next-step', 'Kite:deadline', 'Offer:deadline', 'Later:next-step'])
-    expect(items.find((i) => i.company === 'Kite')!.text).toBe('Submit the application')
-    expect(items.find((i) => i.kind === 'deadline' && i.company === 'Offer')!.text).toBe('Deadline')
+    // Offer's step comes before its deadline, so the deadline rides on the step row instead of its own.
+    expect(items.map((i) => `${i.company}:${i.kind}`)).toEqual(['Vectorline:next-step', 'Offer:next-step', 'Kite:deadline', 'Later:next-step'])
+    expect(items.find((i) => i.company === 'Kite')!.text).toBe('Application due')
+    expect(items.find((i) => i.company === 'Offer')!.deadline).toBe('2026-11-28')
+  })
+
+  it('keeps a separate deadline row when the step is later than the deadline', () => {
+    const items = todayItems([role('Late', 'offer', step('Decide', '2026-11-30'), '2026-11-28')], TODAY)
+    expect(items.map((i) => i.kind)).toEqual(['deadline', 'next-step'])
+    expect(items[0]!.text).toBe('Deadline')
   })
 })
 

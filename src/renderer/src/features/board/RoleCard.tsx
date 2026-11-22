@@ -174,7 +174,10 @@ export function RoleCard({ role, ghost, ...rest }: Props) {
               Found for you
             </span>
           )}
-          {!saved && role.appliedOn && role.stage !== 'closed' && <span className="card-age">Applied {ago(role.appliedOn)}</span>}
+          {!saved && role.appliedOn && role.stage !== 'closed' && <span className="card-age" title={`Applied ${ago(role.appliedOn)}`}>
+              <span className="card-age-prefix">Applied </span>
+              {ago(role.appliedOn)}
+            </span>}
         </div>
       )}
       {!finished && role.notes && !(hasNext && similar(role.notes, role.nextStep!.text)) && <div className="card-note">{role.notes}</div>}

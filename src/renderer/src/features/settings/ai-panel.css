@@ -229,3 +229,41 @@
 .ai-test-when {
   color: var(--ink-3);
 }
+
+/* Drawn radios so enabled and disabled read differently in both themes. */
+.ai-pick input[type='radio'] {
+  appearance: none;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.ai-pick input[type='radio']::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  transform: scale(0);
+  transition: transform 0.12s;
+}
+.ai-pick input[type='radio']:checked {
+  border-color: var(--accent);
+}
+.ai-pick input[type='radio']:checked::before {
+  transform: scale(1);
+}
+.ai-pick input[type='radio']:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.ai-pick input[type='radio']:disabled {
+  opacity: 0.4;
+  cursor: default;
+  background: transparent;
+}

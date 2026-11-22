@@ -31,7 +31,7 @@ export function displayTitle(title: string): string {
 
 /** Posted age first so freshness survives, then location, then pay: ["2d ago", "San Jose, CA", "$50–60/hr"]. */
 export function metaParts(s: Pick<Suggestion, 'postedAt' | 'location' | 'pay'>): string[] {
-  return [s.postedAt && ago(s.postedAt), s.location, s.pay].filter((p): p is string => !!p)
+  return [s.postedAt && `Posted ${ago(s.postedAt)}`, s.location, s.pay].filter((p): p is string => !!p)
 }
 
 /** The full meta line, "2d ago · San Jose, CA · $50–60/hr". */

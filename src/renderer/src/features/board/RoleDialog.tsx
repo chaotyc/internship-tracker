@@ -372,22 +372,36 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
               <h3 className="form-group wide">Progress</h3>
               <label className="field">
                 <span>Stage</span>
-                <select value={form.stage} onChange={(e) => set('stage', e.target.value as StageKey)}>
-                  {STAGES.map((s) => (
-                    <option key={s.key} value={s.key}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
+                {/* Same stage dot as the board, beside the selected value. */}
+                <div className="select-adorn" style={{ ['--stage' as string]: `var(--stage-${form.stage})` }}>
+                  <span className="adorn-dot" aria-hidden="true" />
+                  <select value={form.stage} onChange={(e) => set('stage', e.target.value as StageKey)}>
+                    {STAGES.map((s) => (
+                      <option key={s.key} value={s.key}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </label>
               <label className="field">
                 <span>Job fit</span>
-                <select className={cls('fit')} value={form.fit} onChange={(e) => set('fit', e.target.value as Form['fit'])}>
-                  <option value="">Not rated</option>
-                  {FITS.map((f) => (
-                    <option key={f}>{f}</option>
-                  ))}
-                </select>
+                {/* Same four-bar meter as the cards, beside the selected value. */}
+                <div className={`select-adorn${form.fit ? '' : ' is-bare'}`}>
+                  {form.fit && (
+                    <span className="adorn-meter fit-bars" aria-hidden="true">
+                      {[1, 2, 3, 4].map((i) => (
+                        <i key={i} className={i <= ({ Strong: 4, Good: 3, Moderate: 2, Weak: 1 } as const)[form.fit as 'Strong'] ? 'on' : ''} />
+                      ))}
+                    </span>
+                  )}
+                  <select className={cls('fit')} value={form.fit} onChange={(e) => set('fit', e.target.value as Form['fit'])}>
+                    <option value="">Not rated</option>
+                    {FITS.map((f) => (
+                      <option key={f}>{f}</option>
+                    ))}
+                  </select>
+                </div>
               </label>
               <div className="wide track-row">
                 <TrackSelect value={form.trackId} onChange={(id) => set('trackId', id)} />

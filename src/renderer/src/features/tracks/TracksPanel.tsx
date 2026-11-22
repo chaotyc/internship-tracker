@@ -82,7 +82,7 @@ function TrackResume({ track, onProfile }: { track: ApplicationTrack; onProfile:
               <strong title={resume.fileName}>{resume.fileName}</strong>
               <span>
                 Updated {fullDate(resume.updatedAt)}
-                {resume.text ? ` · ${words(resume.text).toLocaleString()} words read` : ' · no text found'}
+                {resume.text ? ' · text extracted' : ' · no text found'}
               </span>
             </div>
             <div className="pf-resume-actions">

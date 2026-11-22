@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { daysUntil } from '@renderer/lib/format'
+import { ago, daysUntil } from '@renderer/lib/format'
 import { Icon } from './Icon'
 
 /** "Thu, Nov 26" for a YYYY-MM-DD string. */
@@ -15,8 +15,8 @@ function relative(iso: string): string {
   if (n == null) return ''
   if (n === 0) return 'today'
   if (n === 1) return 'tomorrow'
-  if (n === -1) return 'yesterday'
-  return n > 0 ? `in ${n} days` : `${-n} days ago`
+  if (n < 0) return ago(iso)
+  return `in ${n} days`
 }
 
 interface Props {

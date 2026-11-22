@@ -329,6 +329,12 @@ function Row({
         </div>
         <div className="td-row-sub">
           <strong>{item.company}</strong> · {item.title}
+          {item.deadline && (
+            <span className="td-row-deadline">
+              <Icon name="flag" />
+              Due {dueLabel(item.deadline, '')}
+            </span>
+          )}
         </div>
       </div>
       <span className={`td-due${tone}`}>

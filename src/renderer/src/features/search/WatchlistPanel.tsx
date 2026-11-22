@@ -16,6 +16,7 @@ import {
 import { Icon } from '@renderer/components/Icon'
 import { useToast } from '@renderer/components/Toast'
 import { api } from '@renderer/lib/api'
+import { since } from '@renderer/lib/format'
 import { Monogram } from '@renderer/features/board/RoleCard'
 import { PaneHeader } from '@renderer/features/settings/PaneHeader'
 import { boardFailure } from './labels'
@@ -28,19 +29,8 @@ const GROUPS: SuggestedGroup[] = ['AI labs and platforms', 'AI chips', 'Semicond
 const sourceOf = (c: Pick<WatchCompany, 'board'>): SuggestionSource => (c.board === 'workday' ? 'workday' : 'boards')
 
 /** "just now", "12m ago", "3h ago", "yesterday", then a date. */
-export function since(iso: string, now = Date.now()): string {
-  const t = Date.parse(iso)
-  if (!Number.isFinite(t)) return ''
-  const m = Math.max(0, Math.round((now - t) / 60_000))
-  if (m < 1) return 'just now'
-  if (m < 60) return `${m}m ago`
-  const h = Math.round(m / 60)
-  if (h < 24) return `${h}h ago`
-  const d = Math.round(h / 24)
-  if (d === 1) return 'yesterday'
-  if (d < 14) return `${d}d ago`
-  return new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-}
+// The one relative-time rule lives in lib/format.
+export { since }
 
 /** A board counts as stale when its last good check is older than this. */
 const STALE_MS = 2 * 24 * 60 * 60 * 1000

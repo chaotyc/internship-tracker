@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react'
 import { STAGES, type StageKey } from '@shared/roles'
 import { localIso } from '@shared/today'
 import { Icon } from '@renderer/components/Icon'
-import { shortDate } from '@renderer/lib/format'
+import { since } from '@renderer/lib/format'
 
 export const stageLabel = (k: StageKey) => STAGES.find((s) => s.key === k)?.label ?? k
 export const stageStyle = (k: StageKey) => ({ ['--stage' as string]: `var(--stage-${k})` }) as CSSProperties
@@ -34,15 +34,9 @@ export function Switch({ checked, onChange, label, hint, disabled }: { checked: 
 }
 
 /** "just now", "5 min ago", "2 h ago", or a date. */
+/** Kept for existing imports; the one relative-time rule lives in lib/format. */
 export function sinceLabel(iso: string, now = Date.now()): string {
-  const t = Date.parse(iso)
-  if (!t) return ''
-  const min = Math.round((now - t) / 60_000)
-  if (min < 1) return 'just now'
-  if (min < 60) return `${min} min ago`
-  const h = Math.round(min / 60)
-  if (h < 24) return `${h} h ago`
-  return shortDate(localIso(new Date(t)))
+  return since(iso, now)
 }
 
 /** Reads a dropped .eml (or .txt) file; refuses anything else or anything huge. */
