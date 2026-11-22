@@ -28,13 +28,14 @@ vi.mock('electron', () => {
   }
 })
 
-import { EMPTY_PROFILE, mergeWithDefaults, normalizeProfile, validateProfile, type Profile } from '@shared/profile'
+import { answersForTrack, EMPTY_PROFILE, mergeWithDefaults, normalizeProfile, validateProfile, type Profile } from '@shared/profile'
 import { openStore } from '../../db/store'
 import { Secrets, secretsMigration } from '../../secrets'
 import { Settings, settingsMigration } from '../../settings'
 import { buildExport } from './export'
 import { extractResumeText, importResume, NO_TEXT_WARNING, ResumeError, safeFileName } from './resume'
 import { EncryptedProfileService, ProfileValidationError } from './service'
+import { TrackError, TrackManager } from './tracks'
 
 async function setup() {
   const store = await openStore(null)
@@ -273,8 +274,9 @@ describe('resume text extraction', () => {
 
   it('stores one copy, replacing the previous file, and records it', async () => {
     const { svc } = await setup()
-    await importResume(svc, dir, 'old.txt', new Uint8Array(Buffer.from('old resume')))
-    const { profile, warning } = await importResume(svc, dir, '/Users/someone/My Resume.txt', new Uint8Array(Buffer.from('new resume')))
+    const target = new TrackManager(svc, dir).target(null)
+    await importResume(target, dir, 'old.txt', new Uint8Array(Buffer.from('old resume')))
+    const { profile, warning } = await importResume(target, dir, '/Users/someone/My Resume.txt', new Uint8Array(Buffer.from('new resume')))
     expect(warning).toBeNull()
     expect(readdirSync(dir)).toEqual(['My Resume.txt'])
     expect(profile.resume).toMatchObject({ fileName: 'My Resume.txt', text: 'new resume', storedPath: join(dir, 'My Resume.txt') })
@@ -284,7 +286,7 @@ describe('resume text extraction', () => {
 
   it('changes nothing when extraction fails', async () => {
     const { svc } = await setup()
-    await expect(importResume(svc, dir, 'bad.pdf', new Uint8Array(Buffer.from('nope')))).rejects.toThrow()
+    await expect(importResume(new TrackManager(svc, dir).target(null), dir, 'bad.pdf', new Uint8Array(Buffer.from('nope')))).rejects.toThrow()
     expect(existsSync(join(dir, 'bad.pdf'))).toBe(false)
     expect(svc.get().resume).toBeNull()
   })
@@ -328,5 +330,204 @@ describe('buildExport', () => {
     const out = buildExport({ store, profile: svc })
     expect(out['roles']).toEqual([])
     expect(out['tables']).toEqual({})
+  })
+})
+
+describe('application tracks', () => {
+  let dir: string
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'tracks-test-'))
+  })
+  afterEach(() => rmSync(dir, { recursive: true, force: true }))
+  const bytes = (s: string) => new Uint8Array(Buffer.from(s))
+
+  it('normalizes stored tracks: bad and repeated ids dropped, missing fields filled, wrong types removed', () => {
+    const p = mergeWithDefaults({
+      tracks: [
+        { id: 'ml', name: '  ML inference ', targetRoles: ['Kernels', 4], resume: { fileName: 'a.pdf', text: 'hi' }, answers: [{ question: 'Q' }, 'x'] },
+        { id: 'ml', name: 'Duplicate' },
+        { id: '../evil', name: 'Path trick' },
+        { name: 'No id' },
+        { id: 'hw', name: '', keywords: 'optics', resume: 'nope' },
+        'junk',
+      ],
+    })
+    expect(p.tracks).toEqual([
+      {
+        id: 'ml',
+        name: 'ML inference',
+        description: '',
+        resume: { fileName: 'a.pdf', storedPath: '', text: 'hi', updatedAt: '' },
+        targetRoles: ['Kernels'],
+        keywords: [],
+        answers: [{ id: '', question: 'Q', answer: '' }],
+      },
+      { id: 'hw', name: 'Untitled track', description: '', resume: null, targetRoles: [], keywords: [], answers: [] },
+    ])
+    expect(mergeWithDefaults({ tracks: 'nope' }).tracks).toEqual([])
+
+    const n = normalizeProfile({
+      ...EMPTY_PROFILE,
+      tracks: [{ ...p.tracks[0]!, name: '  Photonics   hardware ', keywords: ['optics', 'Optics ', ' '], answers: [{ id: '', question: ' Why? ', answer: ' Because ' }, { id: 'e', question: '', answer: '' }] }],
+    })
+    expect(n.tracks[0]).toMatchObject({ name: 'Photonics hardware', keywords: ['optics'], answers: [{ question: 'Why?', answer: 'Because' }] })
+    expect(n.tracks[0]!.answers[0]!.id).not.toBe('')
+    expect(validateProfile({ ...EMPTY_PROFILE, tracks: [{ ...n.tracks[0]!, answers: [{ id: 'a', question: '', answer: 'x' }] }] })).toEqual({
+      'tracks.0.answers.0.question': 'Add the question this answers.',
+    })
+  })
+
+  it('first track takes over the profile resume and preferences; later tracks start empty', async () => {
+    const { svc } = await setup()
+    svc.save(filled({ preferences: { ...EMPTY_PROFILE.preferences, targetRoles: ['ML intern'], keywords: ['CUDA'] } }))
+    const tm = new TrackManager(svc, dir)
+    await tm.importResume(null, 'cv.txt', bytes('general resume'))
+    expect(readdirSync(dir)).toEqual(['cv.txt'])
+
+    const { profile, trackId } = tm.create()
+    expect(profile.tracks).toHaveLength(1)
+    expect(profile.tracks[0]).toMatchObject({ id: trackId, name: 'General', targetRoles: ['ML intern'], keywords: ['CUDA'] })
+    expect(profile.tracks[0]!.resume).toMatchObject({ fileName: 'cv.txt', text: 'general resume', storedPath: join(dir, `${trackId}-cv.txt`) })
+    expect(readdirSync(dir)).toEqual([`${trackId}-cv.txt`])
+    expect(profile.resume?.storedPath).toBe(join(dir, `${trackId}-cv.txt`))
+
+    const second = tm.create('Photonics')
+    expect(second.profile.tracks[1]).toMatchObject({ name: 'Photonics', resume: null, targetRoles: [], keywords: [], answers: [] })
+  })
+
+  it("keeps each track's resume in its own file; importing for one never deletes another's", async () => {
+    const { svc } = await setup()
+    const tm = new TrackManager(svc, dir)
+    const a = tm.create('ML').trackId
+    const b = tm.create('Photonics').trackId
+    await tm.importResume(a, 'resume.txt', bytes('ml resume'))
+    await tm.importResume(b, 'resume.txt', bytes('photonics resume'))
+    expect(readdirSync(dir).sort()).toEqual([`${a}-resume.txt`, `${b}-resume.txt`].sort())
+
+    // Replacing A's resume removes only A's old file.
+    await tm.importResume(a, 'ml-v2.txt', bytes('ml resume v2'))
+    expect(readdirSync(dir).sort()).toEqual([`${a}-ml-v2.txt`, `${b}-resume.txt`].sort())
+    expect(readFileSync(join(dir, `${b}-resume.txt`), 'utf8')).toBe('photonics resume')
+    expect(svc.resumeFor(a)?.text).toBe('ml resume v2')
+    expect(svc.resumeFor(b)?.text).toBe('photonics resume')
+
+    // The legacy channel targets the default (first) track.
+    await tm.importResume(null, 'default.txt', bytes('default v3'))
+    expect(svc.get().tracks[0]!.resume?.text).toBe('default v3')
+    expect(svc.get().resume?.text).toBe('default v3')
+    expect(existsSync(join(dir, `${b}-resume.txt`))).toBe(true)
+
+    tm.removeResume(b)
+    expect(readdirSync(dir)).toEqual([`${a}-default.txt`])
+    expect(svc.get().tracks[1]!.resume).toBeNull()
+    await expect(tm.importResume('missing', 'x.txt', bytes('x'))).rejects.toBeInstanceOf(TrackError)
+  })
+
+  it('deleting a track deletes its file; deleting the only track keeps its resume as the profile resume', async () => {
+    const { svc } = await setup()
+    const tm = new TrackManager(svc, dir)
+    const a = tm.create('ML').trackId
+    const b = tm.create('Photonics').trackId
+    await tm.importResume(a, 'a.txt', bytes('a'))
+    await tm.importResume(b, 'b.txt', bytes('b'))
+
+    const afterB = tm.delete(b)
+    expect(afterB.tracks.map((t) => t.id)).toEqual([a])
+    expect(readdirSync(dir)).toEqual([`${a}-a.txt`])
+
+    const afterA = tm.delete(a)
+    expect(afterA.tracks).toEqual([])
+    expect(afterA.resume).toMatchObject({ text: 'a', storedPath: join(dir, `${a}-a.txt`) })
+    expect(existsSync(join(dir, `${a}-a.txt`))).toBe(true)
+    expect(() => tm.delete(a)).toThrow(TrackError)
+  })
+
+  it('deleting the default track makes the next one the default, removes the file, and resumes mirror it', async () => {
+    const { svc } = await setup()
+    const tm = new TrackManager(svc, dir)
+    const a = tm.create('ML').trackId
+    const b = tm.create('Photonics').trackId
+    await tm.importResume(a, 'a.txt', bytes('a'))
+    await tm.importResume(b, 'b.txt', bytes('b'))
+    const p = tm.delete(a)
+    expect(p.tracks[0]!.id).toBe(b)
+    expect(p.resume?.text).toBe('b')
+    expect(readdirSync(dir)).toEqual([`${b}-b.txt`])
+  })
+
+  it('reorders, sets the default, and edits a track', async () => {
+    const { svc } = await setup()
+    const tm = new TrackManager(svc, dir)
+    const a = tm.create('A').trackId
+    const b = tm.create('B').trackId
+    const c = tm.create('C').trackId
+    expect(tm.reorder([c, a]).tracks.map((t) => t.id)).toEqual([c, a, b])
+    expect(tm.setDefault(b).tracks.map((t) => t.id)).toEqual([b, c, a])
+    const p = tm.update(a, { name: '  Hardware ', keywords: ['optics', 'Optics'], answers: [{ id: '', question: 'Why us?', answer: 'Lasers' }] })
+    expect(p.tracks.find((t) => t.id === a)).toMatchObject({ name: 'Hardware', keywords: ['optics'], answers: [{ question: 'Why us?', answer: 'Lasers' }] })
+    expect(() => tm.update(a, { answers: [{ id: 'x', question: '', answer: 'orphan' }] })).toThrow(ProfileValidationError)
+  })
+
+  it('trackFor and resumeFor fall back to the default track, then the profile resume', async () => {
+    const { svc } = await setup()
+    const tm = new TrackManager(svc, dir)
+    // No tracks: one implicit default made from the profile.
+    await tm.importResume(null, 'cv.txt', bytes('profile resume'))
+    expect(svc.tracks()).toHaveLength(1)
+    expect(svc.tracks()[0]).toMatchObject({ id: 'default', name: 'General' })
+    expect(svc.trackFor('anything').id).toBe('default')
+    expect(svc.resumeFor('')?.text).toBe('profile resume')
+
+    const a = tm.create('ML').trackId
+    const b = tm.create('Photonics').trackId
+    expect(svc.trackFor('').id).toBe(a)
+    expect(svc.trackFor('gone').id).toBe(a)
+    expect(svc.trackFor(b).id).toBe(b)
+    // B has no resume yet: falls back to the default track's (the profile's).
+    expect(svc.resumeFor(b)?.text).toBe('profile resume')
+    await tm.importResume(b, 'p.txt', bytes('photonics'))
+    expect(svc.resumeFor(b)?.text).toBe('photonics')
+    expect(svc.tracks().map((t) => t.resume?.text)).toEqual(['profile resume', 'photonics'])
+  })
+
+  it('save() keeps tracks whatever it is given; without a keychain, track answers are never stored', async () => {
+    const { svc } = await setup()
+    const tm = new TrackManager(svc, dir)
+    tm.create('ML')
+    expect(svc.save({ ...filled(), tracks: [] }).tracks).toHaveLength(1)
+
+    keychain.available = false
+    const plain = await setup()
+    const tm2 = new TrackManager(plain.svc, dir)
+    const id = tm2.create('ML').trackId
+    tm2.update(id, { answers: [{ id: 'a', question: 'Salary history?', answer: 'PRIVATE-ANSWER' }] })
+    expect(JSON.stringify(plain.settings.get('profile', {}))).not.toContain('PRIVATE-ANSWER')
+    expect(plain.svc.get().tracks[0]!.answers).toEqual([])
+  })
+
+  it("answer overrides take precedence over the profile's saved answers", () => {
+    const p: Profile = {
+      ...EMPTY_PROFILE,
+      answers: [
+        { id: '1', question: 'Why are you interested?', answer: 'General answer' },
+        { id: '2', question: 'Earliest start date', answer: 'May 2027' },
+      ],
+    }
+    const track = { id: 't', name: 'HW', description: '', resume: null, targetRoles: [], keywords: [], answers: [{ id: 'o', question: 'why are you interested', answer: 'Photonics answer' }] }
+    expect(answersForTrack(p, track).map((a) => a.answer)).toEqual(['Photonics answer', 'May 2027'])
+  })
+
+  it('exports every track with its resume text, and no secrets', async () => {
+    const { store, secrets, svc } = await setup()
+    const tm = new TrackManager(svc, dir)
+    const a = tm.create('ML').trackId
+    tm.create('Photonics')
+    await tm.importResume(a, 'a.txt', bytes('kernel work'))
+    secrets.set('ai.anthropic', 'sk-ant-SECRET-123')
+    const out = buildExport({ store, profile: svc })
+    expect(JSON.stringify(out)).not.toContain('SECRET')
+    const tracks = (out['profile'] as Profile).tracks
+    expect(tracks.map((t) => t.name)).toEqual(['ML', 'Photonics'])
+    expect(tracks[0]!.resume?.text).toBe('kernel work')
   })
 })

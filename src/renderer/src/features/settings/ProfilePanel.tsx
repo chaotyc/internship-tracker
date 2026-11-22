@@ -125,7 +125,7 @@ function Segmented({ label, hint, value, onChange }: { label: string; hint?: str
   )
 }
 
-function ChipInput({
+export function ChipInput({
   label,
   hint,
   values,
@@ -211,7 +211,7 @@ function Switch({ checked, onChange, label, hint }: { checked: boolean; onChange
   )
 }
 
-function Note({ tone, children }: { tone: 'warn' | 'info' | 'danger'; children: ReactNode }) {
+export function Note({ tone, children }: { tone: 'warn' | 'info' | 'danger'; children: ReactNode }) {
   return (
     <div className={`pf-note pf-note-${tone}`} role={tone === 'info' ? undefined : 'status'}>
       {tone === 'info' ? <Icon name="lock" /> : <Icon name="alert" />}
@@ -318,16 +318,27 @@ function PronounsField({ value, onChange, disabled }: { value: string; onChange:
 // ---------------------------------------------------------------------------
 // Resume
 
-function words(text: string): number {
+export function words(text: string): number {
   return text.split(/\s+/).filter(Boolean).length
 }
 
-function fullDate(iso: string): string {
+export function fullDate(iso: string): string {
   const d = new Date(iso)
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-function ResumeSection({ resume, onImported, onRemoved }: { resume: Profile['resume']; onImported: (r: ResumeImport) => void; onRemoved: (p: Profile) => void }) {
+function ResumeSection({
+  resume,
+  defaultTrack,
+  onImported,
+  onRemoved,
+}: {
+  resume: Profile['resume']
+  /** Name of the default application track, when the user has tracks. */
+  defaultTrack?: string
+  onImported: (r: ResumeImport) => void
+  onRemoved: (p: Profile) => void
+}) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [over, setOver] = useState(false)
@@ -389,7 +400,15 @@ function ResumeSection({ resume, onImported, onRemoved }: { resume: Profile['res
   }
 
   return (
-    <Section id="resume" title="Resume" hint="Autofill attaches this file, and the assistant reads its text to judge fit and draft answers. The app keeps its own copy.">
+    <Section
+      id="resume"
+      title="Resume"
+      hint={
+        defaultTrack
+          ? `This is your default track’s resume (“${defaultTrack}”). Each application track keeps its own; manage them under Application tracks.`
+          : 'Autofill attaches this file, and the assistant reads its text to judge fit and draft answers. The app keeps its own copy.'
+      }
+    >
       {resume ? (
         <div className={`pf-resume${over ? ' is-over' : ''}`} {...dragProps} aria-busy={busy}>
           <div className="pf-resume-row">
@@ -463,7 +482,8 @@ function ResumeSection({ resume, onImported, onRemoved }: { resume: Profile['res
 const ANSWER_IDEAS = ['How did you hear about us?', 'Earliest start date', 'Are you willing to relocate?', 'Expected graduation date']
 const DEGREES = ['High school diploma', 'Associate', 'B.S.', 'B.A.', 'B.Eng.', 'M.S.', 'M.Eng.', 'MBA', 'Ph.D.']
 
-const comparable = (p: Profile) => JSON.stringify({ ...p, resume: null })
+// Resumes and tracks are saved by their own calls, so they never make the form dirty.
+const comparable = (p: Profile) => JSON.stringify({ ...p, resume: null, tracks: [] })
 let localId = 0
 const newAnswerId = () => `new-${Date.now().toString(36)}-${localId++}`
 
@@ -526,7 +546,7 @@ export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<Profile
         setBase(p)
         // Keep the user's unsaved edits if something else (the assistant) changed the profile.
         if (!dirtyRef.current) setDraft(p)
-        else setDraft((d) => ({ ...d, resume: p.resume }))
+        else setDraft((d) => ({ ...d, resume: p.resume, tracks: p.tracks }))
         setLoadError(null)
       })
       .catch((e: Error) => setLoadError(e.message))
@@ -816,7 +836,7 @@ export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<Profile
           </div>
         </Section>
 
-        <ResumeSection resume={draft.resume} onImported={onResumeImported} onRemoved={onResumeRemoved} />
+        <ResumeSection resume={draft.resume} defaultTrack={draft.tracks[0]?.name} onImported={onResumeImported} onRemoved={onResumeRemoved} />
 
         <Section id="prefs" title="What you’re looking for" hint="Autosearch and the assistant use this to find and rank roles. Press Enter or a comma after each item.">
           <ChipInput label="Target roles" placeholder="e.g. ML inference intern" values={draft.preferences.targetRoles} onChange={setPref('targetRoles')} />

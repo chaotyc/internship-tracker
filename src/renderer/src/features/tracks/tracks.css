@@ -1,0 +1,315 @@
+/* Settings > Application tracks. Builds on profile.css (.pf-*), .field, .btn and .chip. */
+
+.trk {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.trk-intro {
+  align-items: center;
+  padding-bottom: 2px;
+}
+
+/* Empty state */
+.trk-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 30px 28px 26px;
+  border: 1.5px dashed var(--line-strong);
+  border-radius: var(--r-lg);
+  background: var(--surface-hover);
+  text-align: center;
+}
+.trk-empty strong {
+  font: 650 15px/1.3 var(--font-display);
+  letter-spacing: -0.01em;
+}
+.trk-empty p {
+  margin: 0 0 6px;
+  max-width: 50ch;
+  color: var(--ink-3);
+  font-size: 13px;
+  text-wrap: pretty;
+}
+.trk-empty small {
+  max-width: 52ch;
+  color: var(--ink-3);
+  font-size: 12px;
+  text-wrap: pretty;
+}
+.trk-empty-art {
+  position: relative;
+  width: 78px;
+  height: 52px;
+  margin-bottom: 6px;
+}
+.trk-empty-art span {
+  position: absolute;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 46px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: var(--shadow-2);
+}
+.trk-empty-art span:first-child {
+  left: 2px;
+  transform: rotate(-9deg);
+  color: var(--ink-3);
+}
+.trk-empty-art span:last-child {
+  right: 2px;
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--line));
+  top: 6px;
+  transform: rotate(6deg);
+  background: var(--accent-soft);
+}
+.trk-empty-art svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* A track */
+.trk-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+.trk-card.is-default {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+}
+.trk-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.trk-badge {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  margin-top: 1px;
+  border-radius: var(--r-md);
+  background: var(--surface-sunken);
+  color: var(--ink-2);
+  font: 650 15px/1 var(--font-display);
+}
+.trk-card.is-default .trk-badge {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.trk-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+/* Name and description edit in place: they look like text until hovered or focused. */
+.trk-name,
+.trk-desc {
+  width: 100%;
+  margin-left: -6px;
+  padding: 1px 6px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  outline: none;
+  transition: border-color 0.12s, background 0.12s, box-shadow 0.12s;
+}
+.trk-name {
+  height: 24px;
+  font: 650 15px/1.3 var(--font-display);
+  letter-spacing: -0.01em;
+}
+.trk-desc {
+  height: 22px;
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+.trk-name::placeholder,
+.trk-desc::placeholder {
+  color: var(--ink-4);
+}
+.trk-name:hover,
+.trk-desc:hover {
+  background: var(--surface-hover);
+}
+.trk-name:focus,
+.trk-desc:focus {
+  border-color: var(--accent);
+  background: var(--surface);
+  box-shadow: var(--ring);
+}
+.trk-head-side {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 34px;
+}
+.trk-default {
+  margin-right: 4px;
+}
+.trk-default svg {
+  width: 12px;
+  height: 12px;
+}
+.trk-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 6px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.trk-status svg {
+  width: 13px;
+  height: 13px;
+}
+.trk-status.is-saved {
+  color: var(--ok);
+}
+.trk-status.is-error {
+  color: var(--danger);
+  font-weight: 550;
+}
+.trk-order {
+  display: flex;
+}
+.trk-order .icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+  background: transparent;
+}
+.trk-up svg {
+  transform: rotate(180deg);
+}
+.trk-card .trk-delete:hover {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+/* Delete confirmation, inside the card. */
+.trk-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--line));
+  border-radius: var(--r-md);
+  background: var(--danger-soft);
+}
+.trk-confirm > svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--danger);
+}
+.trk-confirm-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.trk-confirm-text strong {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+.btn.trk-confirm-delete {
+  border-color: var(--danger-fill);
+  background: var(--danger-fill);
+  color: #fff;
+}
+.btn.trk-confirm-delete:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger-fill) 88%, #000);
+}
+
+/* Resume */
+.trk-resume {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.trk-resume .pf-resume {
+  box-shadow: none;
+  background: var(--surface-hover);
+}
+.pf-dropzone.trk-dropzone {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  text-align: left;
+}
+.trk-dropzone .pf-dropzone-icon {
+  margin: 0;
+}
+.trk-dropzone-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.trk-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 14px;
+}
+
+/* Answer overrides */
+.trk-answers {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.trk-answers-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.trk-answers-head h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.trk-answers-head .pf-hint {
+  margin-top: 1px;
+}
+.trk-answers-head .btn {
+  flex: none;
+}
+.pf-card.trk-answer {
+  background: var(--surface-hover);
+  box-shadow: none;
+}
+
+/* Role dialog: the resume the chosen track uses. */
+.trk-select-hint {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.trk-select-hint b {
+  font-weight: 600;
+  color: var(--ink-2);
+}

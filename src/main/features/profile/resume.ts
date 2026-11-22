@@ -1,5 +1,5 @@
-import { mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
-import { basename, extname, join } from 'node:path'
+import { existsSync, mkdirSync, readdirSync, renameSync, rmdirSync, rmSync, writeFileSync } from 'node:fs'
+import { basename, extname, join, relative, resolve, sep } from 'node:path'
 import { RESUME_EXTENSIONS, RESUME_MAX_BYTES, type ResumeImport, type StoredResume } from '@shared/profile'
 
 export const NO_TEXT_WARNING =
@@ -80,30 +80,75 @@ export function safeFileName(fileName: string): string {
   return clean || `resume.${extOf(fileName)}`
 }
 
-/** Writes our copy, replacing whatever was in the folder before. Returns its path. */
-export function storeResumeCopy(dir: string, fileName: string, data: Uint8Array): string {
+/** True when `path` is a file somewhere under `dir` (never `dir` itself, never outside it). */
+export function isInside(dir: string, path: string): boolean {
+  if (!path) return false
+  const rel = relative(resolve(dir), resolve(path))
+  return !!rel && !rel.startsWith('..') && !rel.startsWith(sep) && rel !== '..'
+}
+
+/** Removes `dir` if nothing is left in it. */
+function pruneEmpty(dir: string): void {
+  try {
+    if (existsSync(dir) && readdirSync(dir).length === 0) rmdirSync(dir)
+  } catch {
+    // Not empty after all, or already gone.
+  }
+}
+
+/** Deletes one of our resume copies. Paths outside `dir` are never touched. */
+export function removeStoredFile(dir: string, path: string | null | undefined): void {
+  if (!path || !isInside(dir, path)) return
+  rmSync(path, { force: true })
+  pruneEmpty(dir)
+}
+
+/**
+ * Writes our copy as <dir>/<prefix><file name> and deletes `replaces` (the copy it
+ * supersedes) when that is a different file in `dir`. Other files are left alone:
+ * each application track keeps its own resume in the same folder.
+ */
+export function storeResumeCopy(dir: string, fileName: string, data: Uint8Array, opts: { prefix?: string; replaces?: string | null } = {}): string {
   mkdirSync(dir, { recursive: true, mode: 0o700 })
-  for (const f of readdirSync(dir)) rmSync(join(dir, f), { force: true, recursive: true })
-  const path = join(dir, safeFileName(fileName))
+  const path = join(dir, (opts.prefix ?? '') + safeFileName(fileName))
   writeFileSync(path, data, { mode: 0o600 })
+  if (opts.replaces && resolve(opts.replaces) !== resolve(path)) removeStoredFile(dir, opts.replaces)
   return path
+}
+
+/** Moves one of our copies to a new name in the same folder. Returns the path it ends up at. */
+export function renameStoredFile(dir: string, path: string, prefix: string): string {
+  if (!isInside(dir, path) || !existsSync(path)) return path
+  const name = basename(path)
+  if (name.startsWith(prefix)) return path
+  const next = join(dir, prefix + name)
+  try {
+    renameSync(path, next)
+    return next
+  } catch {
+    return path
+  }
 }
 
 export function clearResumeFolder(dir: string): void {
   rmSync(dir, { recursive: true, force: true })
 }
 
+/** Where an imported resume goes: the profile's own, or one application track's. */
+export interface ResumeTarget {
+  /** The resume being replaced; its file is deleted once the new copy is stored. */
+  current(): StoredResume | null
+  set(resume: StoredResume | null): ResumeImport['profile']
+  /** Prefix for the stored file name ("<trackId>-" for a track). */
+  prefix: string
+}
+
 /** Validates, extracts, copies and records a resume. Nothing is changed if extraction throws. */
-export async function importResume(
-  target: { setResume(r: StoredResume | null): ResumeImport['profile'] },
-  dir: string,
-  fileName: string,
-  data: Uint8Array,
-): Promise<ResumeImport> {
+export async function importResume(target: ResumeTarget, dir: string, fileName: string, data: Uint8Array): Promise<ResumeImport> {
   if (!data.byteLength) throw new ResumeError('That file is empty.')
   if (data.byteLength > RESUME_MAX_BYTES) throw new ResumeError('That file is over 15 MB. Resumes are usually well under 1 MB; try exporting it again.')
   const { text, warning } = await extractResumeText(data, fileName)
-  const storedPath = storeResumeCopy(dir, fileName, data)
-  const profile = target.setResume({ fileName: safeFileName(fileName), storedPath, text, updatedAt: new Date().toISOString() })
+  const storedPath = storeResumeCopy(dir, fileName, data, { prefix: target.prefix, replaces: target.current()?.storedPath })
+  const profile = target.set({ fileName: safeFileName(fileName), storedPath, text, updatedAt: new Date().toISOString() })
   return { profile, warning }
 }

@@ -8,7 +8,9 @@ import {
   type ProfileErrors,
   type StoredResume,
   type ApplicationTrack,
-  defaultTrack,
+  profileTracks,
+  resumeForTrack,
+  trackById,
 } from '@shared/profile'
 import type { Store } from '../../db/store'
 import type { Secrets } from '../../secrets'
@@ -18,11 +20,16 @@ import type { Settings } from '../../settings'
 export interface ProfileService {
   get(): Profile
   save(profile: Profile): Profile
-  /** Always at least one track: the user's tracks, or the implicit default built from the profile. */
+  /**
+   * Always at least one track: the user's tracks (the first is the default), or the
+   * implicit default built from the profile. Each carries its full resume text,
+   * target roles, keywords and answer overrides, so search can score a posting
+   * against every track.
+   */
   tracks(): ApplicationTrack[]
-  /** The track for a role's trackId, falling back to the first track. */
+  /** The track for a role's trackId, falling back to the default (first) track. */
   trackFor(trackId: string): ApplicationTrack
-  /** The resume to use for a role: its track's resume, else the profile's resume. */
+  /** The resume to use for a role: its track's resume, else the default track's (the profile's) resume. */
   resumeFor(trackId: string): StoredResume | null
 }
 
@@ -68,17 +75,15 @@ export class EncryptedProfileService implements ProfileService {
   constructor(private readonly deps: Deps) {}
 
   tracks(): ApplicationTrack[] {
-    const p = this.get()
-    return p.tracks.length ? p.tracks : [defaultTrack(p)]
+    return profileTracks(this.get())
   }
 
   trackFor(trackId: string): ApplicationTrack {
-    const all = this.tracks()
-    return all.find((t) => t.id === trackId) ?? all[0]!
+    return trackById(this.get(), trackId)
   }
 
   resumeFor(trackId: string): StoredResume | null {
-    return this.trackFor(trackId).resume ?? this.get().resume
+    return resumeForTrack(this.get(), trackId)
   }
 
   /** True when the profile is encrypted at rest. */
@@ -102,26 +107,56 @@ export class EncryptedProfileService implements ProfileService {
   }
 
   /**
-   * Normalizes, validates and stores. The resume is managed by importResume /
-   * removeResume, so the stored one is kept whatever the caller passes.
+   * Normalizes, validates and stores. Resumes and tracks have their own calls
+   * (importResume, the track channels), so the stored ones are kept whatever the
+   * caller passes; a form opened before a track changed can't undo that change.
    */
   save(profile: Profile): Profile {
     const current = this.get()
-    const next: Profile = { ...normalizeProfile(profile), resume: current.resume }
+    const next: Profile = { ...normalizeProfile(profile), resume: current.resume, tracks: current.tracks }
     const errors = validateProfile(next)
     if (Object.keys(errors).length) throw new ProfileValidationError(errors)
     this.write(next)
     return this.get()
   }
 
-  /** Replaces (or clears) the stored resume without touching anything else. */
+  /**
+   * Replaces (or clears) the profile's resume without touching anything else.
+   * Once tracks exist, that is the default track's resume.
+   */
   setResume(resume: StoredResume | null): Profile {
-    this.write({ ...this.get(), resume })
+    const p = this.get()
+    if (p.tracks.length) return this.setTrackResume(p.tracks[0]!.id, resume)
+    this.write({ ...p, resume })
     return this.get()
   }
 
-  private write(profile: Profile): void {
+  /** Replaces (or clears) one track's resume. */
+  setTrackResume(trackId: string, resume: StoredResume | null): Profile {
+    const p = this.get()
+    if (!p.tracks.some((t) => t.id === trackId)) throw new Error('That application track no longer exists.')
+    this.write({ ...p, tracks: p.tracks.map((t) => (t.id === trackId ? { ...t, resume } : t)) })
+    return this.get()
+  }
+
+  /**
+   * Stores a new track list (normalized and validated) as is, resumes included.
+   * `resume` is the profile's resume to keep when the list becomes empty.
+   */
+  setTracks(tracks: ApplicationTrack[], resume?: StoredResume | null): Profile {
+    const p = this.get()
+    const next = normalizeProfile({ ...p, tracks })
+    const errors = validateProfile({ ...EMPTY_PROFILE, tracks: next.tracks })
+    if (Object.keys(errors).length) throw new ProfileValidationError(errors)
+    this.write({ ...p, tracks: next.tracks, resume: resume === undefined ? p.resume : resume })
+    return this.get()
+  }
+
+  private write(input: Profile): void {
     const { store, secrets, settings } = this.deps
+    // The profile's resume is the default track's while tracks exist, so readers
+    // that only know about `resume` (autofill, older code) see the default one.
+    const profile: Profile = input.tracks.length ? { ...input, resume: input.tracks[0]!.resume } : input
     if (secrets.available) {
       secrets.set(KEY, JSON.stringify(profile))
       store.run('DELETE FROM settings WHERE key = ?', [KEY])
@@ -130,6 +165,7 @@ export class EncryptedProfileService implements ProfileService {
         ...profile,
         demographics: { ...EMPTY_PROFILE.demographics },
         answers: [],
+        tracks: profile.tracks.map((t) => ({ ...t, answers: [] })),
       })
     }
     this.deps.onChange?.()

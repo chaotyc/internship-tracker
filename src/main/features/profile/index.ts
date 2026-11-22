@@ -5,10 +5,11 @@ import { app, dialog, shell, type OpenDialogOptions, type SaveDialogOptions } fr
 import { RESUME_EXTENSIONS, RESUME_MAX_BYTES, type ProfileStatus } from '@shared/profile'
 import type { Feature, FeatureContext } from '../../context'
 import { emit, handle } from '../../ipc'
-import { seedDemoProfile } from './demo'
+import { assignDemoTracks, seedDemoProfile } from './demo'
 import { buildExport } from './export'
-import { clearResumeFolder, importResume, ResumeError } from './resume'
+import { clearResumeFolder, ResumeError } from './resume'
 import { EncryptedProfileService } from './service'
+import { TrackManager } from './tracks'
 
 const isDemo = () => process.env['TRACKER_DEMO'] === '1'
 
@@ -40,13 +41,27 @@ export const profileFeature: Feature = {
       onChange: () => emit('profile:changed', {}),
     })
     ctx.services.profile = profile
+    const tracks = new TrackManager(profile, resumesDir)
 
-    handle('profile:get', () => profile.get())
+    // Demo roles are seeded after features register, so the demo's track
+    // assignments happen on the next tick, or at the latest on the first read.
+    let demoPending = isDemo()
+    const demoAssign = () => {
+      if (demoPending && assignDemoTracks(ctx.services.roles, profile)) demoPending = false
+    }
+    if (demoPending) setImmediate(demoAssign)
+
+    handle('profile:get', () => {
+      demoAssign()
+      return profile.get()
+    })
     handle('profile:save', (p) => profile.save(p))
 
-    handle('profile:importResume', async () => {
+    /** Picks a resume file; null when cancelled. `trackName` personalizes the dialog title. */
+    const pickResume = async (trackId: string | null, trackName?: string) => {
+      tracks.target(trackId) // Fails early if the track is gone.
       const res = await openFile(ctx, {
-        title: 'Choose your resume',
+        title: trackName ? `Choose the resume for ${trackName}` : 'Choose your resume',
         buttonLabel: 'Import',
         properties: ['openFile'],
         filters: [{ name: 'Resume (PDF, Word, text, Markdown)', extensions: [...RESUME_EXTENSIONS] }],
@@ -54,15 +69,28 @@ export const profileFeature: Feature = {
       const file = res.canceled ? undefined : res.filePaths[0]
       if (!file) return null
       if (statSync(file).size > RESUME_MAX_BYTES) throw new ResumeError('That file is over 15 MB. Resumes are usually well under 1 MB; try exporting it again.')
-      return importResume(profile, resumesDir, file, new Uint8Array(readFileSync(file)))
-    })
+      return tracks.importResume(trackId, file, new Uint8Array(readFileSync(file)))
+    }
 
-    handle('profile:importResumeData', ({ fileName, data }) => importResume(profile, resumesDir, fileName, new Uint8Array(data)))
+    // Without tracks these act on the profile's resume; with tracks, on the default track's.
+    handle('profile:importResume', () => pickResume(null))
+    handle('profile:importResumeData', ({ fileName, data }) => tracks.importResume(null, fileName, new Uint8Array(data)))
+    handle('profile:removeResume', () => tracks.removeResume(null))
 
-    handle('profile:removeResume', () => {
-      clearResumeFolder(resumesDir)
-      return profile.setResume(null)
+    handle('profile:createTrack', ({ name }) => tracks.create(name))
+    handle('profile:updateTrack', ({ id, patch }) => tracks.update(id, patch))
+    handle('profile:deleteTrack', ({ id }) => {
+      const next = tracks.delete(id)
+      // Roles on the deleted track go back to the default track.
+      const roles = ctx.services.roles
+      for (const r of roles?.list() ?? []) if (r.trackId === id) roles.update(r.id, { trackId: '' })
+      return next
     })
+    handle('profile:reorderTracks', ({ ids }) => tracks.reorder(ids))
+    handle('profile:setDefaultTrack', ({ id }) => tracks.setDefault(id))
+    handle('profile:importTrackResume', ({ id }) => pickResume(id, profile.get().tracks.find((t) => t.id === id)?.name))
+    handle('profile:importTrackResumeData', ({ id, fileName, data }) => tracks.importResume(id, fileName, new Uint8Array(data)))
+    handle('profile:removeTrackResume', ({ id }) => tracks.removeResume(id))
 
     handle('profile:exportAll', async () => {
       const date = new Date().toISOString().slice(0, 10)
@@ -103,6 +131,6 @@ export const profileFeature: Feature = {
       platform: process.platform,
     }))
 
-    if (isDemo()) seedDemoProfile(profile, resumesDir)
+    if (isDemo()) seedDemoProfile(profile, tracks, resumesDir)
   },
 }

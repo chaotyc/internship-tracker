@@ -37,7 +37,7 @@ import { profileFeature } from './index'
 
 let dir: string
 
-async function boot() {
+async function boot(roles?: unknown) {
   const store = await openStore(null)
   store.migrate([settingsMigration, secretsMigration, { id: 't-roles', sql: 'CREATE TABLE roles (id TEXT, company TEXT)' }])
   store.run("INSERT INTO roles VALUES ('r1', 'Acme')")
@@ -47,7 +47,7 @@ async function boot() {
     store,
     secrets,
     settings: new Settings(store),
-    services: { roles: { list: () => store.all('SELECT * FROM roles') } } as unknown as Services,
+    services: { roles: roles ?? { list: () => store.all('SELECT * FROM roles') } } as unknown as Services,
     dataDir: join(dir, 'data'),
     mainWindow: () => null,
   }
@@ -157,6 +157,75 @@ describe('profile IPC', () => {
     const p = (await call('profile:get')) as { email: string; resume: { storedPath: string } }
     expect(p.email).toBe('alex@example.com')
     expect(p.resume.storedPath.startsWith(join(dir, 'data'))).toBe(false)
+    delete process.env['TRACKER_DEMO']
+  })
+
+  it('manages tracks over IPC: create, import per track (dialog and drop), reorder, default, delete', async () => {
+    const roleRows = [
+      { id: 'r1', company: 'Acme', trackId: '' },
+      { id: 'r2', company: 'Lumen', trackId: '' },
+    ]
+    const roles = { list: () => roleRows, update: vi.fn((id: string, patch: { trackId: string }) => Object.assign(roleRows.find((r) => r.id === id)!, patch)) }
+    const { call } = await boot(roles)
+    const resumes = join(dir, 'data', 'resumes')
+    await call('profile:importResumeData', { fileName: 'cv.txt', data: new Uint8Array(Buffer.from('general')) })
+
+    const first = (await call('profile:createTrack', {})) as { trackId: string; profile: { tracks: { name: string; resume: { text: string } }[] } }
+    expect(first.profile.tracks[0]).toMatchObject({ name: 'General', resume: { text: 'general' } })
+    const ml = first.trackId
+    await call('profile:updateTrack', { id: ml, patch: { name: 'ML inference' } })
+    const hw = ((await call('profile:createTrack', { name: 'Photonics hardware' })) as { trackId: string }).trackId
+
+    const src = join(dir, 'Photonics.md')
+    writeFileSync(src, '# Optics\n\nRing resonators')
+    m.showOpenDialog.mockResolvedValueOnce({ canceled: false, filePaths: [src] })
+    const imported = (await call('profile:importTrackResume', { id: hw })) as { profile: { tracks: { resume: { text: string } | null }[] } }
+    expect(m.showOpenDialog.mock.calls[0]![0]).toMatchObject({ title: 'Choose the resume for Photonics hardware' })
+    expect(imported.profile.tracks[1]!.resume!.text).toContain('Ring resonators')
+    await call('profile:importTrackResumeData', { id: ml, fileName: 'ml.txt', data: new Uint8Array(Buffer.from('kernels')) })
+    expect(existsSync(join(resumes, `${hw}-Photonics.md`))).toBe(true)
+    expect(existsSync(join(resumes, `${ml}-ml.txt`))).toBe(true)
+    expect(existsSync(join(resumes, `${ml}-cv.txt`))).toBe(false)
+
+    // The legacy dialog channel still targets the default track.
+    m.showOpenDialog.mockResolvedValueOnce({ canceled: true, filePaths: [] })
+    expect(await call('profile:importResume')).toBeNull()
+
+    expect(((await call('profile:setDefaultTrack', { id: hw })) as { tracks: { id: string }[] }).tracks.map((t) => t.id)).toEqual([hw, ml])
+    expect(((await call('profile:reorderTracks', { ids: [ml, hw] })) as { tracks: { id: string }[] }).tracks.map((t) => t.id)).toEqual([ml, hw])
+
+    roleRows[1]!.trackId = hw
+    const afterDelete = (await call('profile:deleteTrack', { id: hw })) as { tracks: { id: string }[] }
+    expect(afterDelete.tracks.map((t) => t.id)).toEqual([ml])
+    expect(existsSync(join(resumes, `${hw}-Photonics.md`))).toBe(false)
+    expect(roles.update).toHaveBeenCalledWith('r2', { trackId: '' })
+    await expect(call('profile:removeTrackResume', { id: hw })).rejects.toThrow(/no longer exists/)
+    await call('profile:removeTrackResume', { id: ml })
+    expect(existsSync(resumes)).toBe(false)
+  })
+
+  it('delete-all removes every track and every resume copy', async () => {
+    const { call } = await boot()
+    const a = ((await call('profile:createTrack', { name: 'A' })) as { trackId: string }).trackId
+    const b = ((await call('profile:createTrack', { name: 'B' })) as { trackId: string }).trackId
+    await call('profile:importTrackResumeData', { id: a, fileName: 'a.txt', data: new Uint8Array(Buffer.from('a')) })
+    await call('profile:importTrackResumeData', { id: b, fileName: 'b.txt', data: new Uint8Array(Buffer.from('b')) })
+    await call('profile:deleteAll')
+    expect(existsSync(join(dir, 'data', 'resumes'))).toBe(false)
+    expect(((await call('profile:get')) as { tracks: unknown[] }).tracks).toEqual([])
+  })
+
+  it('seeds two fictional demo tracks and puts the photonics roles on the photonics track', async () => {
+    process.env['TRACKER_DEMO'] = '1'
+    const roleRows: { id: string; company: string; trackId: string }[] = []
+    const roles = { list: () => roleRows, update: (id: string, patch: { trackId: string }) => Object.assign(roleRows.find((r) => r.id === id)!, patch) }
+    const { call } = await boot(roles)
+    // Roles are seeded after features register.
+    roleRows.push({ id: 'r1', company: 'Lumora Photonics', trackId: '' }, { id: 'r2', company: 'Vectorline', trackId: '' })
+    const p = (await call('profile:get')) as { tracks: { id: string; name: string; resume: { storedPath: string; text: string } }[] }
+    expect(p.tracks.map((t) => t.name)).toEqual(['ML inference', 'Photonics hardware'])
+    expect(p.tracks.every((t) => t.resume.text && !t.resume.storedPath.startsWith(join(dir, 'data')))).toBe(true)
+    expect(roleRows.map((r) => r.trackId)).toEqual([p.tracks[1]!.id, ''])
     delete process.env['TRACKER_DEMO']
   })
 })

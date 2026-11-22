@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Profile } from '@shared/profile'
 import type { EncryptedProfileService } from './service'
+import type { TrackManager } from './tracks'
 
 /** A clearly fictional applicant for screenshots. Only used with TRACKER_DEMO=1. */
 export const DEMO_PROFILE: Profile = {
@@ -58,16 +59,73 @@ Tiny inference server: continuous batching and paged KV cache in 2,000 lines of 
 SKILLS
 CUDA, PyTorch, C++, Python, Triton, Linux`
 
-/** Seeds the in-memory demo database. The resume copy goes to the demo folder, never the real one. */
-export function seedDemoProfile(service: EncryptedProfileService, resumesDir: string): void {
+const PHOTONICS_RESUME = `Alex Rivera
+alex@example.com · Berkeley, CA · github.com/alex-rivera-example
+
+EDUCATION
+Example State University, B.S. Electrical Engineering and Computer Science, expected May 2028. GPA 3.8/4.0
+Coursework: Electromagnetics, Optoelectronics, Analog Circuits, Signals and Systems
+
+EXPERIENCE
+Undergraduate Researcher, Example Photonics Lab (Jun 2025 to present)
+- Characterized silicon ring resonators on a fiber-coupled probe station; automated sweeps in Python.
+- Built a temperature-controlled test fixture that cut wavelength drift during measurements by half.
+
+PROJECTS
+Free-space optical link: 1 Gb/s over 10 m with an off-the-shelf laser diode and a custom TIA board.
+
+SKILLS
+Lumerical, KiCad, Python, MATLAB, lab instruments (OSA, oscilloscopes, lasers), soldering`
+
+export const DEMO_TRACK_ML = 'demo-ml'
+export const DEMO_TRACK_PHOTONICS = 'demo-photonics'
+
+/** Companies whose demo roles go on the photonics track. */
+const PHOTONICS_COMPANIES = new Set(['Lumora Photonics', 'Prism Labs', 'Quanta Optics Lab'])
+
+const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString()
+
+function writeDemoResume(service: EncryptedProfileService, resumesDir: string, trackId: string, fileName: string, text: string, age: number): void {
+  const storedPath = join(resumesDir, `${trackId}-${fileName}`)
+  writeFileSync(storedPath, text)
+  service.setTrackResume(trackId, { fileName, storedPath, text, updatedAt: daysAgo(age) })
+}
+
+/** Seeds the in-memory demo database. Resume copies go to the demo folder, never the real one. */
+export function seedDemoProfile(service: EncryptedProfileService, tracks: TrackManager, resumesDir: string): void {
   service.save(DEMO_PROFILE)
   mkdirSync(resumesDir, { recursive: true })
-  const storedPath = join(resumesDir, 'Alex_Rivera_Resume.txt')
-  writeFileSync(storedPath, DEMO_RESUME)
-  service.setResume({
-    fileName: 'Alex_Rivera_Resume.txt',
-    storedPath,
-    text: DEMO_RESUME,
-    updatedAt: new Date(Date.now() - 2 * 86_400_000).toISOString(),
+  tracks.create('ML inference', DEMO_TRACK_ML)
+  tracks.update(DEMO_TRACK_ML, {
+    description: 'Inference runtimes, GPU kernels and compilers.',
+    targetRoles: ['ML inference intern', 'GPU kernels intern'],
+    keywords: ['CUDA', 'PyTorch', 'Triton', 'compilers'],
   })
+  writeDemoResume(service, resumesDir, DEMO_TRACK_ML, 'Alex_Rivera_Resume.txt', DEMO_RESUME, 2)
+  tracks.create('Photonics hardware', DEMO_TRACK_PHOTONICS)
+  tracks.update(DEMO_TRACK_PHOTONICS, {
+    description: 'Silicon photonics, optical I/O and lab hardware.',
+    targetRoles: ['Photonics intern', 'Optical engineering intern'],
+    keywords: ['silicon photonics', 'optics', 'Lumerical', 'lab'],
+    answers: [
+      { id: 'demo-p1', question: 'Why are you interested in this role?', answer: 'I have spent the last year measuring ring resonators in a photonics lab and want to see the same devices go into a product.' },
+    ],
+  })
+  writeDemoResume(service, resumesDir, DEMO_TRACK_PHOTONICS, 'Alex_Rivera_Photonics.txt', PHOTONICS_RESUME, 9)
+}
+
+/**
+ * Puts the demo's photonics roles on the photonics track. Returns false while the
+ * roles haven't been seeded yet, so the caller can try again later.
+ */
+export function assignDemoTracks(
+  roles: { list(): { id: string; company: string; trackId: string }[]; update(id: string, patch: { trackId: string }): unknown } | undefined,
+  service: EncryptedProfileService,
+): boolean {
+  if (!roles?.list || !roles.update) return false
+  if (!service.get().tracks.some((t) => t.id === DEMO_TRACK_PHOTONICS)) return true
+  const list = roles.list()
+  if (!list.length) return false
+  for (const r of list) if (PHOTONICS_COMPANIES.has(r.company) && r.trackId !== DEMO_TRACK_PHOTONICS) roles.update(r.id, { trackId: DEMO_TRACK_PHOTONICS })
+  return true
 }
