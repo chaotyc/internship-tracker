@@ -97,7 +97,7 @@
   position: relative;
   display: grid;
   /* Fixed due and stage tracks so dates and stage dots line up across every row and section. */
-  grid-template-columns: 30px minmax(0, 1fr) 150px 92px 58px;
+  grid-template-columns: 30px minmax(0, 1fr) 176px 92px 58px;
   align-items: center;
   gap: 12px;
   min-height: 56px;

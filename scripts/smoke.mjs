@@ -81,6 +81,7 @@ for (const view of views) {
     ? `found ${result.found}, ${result.ms} ms, keychain ${result.keychain == null ? 'not checked' : result.keychain ? 'ok' : 'unavailable'}${result.storageBackend ? ` (${result.storageBackend})` : ''}`
     : 'no result'
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${view.padEnd(12)} ${detail}`)
+  if (result?.notes?.length) console.log(`      notes: ${result.notes.join('; ')}`)
   if (result?.errors?.length) console.log(`      console errors:\n        ${result.errors.join('\n        ')}`)
   if (!keychainOk) console.log(`      expected keychain ${expectKeychain}, got ${result?.keychain}`)
   if (!ok && stderr) console.log(`      stderr:\n${stderr.replace(/^/gm, '        ')}`)

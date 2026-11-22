@@ -42,6 +42,8 @@ export interface SmokeResult {
   keychain: boolean | null
   storageBackend: string | null
   errors: string[]
+  /** Expected conditions worth reporting, such as no keyring on a Linux machine. */
+  notes: string[]
   ms: number
 }
 
@@ -65,6 +67,7 @@ async function probeKeychain(): Promise<{ ok: boolean; error?: string }> {
 export function runSmoke(win: BrowserWindow, opts: { view: string }): void {
   const started = Date.now()
   const errors: string[] = []
+  const notes: string[] = []
   const view = opts.view || 'board'
   const selector = readySelector(view)
 
@@ -99,7 +102,7 @@ export function runSmoke(win: BrowserWindow, opts: { view: string }): void {
     if (process.env['TRACKER_SMOKE_KEYCHAIN'] === '1') {
       const probe = await probeKeychain()
       keychain = probe.ok
-      if (probe.error) errors.push(`keychain: ${probe.error}`)
+      if (probe.error) notes.push(`keychain: ${probe.error}`)
     }
     const result: SmokeResult = {
       ok,
@@ -111,6 +114,7 @@ export function runSmoke(win: BrowserWindow, opts: { view: string }): void {
       keychain,
       storageBackend,
       errors,
+      notes,
       ms: Date.now() - started,
     }
     process.stdout.write(`SMOKE ${JSON.stringify(result)}\n`)
