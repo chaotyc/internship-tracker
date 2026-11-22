@@ -1,0 +1,190 @@
+/* Settings > Data & privacy. */
+.dp {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.dp .settings-section > p {
+  max-width: 60ch;
+  text-wrap: pretty;
+}
+.dp-path {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface-hover);
+}
+.dp-path-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.dp-path-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.dp-path-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dp-path-text code {
+  font: 12.5px/1.4 var(--font-mono);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+.dp-path-text small {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.dp-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--r-lg);
+}
+.dp-status.is-ok {
+  background: var(--ok-soft);
+}
+.dp-status.is-warn {
+  background: var(--warn-soft);
+}
+.dp-status-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--surface);
+}
+.dp-status.is-ok .dp-status-icon {
+  color: var(--ok);
+}
+.dp-status.is-warn .dp-status-icon {
+  color: var(--warn);
+}
+.dp-status-icon svg {
+  width: 16px;
+  height: 16px;
+}
+.dp-status strong {
+  font-weight: 600;
+}
+.dp-status p {
+  margin: 2px 0 0;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.dp-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.dp-facts li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.dp-facts svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+  color: var(--ok);
+}
+.dp-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.dp-btn-glyph {
+  width: 15px;
+  height: 15px;
+}
+.dp-small {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.dp-msg {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  font-size: 12.5px;
+}
+.dp-msg svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+.dp-msg.is-ok {
+  color: var(--ok);
+}
+.dp-msg.is-error {
+  color: var(--danger);
+}
+.dp-msg-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-2);
+}
+.dp-danger {
+  padding: 14px 16px 16px;
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--line));
+  border-radius: var(--r-lg);
+}
+.dp-danger.settings-section:last-child {
+  border-bottom: 1px solid color-mix(in srgb, var(--danger) 35%, var(--line));
+}
+.dp-danger h3 {
+  color: var(--danger);
+}
+.dp-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 14px 14px;
+  border-radius: var(--r-md);
+  background: var(--danger-soft);
+}
+.dp-confirm ul {
+  margin: -6px 0 0;
+  padding-left: 18px;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.dp-confirm .field {
+  max-width: 260px;
+}
+.dp-confirm .field input {
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+}
+.dp-confirm .field input:focus {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 22%, transparent);
+}
