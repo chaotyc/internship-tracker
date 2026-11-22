@@ -545,10 +545,21 @@
 /* Estimated match as plain text. The bar meter is the user's own fit rating on the board. */
 .sugg-fit {
   flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   color: var(--ink-2);
   font-weight: 500;
   white-space: nowrap;
   cursor: help;
+}
+/* Same meter as the board card; the wrapper's "Estimated by …" tooltip wins over the meter's own. */
+.sugg-fit .fit-meter {
+  pointer-events: none;
+}
+.sugg-fit-sep {
+  color: var(--ink-4);
+  font-weight: 400;
 }
 .sugg-fit:not(:last-child)::after {
   content: '·';
@@ -751,10 +762,15 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.watch-check.error {
+.watch-check.error,
+.watch-check.danger {
   color: var(--danger);
   /* Errors wrap so the reason is readable, never cut mid-word. */
   white-space: normal;
+}
+/* A board that didn't answer this time is usually fine next time: amber, one line. */
+.watch-check.warn {
+  color: var(--warn);
 }
 .watch-check.stale {
   color: var(--warn);

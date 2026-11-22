@@ -204,25 +204,33 @@ function ProviderCard(props: {
   return (
     <article className={`ai-card${isActive ? ' is-active' : ''}${missing ? ' is-missing' : ''}`} aria-label={info.label}>
       <div className="ai-card-head">
-        <div className="ai-card-name">
-          <strong>{info.label}</strong>
-          <span>{info.vendor}</span>
-          {status.kind === 'cli' && status.available && status.version && <span className="ai-version">v{status.version}</span>}
-        </div>
-        {!status.available && <span className="chip ai-pill is-muted">{status.kind === 'cli' ? 'Not installed' : 'No key'}</span>}
-        <span className="ai-spacer" />
+        {/* The whole name area picks the provider; the radios share one name, so arrow keys move between cards.
+            Checked without being pinned means chosen automatically. */}
+        <label
+          className="ai-pick"
+          title={!status.available ? undefined : isAuto ? 'Chosen automatically: the first connection that works. Click to always use it.' : `Always use ${info.label} for AI features`}
+        >
+          <input
+            type="radio"
+            name="ai-provider"
+            aria-label={`Use ${info.label}`}
+            checked={isActive}
+            disabled={!status.available}
+            onChange={props.onPick}
+            onClick={() => isAuto && props.onPick()}
+          />
+          <span className="ai-card-name">
+            <strong>{info.label}</strong>
+            <span>{info.vendor}</span>
+            {status.kind === 'cli' && status.available && status.version && <span className="ai-version">v{status.version}</span>}
+          </span>
+          {isAuto && <span className="chip ai-pill">Detected</span>}
+          {!status.available && <span className="chip ai-pill is-muted">{status.kind === 'cli' ? 'Not installed' : 'No key'}</span>}
+        </label>
         {status.available && (
-          <>
-            {/* The one control for which provider is used. Checked without being pinned means chosen automatically. */}
-            <label className="ai-use" title={isAuto ? 'Chosen automatically: the first connection that works. Click to always use it.' : `Always use ${info.label} for AI features`}>
-              <input type="radio" name="ai-provider" checked={isActive} onChange={props.onPick} onClick={() => isAuto && props.onPick()} />
-              Use {info.label}
-              {isAuto && <span className="chip ai-use-auto">Detected</span>}
-            </label>
-            <button type="button" className="btn btn-sm" onClick={props.onTest} disabled={test?.state === 'running'}>
-              {test?.state === 'running' ? 'Testing…' : 'Test'}
-            </button>
-          </>
+          <button type="button" className="btn btn-sm" onClick={props.onTest} disabled={test?.state === 'running'}>
+            {test?.state === 'running' ? 'Testing…' : 'Test'}
+          </button>
         )}
       </div>
       {testLine}

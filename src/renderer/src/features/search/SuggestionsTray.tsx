@@ -4,7 +4,8 @@ import { Icon } from '@renderer/components/Icon'
 import { useToast } from '@renderer/components/Toast'
 import { api } from '@renderer/lib/api'
 import { ago } from '@renderer/lib/format'
-import { Monogram } from '@renderer/features/board/RoleCard'
+import { FitMeter, Monogram } from '@renderer/features/board/RoleCard'
+import { fitFromScore } from './labels'
 import { useEdgeFade } from './useEdgeFade'
 import { partCandidates, useFitText, wordCandidates } from './useFitText'
 import { setSuggestionState, useSuggestionState } from './useSuggestionState'
@@ -38,12 +39,16 @@ export function metaLine(s: Pick<Suggestion, 'postedAt' | 'location' | 'pay'>): 
   return metaParts(s).join(' · ')
 }
 
-/** Estimated match, 0-100, as plain text. The board's bar meter is reserved for the user's own fit rating. */
+/** The board card's fit meter with the label this role gets when added, then the score: "▮▮▮▮ Strong fit · 91%". */
 function MatchMeter({ score, rankedBy }: { score: number; rankedBy?: Suggestion['rankedBy'] }) {
   const pct = Math.round(Math.max(0, Math.min(100, score)))
   return (
-    <span className="sugg-fit tabular" title={rankedBy ? `Estimated match, ranked by ${RANKED_BY[rankedBy]}` : 'Estimated match'}>
-      {pct}% match
+    <span className="sugg-fit tabular" title={rankedBy ? `Estimated by ${RANKED_BY[rankedBy]}` : 'Estimated'}>
+      <FitMeter fit={fitFromScore(pct)} />
+      <span className="sugg-fit-sep" aria-hidden="true">
+        ·
+      </span>
+      {pct}%
     </span>
   )
 }
@@ -118,7 +123,7 @@ function rankingLabel(items: Suggestion[]): { text: string; title: string } | nu
     : { text: 'Ranked by keywords', title: 'Match estimates come from keyword overlap with your preferences.' }
 }
 
-/** Roles autosearch found, ready to add to Saved or dismiss. */
+/** Roles Find roles turned up, ready to add to Saved or dismiss. */
 export function SuggestionsTray({ open, onClose }: { open: boolean; onClose: () => void }) {
   const toast = useToast()
   const [items, setItems] = useState<Suggestion[] | null>(null)

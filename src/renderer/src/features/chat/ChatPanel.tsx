@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from 'react'
 import { describeAction, visibleReply, type ChatAction, type ChatActionState, type ChatMessage } from '@shared/chat'
 import { STAGES, type Role } from '@shared/roles'
 import { Icon, type IconName } from '@renderer/components/Icon'
 import { api, useRoles } from '@renderer/lib/api'
 import type { SettingsTab } from '@renderer/features/settings/SettingsDialog'
 import { renderMarkdown } from './markdown'
+import { useScrollFade } from './useScrollFade'
 import './chat.css'
 
 const SUGGESTIONS: { label: string; prompt: string; send: boolean }[] = [
@@ -171,10 +172,10 @@ export function ChatPanel({ roleId, onClose, onOpenSettings }: Props) {
     })
   }
 
-  const clearBtnRef = useRef<HTMLButtonElement>(null)
+  const moreBtnRef = useRef<HTMLButtonElement>(null)
   const cancelClear = () => {
     setConfirmClear(false)
-    requestAnimationFrame(() => clearBtnRef.current?.focus())
+    requestAnimationFrame(() => moreBtnRef.current?.focus())
   }
 
   const clear = async () => {
@@ -206,25 +207,13 @@ export function ChatPanel({ roleId, onClose, onOpenSettings }: Props) {
   const loading = messages === null && !loadError
   const empty = messages !== null && list.length === 0 && !sending
   const shown = visibleReply(stream)
+  const fade = useScrollFade(listRef, [messages, stream, sending, error, loadError])
 
   return (
     <aside className="side-panel chat" aria-label="Assistant">
       <header className="side-head chat-head">
         <h2>Assistant</h2>
-        {list.length > 0 && (
-          <button
-            ref={clearBtnRef}
-            type="button"
-            className={`icon-btn chat-clear${confirmClear ? ' is-on' : ''}`}
-            onClick={() => setConfirmClear(true)}
-            aria-label="Clear conversation"
-            aria-expanded={confirmClear}
-            title="Clear conversation"
-          >
-            <Icon name="trash" />
-          </button>
-        )}
-        <span className="chat-head-sep" aria-hidden="true" />
+        {list.length > 0 && <MoreMenu buttonRef={moreBtnRef} active={confirmClear} onClear={() => setConfirmClear(true)} />}
         <button type="button" className="icon-btn" onClick={onClose} aria-label="Close assistant" title="Close (⌘J)">
           <Icon name="close" />
         </button>
@@ -253,7 +242,7 @@ export function ChatPanel({ roleId, onClose, onOpenSettings }: Props) {
       )}
 
       <div
-        className="chat-scroll"
+        className={`chat-scroll${fade.top ? ' fade-top' : ''}${fade.bottom ? ' fade-bottom' : ''}`}
         ref={listRef}
         onScroll={(e) => {
           const el = e.currentTarget
@@ -433,7 +422,7 @@ const ACTION_ICON: Record<ChatAction['kind'], IconName> = {
   update_preferences: 'sparkle',
   save_answers: 'file',
   move_role: 'arrowRight',
-  set_next_step: 'clock',
+  set_next_step: 'calendar',
 }
 
 function ActionCard({
@@ -495,17 +484,77 @@ function ActionCard({
       )}
       {err && <p className="chat-action-error">{err}</p>}
       {state === 'proposed' && (
-        <footer>
-          <button type="button" className="btn btn-primary btn-sm" onClick={() => void act('chat:applyAction')} disabled={busy}>
+        <div className="chat-action-actions">
+          <button type="button" className="btn btn-primary" onClick={() => void act('chat:applyAction')} disabled={busy}>
             <Icon name="check" />
             {busy ? verbs.busy : verbs.apply}
           </button>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => void act('chat:dismissAction')} disabled={busy}>
+          <button type="button" className="btn" onClick={() => void act('chat:dismissAction')} disabled={busy}>
             Dismiss
           </button>
-        </footer>
+          <span className="chat-action-hint">Nothing changes until you confirm</span>
+        </div>
       )}
     </section>
+  )
+}
+
+/** Header "⋯" menu. Clear lives here, away from Close; choosing it opens the inline confirm. */
+function MoreMenu({ buttonRef, active, onClear }: { buttonRef: RefObject<HTMLButtonElement | null>; active: boolean; onClear: () => void }) {
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const uid = useId()
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: PointerEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('pointerdown', onDown)
+    rootRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus()
+    return () => document.removeEventListener('pointerdown', onDown)
+  }, [open])
+  return (
+    <div
+      className="chat-more"
+      ref={rootRef}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape' && open) {
+          e.stopPropagation()
+          setOpen(false)
+          buttonRef.current?.focus()
+        }
+      }}
+    >
+      <button
+        ref={buttonRef}
+        type="button"
+        className={`icon-btn${open || active ? ' is-on' : ''}`}
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={open ? `${uid}-menu` : undefined}
+        aria-label="More options"
+        title="More options"
+      >
+        <Icon name="more" />
+      </button>
+      {open && (
+        <div className="chat-more-menu" role="menu" id={`${uid}-menu`} aria-label="Conversation">
+          <button
+            type="button"
+            role="menuitem"
+            className="is-danger"
+            onClick={() => {
+              setOpen(false)
+              onClear()
+            }}
+          >
+            <Icon name="trash" />
+            Clear conversation…
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 

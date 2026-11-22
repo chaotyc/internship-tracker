@@ -55,8 +55,8 @@ function DeadlineChip({ deadline }: { deadline: string }) {
   // Only near deadlines get a color; distant ones are plain facts.
   const tone = d <= 3 ? 'danger' : d <= 10 ? 'warn' : ''
   return (
-    <span className={`chip ${tone}`} title={`Deadline ${shortDate(deadline)}`}>
-      <Icon name="clock" />
+    <span className={`chip card-due ${tone}`} title={`Deadline ${shortDate(deadline)}`}>
+      <Icon name="flag" />
       {label}
     </span>
   )
@@ -85,7 +85,8 @@ export function RoleCard({ role, ghost, ...rest }: Props) {
   const saved = role.stage === 'saved'
   const finished = role.stage === 'rejected' || role.stage === 'closed'
   // Deadlines matter in every open stage (offer and interview deadlines most of all).
-  const alerts = (saved && (live === 'closed' || live === 'expiring')) || (!finished && !!role.deadline)
+  const alerts = saved && (live === 'closed' || live === 'expiring')
+  const showDeadline = !finished && !!role.deadline && !(saved && live === 'closed')
   const showFit = !finished && !!role.fit
   const hasNext = !!role.nextStep && !role.nextStep.done && !finished
   return (
@@ -132,7 +133,7 @@ export function RoleCard({ role, ghost, ...rest }: Props) {
       </div>
       {hasNext && (
         <div className={`card-next${nextTone(role.nextStep!.due)}`}>
-          {role.nextStep!.due && <span className="card-next-due">{dueLabel(role.nextStep!.due, role.nextStep!.time)}</span>}
+          <span className="card-next-due">{role.nextStep!.due ? dueLabel(role.nextStep!.due, role.nextStep!.time) : 'Next step'}</span>
           <span className="card-next-text">{role.nextStep!.text || 'Next step'}</span>
         </div>
       )}
@@ -157,10 +158,9 @@ export function RoleCard({ role, ghost, ...rest }: Props) {
               Closing soon
             </span>
           )}
-          {role.deadline && !(saved && live === 'closed') && <DeadlineChip deadline={role.deadline} />}
         </div>
       )}
-      {(showFit || role.appliedOn || (saved && role.source === 'autosearch')) && (
+      {(showFit || role.appliedOn || showDeadline || (saved && role.source === 'autosearch')) && (
         <div className="card-foot">
           {showFit && <FitMeter fit={role.fit} />}
           {saved && role.source === 'autosearch' && (
@@ -170,6 +170,7 @@ export function RoleCard({ role, ghost, ...rest }: Props) {
             </span>
           )}
           {!saved && role.appliedOn && role.stage !== 'closed' && <span className="card-age">Applied {ago(role.appliedOn)}</span>}
+          {showDeadline && <DeadlineChip deadline={role.deadline} />}
         </div>
       )}
       {!finished && role.notes && !(hasNext && similar(role.notes, role.nextStep!.text)) && <div className="card-note">{role.notes}</div>}

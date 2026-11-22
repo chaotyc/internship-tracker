@@ -336,29 +336,19 @@
   box-shadow: none;
 }
 
-/* Role dialog: the resume the chosen track uses. */
-/* Role dialog: the track's resume sits on the label line, so the cell stays one control tall. */
-.trk-select-head {
+/* Role dialog: "Resume: file.pdf" helper under the track select. */
+.trk-select-resume {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 4px;
   min-width: 0;
 }
-.trk-select-head > label {
+.trk-select-resume > span:not(.trk-mid) {
   flex: none;
-  font-size: var(--fs-meta);
-  font-weight: 600;
-  color: var(--ink-2);
-}
-.trk-select-resume {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  justify-content: flex-end;
-  font-size: var(--fs-meta);
-  color: var(--ink-3);
+  white-space: nowrap;
 }
 .trk-select-resume.is-empty {
+  display: block;
   color: var(--warn);
 }
 /* Middle truncation: the start gives way first, the end (with the extension) always shows. */

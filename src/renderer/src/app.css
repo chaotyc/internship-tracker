@@ -567,3 +567,6 @@
   border-color: color-mix(in srgb, var(--accent) 60%, var(--line-strong));
   background: color-mix(in srgb, var(--accent) 5%, var(--surface));
 }
+.track-row:empty {
+  display: none;
+}

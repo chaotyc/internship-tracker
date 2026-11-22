@@ -148,11 +148,12 @@ export function App() {
             Board
           </button>
           <button type="button" role="tab" aria-selected={view === 'today'} className={view === 'today' ? 'is-on' : ''} onClick={() => setView('today')}>
-            <Icon name="clock" />
+            <Icon name="sun" />
             Today
           </button>
         </div>
         <div className="topbar-actions">
+          <RefreshButton />
           <label className="search">
             <Icon name="search" />
             <input
@@ -174,7 +175,6 @@ export function App() {
               <span className="kbd">/</span>
             )}
           </label>
-          <RefreshButton />
           <AutosearchButton onResults={() => setTray(true)} />
           <button type="button" className="btn btn-primary" onClick={() => addRole()} title="Add role (N)">
             <Icon name="plus" />
@@ -308,7 +308,7 @@ function EmptyState({ onAdd, onImport, onProfile }: { onAdd: () => void; onImpor
             </span>
             <span>
               <strong>Set up your profile</strong>
-              <small>Resume and preferences power autosearch and autofill</small>
+              <small>Your resume and preferences power Find roles and autofill</small>
             </span>
             <Icon name="arrowRight" className="empty-arrow" />
           </button>

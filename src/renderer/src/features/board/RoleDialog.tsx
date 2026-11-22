@@ -370,7 +370,6 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
                 <input className={cls('pay')} value={form.pay} placeholder="$45–60/hr" onChange={(e) => set('pay', e.target.value)} />
               </label>
               <h3 className="form-group wide">Progress</h3>
-              <div className="wide grid-auto">
               <label className="field">
                 <span>Stage</span>
                 <select value={form.stage} onChange={(e) => set('stage', e.target.value as StageKey)}>
@@ -390,7 +389,8 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
                   ))}
                 </select>
               </label>
-              <TrackSelect value={form.trackId} onChange={(id) => set('trackId', id)} />
+              <div className="wide track-row">
+                <TrackSelect value={form.trackId} onChange={(id) => set('trackId', id)} />
               </div>
               <DateField id="rd-deadline" label="Deadline" className={cls('deadline')} value={form.deadline} onChange={(v) => set('deadline', v)} />
               <DateField id="rd-applied" label="Applied on" value={form.appliedOn} onChange={(v) => set('appliedOn', v)} placeholder="Not yet" />

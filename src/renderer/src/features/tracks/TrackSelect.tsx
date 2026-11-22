@@ -35,16 +35,10 @@ export function TrackSelect({ value, onChange }: { value: string; onChange: (id:
   const description = resume
     ? `Resume: ${resume.fileName}${borrowed ? ' (from the default track)' : ''}`
     : 'No resume on this track yet. Add one in Settings › Application tracks.'
-  // The resume rides on the label line, so this cell is exactly as tall as its neighbors.
+  // The resume sits under the select as helper text; the role dialog gives this field its own row.
   return (
     <div className="field">
-      <div className="trk-select-head">
-        <label htmlFor={id}>Application track</label>
-        <span id={`${id}-d`} className={`trk-select-resume${resume ? '' : ' is-empty'}`} title={description}>
-          <span className="visually-hidden">{description}</span>
-          {resume ? <MiddleTruncate text={resume.fileName} /> : <span aria-hidden="true">No resume</span>}
-        </span>
-      </div>
+      <label htmlFor={id}>Application track</label>
       <select id={id} value={current.id} onChange={(e) => onChange(e.target.value)} aria-describedby={`${id}-d`}>
         {tracks.map((t, i) => (
           <option key={t.id} value={t.id}>
@@ -53,11 +47,23 @@ export function TrackSelect({ value, onChange }: { value: string; onChange: (id:
           </option>
         ))}
       </select>
+      {resume ? (
+        <span id={`${id}-d`} className="hint trk-select-resume" title={description}>
+          <span className="visually-hidden">{description}</span>
+          <span aria-hidden="true">Resume:</span>
+          <MiddleTruncate text={resume.fileName} />
+          {borrowed && <span aria-hidden="true">(from the default track)</span>}
+        </span>
+      ) : (
+        <span id={`${id}-d`} className="hint trk-select-resume is-empty">
+          {description}
+        </span>
+      )}
     </div>
   )
 }
 
-/** One line that keeps the start and the extension: "Alex_Rivera_Re…sume.pdf". */
+/** One line that keeps the start and the extension; truncates ("Alex_Rivera_Re…sume.pdf") only when it doesn't fit. */
 function MiddleTruncate({ text }: { text: string }) {
   const dot = text.lastIndexOf('.')
   const keep = Math.max(dot > 0 ? text.length - dot + 2 : 6, 6)

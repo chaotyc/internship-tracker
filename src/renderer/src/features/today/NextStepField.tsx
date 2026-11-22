@@ -2,7 +2,7 @@ import { useRef } from 'react'
 import type { NextStep } from '@shared/roles'
 import { addDays, localIso } from '@shared/today'
 import { Icon } from '@renderer/components/Icon'
-import { daysUntil, dueLabel } from '@renderer/lib/format'
+import { daysUntil, plural } from '@renderer/lib/format'
 import './today.css'
 
 const EMPTY: NextStep = { text: '', due: '', time: '', done: false, source: 'manual' }
@@ -32,8 +32,6 @@ const TIMES = Array.from({ length: 31 }, (_, i) => {
   const min = 7 * 60 + i * 30
   return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`
 })
-
-const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 const SOURCE_NOTE: Record<NextStep['source'], string> = { manual: '', email: 'From an email', chat: 'Suggested by the assistant' }
 
@@ -65,11 +63,15 @@ export function NextStepField({ value, onChange }: { value: NextStep | null; onC
   ]
   const has = !!(v.text || v.due)
   const d = v.due ? daysUntil(v.due) : null
+  // The date and time fields (and the Today / Tomorrow chips) already say when; only add a
+  // readout when it says something they don't: how far off or how overdue the step is.
   const status = v.done
     ? { tone: 'is-done', text: 'Done' }
-    : d == null
-      ? { tone: '', text: has ? 'No date yet' : '' }
-      : { tone: d < 0 ? 'is-overdue' : d === 0 ? 'is-today' : '', text: capitalize(dueLabel(v.due, v.time)) }
+    : d == null || d === 0 || d === 1
+      ? null
+      : d < 0
+        ? { tone: 'is-overdue', text: `${plural(-d, 'day')} overdue` }
+        : { tone: '', text: `In ${plural(d, 'day')}` }
 
   return (
     <div className={`field wide ns${v.done ? ' is-done' : ''}`} role="group" aria-labelledby="ns-label">
@@ -79,7 +81,7 @@ export function NextStepField({ value, onChange }: { value: NextStep | null; onC
         {/* Same readable date button as the dialog's other dates (DateField), over a hidden native picker. */}
         <div className="date-field">
           <button type="button" className={`date-btn${v.due ? '' : ' is-empty'}`} onClick={openPicker} aria-label={v.due ? `Next step date, ${fullDate(v.due)}` : 'Next step date'}>
-            <Icon name="clock" />
+            <Icon name="calendar" />
             <span>{v.due ? fullDate(v.due) : 'Add a date'}</span>
           </button>
           {v.due && (
@@ -113,8 +115,8 @@ export function NextStepField({ value, onChange }: { value: NextStep | null; onC
             {c.label}
           </button>
         ))}
-        {(status.text || SOURCE_NOTE[v.source]) && <span className="ns-sep" aria-hidden="true" />}
-        {status.text && (
+        {(status || (has && SOURCE_NOTE[v.source])) && <span className="ns-sep" aria-hidden="true" />}
+        {status && (
           <span className={`ns-status ${status.tone}`} aria-live="polite">
             {status.text}
           </span>

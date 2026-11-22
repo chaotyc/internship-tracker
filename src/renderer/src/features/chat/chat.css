@@ -205,26 +205,56 @@
   color: var(--ink-3);
 }
 
-/* Header actions: clear sits apart from close */
-.chat-head .chat-clear {
-  width: 28px;
-  height: 28px;
+/* Header "⋯" menu: Clear lives here, away from Close. */
+.chat-more {
+  position: relative;
+  margin-left: auto;
 }
-.chat-head .chat-clear svg {
+.chat-more-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 200px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-2);
+}
+.chat-more-menu button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  height: var(--h-ctl);
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  font-size: var(--fs-body);
+}
+.chat-more-menu button svg {
   width: 15px;
   height: 15px;
+  flex: none;
+  color: var(--ink-3);
 }
-.chat-head .chat-clear:hover,
-.chat-head .chat-clear.is-on {
+.chat-more-menu button:hover,
+.chat-more-menu button:focus-visible {
+  background: var(--surface-sunken);
+  box-shadow: none;
+}
+.chat-more-menu button.is-danger:hover,
+.chat-more-menu button.is-danger:focus-visible {
   background: var(--danger-soft);
   color: var(--danger);
 }
-.chat-head-sep {
-  flex: none;
-  width: 1px;
-  height: 18px;
-  margin: 0 4px;
-  background: var(--line);
+.chat-more-menu button.is-danger:hover svg,
+.chat-more-menu button.is-danger:focus-visible svg {
+  color: var(--danger);
 }
 
 .chat-confirm {
@@ -248,9 +278,28 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
-  /* Soft edge under the header instead of a hard cut. Only alpha matters in a mask. */
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, var(--ink) 18px);
-  mask-image: linear-gradient(to bottom, transparent 0, var(--ink) 18px);
+  /* Fade an edge only when there is more past it (useScrollFade). Only alpha matters in a mask. */
+  --chat-fade-top: 0px;
+  --chat-fade-bottom: 0px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, var(--ink) var(--chat-fade-top), var(--ink) calc(100% - var(--chat-fade-bottom)), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, var(--ink) var(--chat-fade-top), var(--ink) calc(100% - var(--chat-fade-bottom)), transparent 100%);
+  transition: --chat-fade-top 0.15s, --chat-fade-bottom 0.15s;
+}
+.chat-scroll.fade-top {
+  --chat-fade-top: 36px;
+}
+.chat-scroll.fade-bottom {
+  --chat-fade-bottom: 24px;
+}
+@property --chat-fade-top {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+@property --chat-fade-bottom {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
 }
 .chat-log {
   display: flex;
@@ -414,20 +463,22 @@
   }
 }
 
-/* Proposed actions */
+/* Proposed actions: same shape as Today's email proposal card (buttons inside the body). */
 .chat-action {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   margin-top: 12px;
-  border: 1px solid var(--line-strong);
+  padding: 12px 12px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
   border-radius: var(--r-lg);
   background: var(--surface);
   box-shadow: var(--shadow-1);
-  overflow: hidden;
 }
 .chat-action > header {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 12px 0;
 }
 .chat-action h4 {
   flex: 1;
@@ -453,7 +504,7 @@
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 4px 12px;
-  margin: 10px 12px 0;
+  margin: 0;
   font-size: var(--fs-meta);
 }
 .chat-action dl > div {
@@ -491,26 +542,34 @@
   overflow: hidden;
   white-space: pre-wrap;
 }
-.chat-action > footer {
+.chat-action-actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
-  margin-top: 12px;
-  padding: 8px 12px;
-  border-top: 1px solid var(--line);
-  background: var(--surface-hover);
+}
+.chat-action-actions .btn {
+  height: var(--h-ctl);
+}
+.chat-action-hint {
+  /* Beside the buttons when the panel has room; its own line under them when it doesn't. */
+  flex: 1 1 10em;
+  min-width: 0;
+  padding-left: 2px;
+  font-size: var(--fs-meta);
+  color: var(--ink-3);
 }
 .chat-action.is-applied,
 .chat-action.is-dismissed {
   box-shadow: none;
   border-color: var(--line);
-  padding-bottom: 10px;
 }
 .chat-action.is-dismissed > header,
 .chat-action.is-dismissed dl {
   opacity: 0.6;
 }
 .chat-action-error {
-  margin: 8px 12px 0;
+  margin: 0;
   font-size: var(--fs-meta);
   color: var(--danger);
 }

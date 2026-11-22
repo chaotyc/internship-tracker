@@ -184,3 +184,8 @@ export interface SearchEvents {
   /** Sent after every scan (manual or scheduled) and when options change. */
   'search:statusChanged': SearchStatus
 }
+
+/** The fit label a suggestion's 0-100 score maps to; used for the tray and for the role it becomes. */
+export function fitFromScore(score: number): 'Strong' | 'Good' | 'Moderate' | 'Weak' {
+  return score >= 85 ? 'Strong' : score >= 70 ? 'Good' : score >= 50 ? 'Moderate' : 'Weak'
+}

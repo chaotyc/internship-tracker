@@ -1,7 +1,6 @@
 import { join } from 'node:path'
 import { DEFAULT_TRACK_ID } from '@shared/profile'
-import type { Fit } from '@shared/roles'
-import type { RefreshResult, Suggestion } from '@shared/search'
+import { fitFromScore, type RefreshResult, type Suggestion } from '@shared/search'
 import type { Feature } from '../../context'
 import { emit, handle } from '../../ipc'
 import { isHeadless } from '../../headless'
@@ -16,11 +15,6 @@ import { loadLastScan, loadOptions, recordReads, saveLastScan, saveOptions, stat
 import { SuggestionStore, searchMigrations } from './suggestions'
 import { detectBoard, loadWatchlist, saveWatchlist } from './watchlist'
 
-/** Turns an AI match score into the board's fit label. Keyword scores are too rough for that. */
-function fitFromScore(score: number): Fit {
-  return score >= 85 ? 'Strong' : score >= 70 ? 'Good' : score >= 50 ? 'Moderate' : 'Weak'
-}
-
 export const searchFeature: Feature = {
   name: 'search',
   migrations: searchMigrations,
@@ -34,7 +28,7 @@ export const searchFeature: Feature = {
 
     /** One scan of every enabled source. Manual scans report progress; scheduled ones only the result. */
     const scan = async (scheduled: boolean): Promise<Suggestion[]> => {
-      if (running) throw new Error(running.scheduled ? 'A scheduled scan is running. Try again in a minute.' : 'Autosearch is already running.')
+      if (running) throw new Error(running.scheduled ? 'A scheduled scan is running. Try again in a minute.' : 'Find roles is already running.')
       const ctrl = new AbortController()
       running = { ctrl, scheduled }
       const at = new Date().toISOString()
@@ -64,7 +58,7 @@ export const searchFeature: Feature = {
         return saved
       } catch (err) {
         if (err instanceof CancelledError || ctrl.signal.aborted) {
-          emit('search:progress', { phase: 'done', message: 'Autosearch cancelled. Your earlier suggestions are unchanged.', done: 0, total: 0 })
+          emit('search:progress', { phase: 'done', message: 'Find roles cancelled. Your earlier suggestions are unchanged.', done: 0, total: 0 })
           return suggestions.list()
         }
         const message = err instanceof Error ? err.message : String(err)
@@ -95,7 +89,7 @@ export const searchFeature: Feature = {
 
     handle('search:addSuggestion', ({ id }) => {
       const s = suggestions.get(id)
-      if (!s) throw new Error('That suggestion is gone. Run autosearch again.')
+      if (!s) throw new Error('That suggestion is gone. Run Find roles again.')
       const roles = ctx.services.roles
       const existing = roles.findByLink(s.link)
       const role =
@@ -108,7 +102,8 @@ export const searchFeature: Feature = {
           pay: s.pay ?? '',
           stage: 'saved',
           source: 'autosearch',
-          fit: s.rankedBy === 'ai' ? fitFromScore(s.score) : '',
+          // Same label the tray showed, whether the AI or keywords ranked it.
+          fit: fitFromScore(s.score),
           why: s.rankedBy === 'ai' ? s.reason : '',
           trackId: s.trackId && s.trackId !== DEFAULT_TRACK_ID ? s.trackId : '',
         })

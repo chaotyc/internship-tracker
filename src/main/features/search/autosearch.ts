@@ -126,7 +126,7 @@ export async function runAutosearch(deps: AutosearchDeps): Promise<AutosearchOut
     })
   }
   if (!units.length) {
-    if (!watchlist.length) throw new Error('Add companies in Settings → Job boards, then run autosearch.')
+    if (!watchlist.length) throw new Error('Add companies in Settings → Job boards, then run Find roles.')
     throw new Error('Every source is turned off. Turn one on in Settings → Job boards.')
   }
 

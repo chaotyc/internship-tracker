@@ -842,7 +842,7 @@ export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<Profile
 
         <ResumeSection resume={draft.resume} defaultTrack={draft.tracks[0]?.name} onImported={onResumeImported} onRemoved={onResumeRemoved} />
 
-        <Section id="prefs" title="What you’re looking for" hint="Autosearch and the assistant use this to find and rank roles. Press Enter or a comma after each item.">
+        <Section id="prefs" title="What you’re looking for" hint="Find roles and the assistant use this to pick and rank roles. Press Enter or a comma after each item.">
           <ChipInput label="Target roles" placeholder="e.g. ML inference intern" values={draft.preferences.targetRoles} onChange={setPref('targetRoles')} />
           <ChipInput label="Locations" placeholder="e.g. San Francisco Bay Area" values={draft.preferences.locations} onChange={setPref('locations')} />
           <Switch

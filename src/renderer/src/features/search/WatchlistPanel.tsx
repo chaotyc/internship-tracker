@@ -18,6 +18,7 @@ import { useToast } from '@renderer/components/Toast'
 import { api } from '@renderer/lib/api'
 import { Monogram } from '@renderer/features/board/RoleCard'
 import { PaneHeader } from '@renderer/features/settings/PaneHeader'
+import { boardFailure } from './labels'
 import './search.css'
 
 const key = boardKey
@@ -76,15 +77,17 @@ export function watchSummary(statuses: Array<BoardStatus | undefined>, now = Dat
  * One board's last check. With `always`, says when it last worked; otherwise only speaks up when the
  * board failed or is stale, since the list header already gives the shared check time.
  */
-function CheckLine({ st, off, always = false }: { st?: BoardStatus; off: boolean; always?: boolean }) {
+function CheckLine({ st, board, off, always = false }: { st?: BoardStatus; board: string; off: boolean; always?: boolean }) {
   if (off) return <span className="watch-check">Source turned off</span>
-  if (st?.error)
+  if (st?.error) {
+    const fail = boardFailure(board, st.error)
+    const parts = [[fail.text, st.errorAt && since(st.errorAt)].filter(Boolean).join(' '), st.lastOk && `last worked ${since(st.lastOk)}`]
     return (
-      <span className="watch-check error" title={st.error}>
-        Failed {st.errorAt ? since(st.errorAt) : ''}: {st.error}
-        {st.lastOk ? ` Last worked ${since(st.lastOk)}.` : ''}
+      <span className={`watch-check ${fail.tone}`} title={st.error}>
+        {parts.filter(Boolean).join(' · ')}
       </span>
     )
+  }
   if (isFresh(st)) return always ? <span className="watch-check">Checked {since(st.lastOk)}</span> : null
   if (st?.lastOk) return <span className="watch-check stale">Last checked {since(st.lastOk)}</span>
   return always ? <span className="watch-check">Not checked yet</span> : null
@@ -132,7 +135,7 @@ function SimplifyDetails() {
   )
 }
 
-/** Companies whose public job boards autosearch scans. */
+/** Companies whose public job boards Find roles scans. */
 export function WatchlistPanel() {
   const toast = useToast()
   const [list, setList] = useState<WatchCompany[] | null>(null)
@@ -211,10 +214,10 @@ export function WatchlistPanel() {
 
   return (
     <div className="watch">
-      <PaneHeader title="Job boards" description="Companies whose public job boards autosearch scans for new roles." />
+      <PaneHeader title="Job boards" description="Companies whose public job boards Find roles scans for new roles." />
       <section className="settings-section">
         <h3>Add a company</h3>
-        <p>Paste a careers page or job board link. Autosearch reads public Greenhouse, Ashby, Lever and Workday boards.</p>
+        <p>Paste a careers page or job board link. Find roles reads public Greenhouse, Ashby, Lever and Workday boards.</p>
         <form
           className="watch-add"
           onSubmit={(e) => {
@@ -263,7 +266,7 @@ export function WatchlistPanel() {
                   <a href={boardUrl(c)} target="_blank" rel="noreferrer">
                     {boardUrl(c).replace(/^https:\/\//, '')}
                   </a>
-                  {status && <CheckLine st={status.boards[key(c)]} off={!!sources && !sources[sourceOf(c)]} />}
+                  {status && <CheckLine st={status.boards[key(c)]} board={BOARD_LABELS[c.board]} off={!!sources && !sources[sourceOf(c)]} />}
                 </span>
                 <span className="board-badge">{BOARD_LABELS[c.board]}</span>
                 <button
@@ -314,7 +317,7 @@ export function WatchlistPanel() {
       {status && sources && (
         <section className="settings-section">
           <h3>Where to look</h3>
-          <p>Autosearch reads the sources that are on when you click Find roles, and in the daily scan.</p>
+          <p>Find roles reads the sources that are on, both when you click it and in the daily scan.</p>
           <ul className="src-list">
             <SourceSwitch checked={sources.boards} onChange={(v) => setSource('boards', v)} label="Greenhouse, Ashby & Lever" hint="The Greenhouse, Ashby and Lever boards on your list." />
             <SourceSwitch
@@ -330,7 +333,7 @@ export function WatchlistPanel() {
               hint={SIMPLIFY_LEAD}
             >
               <SimplifyDetails />
-              {sources.simplify && <CheckLine st={status.boards['simplify']} off={false} always />}
+              {sources.simplify && <CheckLine st={status.boards['simplify']} board="SimplifyJobs" off={false} always />}
             </SourceSwitch>
           </ul>
         </section>

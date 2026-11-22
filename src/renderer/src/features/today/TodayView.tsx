@@ -225,7 +225,6 @@ export function TodayView({ onOpenRole }: { onOpenRole: (id: string) => void }) 
             <div className="td-section-head">
               <h3 id="td-email-h">Email updates</h3>
               {proposals.length > 0 && <span className="td-count tabular">{proposals.length}</span>}
-              <span className="td-section-hint">Nothing changes until you update the role</span>
             </div>
             {proposals.length > 0 && (
               <div className="td-proposals">
@@ -326,7 +325,7 @@ function Row({
       <Monogram name={item.company} size={30} />
       <div className="td-row-main">
         <div className="td-row-step">
-          {!step && <Icon name="clock" />}
+          {!step && <Icon name="flag" />}
           <span>{item.text}</span>
         </div>
         <div className="td-row-sub">
@@ -411,7 +410,7 @@ function TodayEmpty({ onPaste, hasRoles }: { onPaste: () => void; hasRoles: bool
   return (
     <div className="td-empty">
       <span className="td-empty-icon">
-        <Icon name="clock" />
+        <Icon name="sun" />
       </span>
       <h3>Nothing scheduled yet</h3>
       <p>

@@ -163,7 +163,7 @@ export function DataPanel() {
           </li>
           <li>
             <Icon name="check" />
-            <span>Autosearch and Refresh only read public job-board pages. No analytics, no tracking.</span>
+            <span>Find roles and Recheck postings only read public job-board pages. No analytics, no tracking.</span>
           </li>
         </ul>
       </section>

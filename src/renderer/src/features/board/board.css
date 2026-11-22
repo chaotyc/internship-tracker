@@ -55,8 +55,8 @@
   min-width: 36px;
 }
 .app.has-panel .col {
-  /* Keep cards readable beside the assistant; the board scrolls sideways instead. */
-  min-width: 264px;
+  /* Narrow enough that all four active lanes fit beside the assistant at 1440px. */
+  min-width: 212px;
 }
 /* Collapsed Rejected/Closed rails stay pinned to the right edge while the board scrolls. */
 .col.is-collapsed {
@@ -81,9 +81,16 @@
 .app.has-panel .col.is-collapsed + .col.is-collapsed {
   box-shadow: -8px 0 0 0 var(--canvas), 18px 0 0 0 var(--canvas);
 }
-.board.fade-right .col.is-collapsed:has(+ .col.is-collapsed),
-.board.fade-right .col.is-collapsed:last-child:not(.col.is-collapsed + .col.is-collapsed) {
-  box-shadow: -10px 0 14px -10px rgba(0, 0, 0, 0.28);
+/* When cards continue under the pinned rails, fade them out where they are cut. */
+.board.fade-right .col.is-collapsed:not(.col.is-collapsed + .col.is-collapsed)::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 100%;
+  width: 36px;
+  background: linear-gradient(to right, transparent, var(--canvas));
+  pointer-events: none;
 }
 .board.has-rails.fade-right {
   --fade-r: 0px;
@@ -373,6 +380,9 @@ body.is-dragging * {
   font-size: var(--fs-meta);
   color: var(--ink-3);
 }
+.card-foot .card-due {
+  margin-left: auto;
+}
 .card-found {
   display: inline-flex;
   align-items: center;
@@ -421,7 +431,7 @@ body.is-dragging * {
 .card-meta > span {
   white-space: nowrap;
 }
-.card-meta > span + span::before {
+.card-meta > span:not(:last-child)::after {
   content: '·';
   margin: 0 5px;
 }

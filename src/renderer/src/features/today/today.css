@@ -76,11 +76,6 @@
 .td-section.is-today .td-section-head h3 {
   color: var(--ink);
 }
-.td-section-head .td-section-hint {
-  margin-left: auto;
-  font-size: var(--fs-meta);
-  color: var(--ink-3);
-}
 
 /* ----------------------------------- rows ----------------------------------- */
 .td-list {
@@ -473,8 +468,15 @@
 }
 .td-prop-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
+}
+/* Quiet reassurance beside Update role / Dismiss, once per card. */
+.td-prop-hint {
+  margin-left: 6px;
+  font-size: var(--fs-meta);
+  color: var(--ink-3);
 }
 /* Apply / Dismiss match the top bar's control height. */
 .td-prop-actions .btn:not(.btn-sm) {
@@ -659,9 +661,6 @@
 }
 .ns-status.is-overdue {
   color: var(--danger);
-}
-.ns-status.is-today {
-  color: var(--warn);
 }
 .ns-status.is-done {
   color: var(--ok);

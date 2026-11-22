@@ -75,10 +75,32 @@
 
 .ai-card-head {
   display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 28px;
+}
+/* Radio, name, vendor, version, status: one click target that fills the row up to Test. */
+.ai-pick {
+  flex: 1;
+  display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 10px;
-  min-height: 28px;
+  gap: 4px 8px;
+  min-width: 0;
+  align-self: stretch;
+  cursor: pointer;
+  user-select: none;
+}
+.ai-pick:has(input:disabled) {
+  cursor: default;
+}
+.ai-pick input {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin: 0 2px 0 0;
+  accent-color: var(--accent);
+  cursor: inherit;
 }
 .ai-card-name {
   display: flex;
@@ -102,35 +124,11 @@
 .ai-card.is-missing .ai-card-name strong {
   color: var(--ink-2);
 }
-.ai-spacer {
-  flex: 1;
-}
-
-.ai-use {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 4px;
-  font-size: var(--fs-meta);
-  color: var(--ink-2);
-  cursor: pointer;
-  user-select: none;
-}
-.ai-use input {
-  width: 14px;
-  height: 14px;
-  margin: 0;
-  accent-color: var(--accent);
-  cursor: inherit;
-}
-/* Neutral badge on the provider picked automatically (nothing pinned). */
-.ai-use-auto {
+.ai-pill {
+  flex: none;
   height: 18px;
   padding: 0 6px;
   color: var(--ink-3);
-}
-.ai-pill {
-  flex: none;
 }
 .ai-pill.is-muted {
   background: transparent;

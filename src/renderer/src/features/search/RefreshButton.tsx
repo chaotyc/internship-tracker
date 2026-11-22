@@ -70,7 +70,7 @@ export function RefreshButton() {
         <Icon name="refresh" className={running ? 'spin' : undefined} />
       </button>
       {open && result && (
-        <div className="popover refresh-pop" role="dialog" aria-label="Refresh results">
+        <div className="popover refresh-pop" role="dialog" aria-label="Recheck results">
           <header className="pop-head">
             <div>
               <h3>Saved postings</h3>

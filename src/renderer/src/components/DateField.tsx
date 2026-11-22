@@ -48,7 +48,7 @@ export function DateField({ id, label, value, onChange, placeholder = 'Add a dat
       <span id={`${id}-label`}>{label}</span>
       <div className="date-field">
         <button type="button" id={id} className={`date-btn${value ? '' : ' is-empty'}`} onClick={open} aria-labelledby={`${id}-label ${id}`}>
-          <Icon name="clock" />
+          <Icon name="calendar" />
           {value ? (
             <span>
               {fullDate(value)}

@@ -42,7 +42,7 @@ export function AutosearchButton({ onResults }: { onResults: () => void }) {
     try {
       const found = await api.invoke('search:run')
       if (cancelled.current) {
-        toast('Autosearch cancelled.')
+        toast('Find roles cancelled.')
         return
       }
       const fresh = found.filter((s) => s.status === 'new')
@@ -104,7 +104,7 @@ export function AutosearchButton({ onResults }: { onResults: () => void }) {
       <span className="autosearch-bar" aria-hidden="true">
         <span className={pct == null || p?.phase === 'ranking' ? 'is-indeterminate' : undefined} style={pct != null && p?.phase !== 'ranking' ? { width: `${pct}%` } : undefined} />
       </span>
-      <button type="button" className="autosearch-cancel" onClick={cancel} aria-label="Cancel autosearch" title="Cancel">
+      <button type="button" className="autosearch-cancel" onClick={cancel} aria-label="Cancel Find roles" title="Cancel">
         <Icon name="close" />
       </button>
     </div>
