@@ -160,19 +160,23 @@ export function DataPanel() {
             </div>
           </div>
         )}
-        <ul className="dp-facts">
+        {/* Plain facts, not an all-clear: neutral bullets; green stays with the Keychain row. */}
+        <div className="dp-facts-label" id="dp-net">
+          What leaves this computer
+        </div>
+        <ul className="dp-facts" aria-labelledby="dp-net">
           <li>
-            <Icon name="check" />
+            <span className="dp-fact-dot" aria-hidden="true" />
             <span>AI features send only what they need, and only to the provider you connected.</span>
           </li>
           <li>
-            <Icon name="check" />
+            <span className="dp-fact-dot" aria-hidden="true" />
             <span>
               <strong>Find roles</strong> and <strong>Recheck postings</strong> read public job pages. No analytics or tracking.
             </span>
           </li>
           <li title="The app never marks, moves, deletes or sends mail. Only emails from companies on your board go to your AI provider.">
-            <Icon name="check" />
+            <span className="dp-fact-dot" aria-hidden="true" />
             <span>Email is read-only and matched to your board on this computer.</span>
           </li>
         </ul>

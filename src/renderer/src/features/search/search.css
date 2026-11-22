@@ -192,10 +192,11 @@
 }
 
 /* ---------- Find roles split button: run | waiting suggestions ---------- */
-/* Idle and running states share one width so the top bar never shifts. */
+/* Idle, the split button sizes to its content so narrow windows keep their room; only the
+   running state has a fixed width, so the progress text never makes the top bar jitter. */
 .autosearch {
   display: flex;
-  width: 176px;
+  flex: none;
   -webkit-app-region: no-drag;
 }
 .autosearch-main {
@@ -241,6 +242,7 @@
 .autosearch-run {
   display: inline-flex;
   align-items: center;
+  flex: none;
   gap: 6px;
   width: 176px;
   height: var(--h-ctl);
@@ -407,8 +409,8 @@
   scroll-padding-inline: 18px;
   scroll-snap-type: x proximity;
   /* Fades whichever edge has more cards past it, so a clipped card reads as "more this way".
-     Only alpha matters in a mask; the stops are opaque in both themes. The fade is wide
-     enough to read against the light canvas, where white cards barely contrast. */
+     Only alpha matters in a mask; the stops are opaque in both themes. Narrow, like the
+     board's fade, so the last card's actions stay readable. */
   -webkit-mask-image: linear-gradient(
     to right,
     transparent 0,
@@ -430,10 +432,10 @@
   scroll-padding-inline: 12px;
 }
 .tray-scroll.fade-start {
-  --fade-start: 72px;
+  --fade-start: 36px;
 }
 .tray-scroll.fade-end {
-  --fade-end: 120px;
+  --fade-end: 48px;
 }
 .tray-state {
   display: flex;

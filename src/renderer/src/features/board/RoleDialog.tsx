@@ -475,9 +475,9 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
             )}
             {role && <span className="foot-divider" aria-hidden="true" />}
             {role && (
-              <button type="button" className="btn btn-ghost" onClick={askAssistant}>
+              <button type="button" className="btn btn-ghost" onClick={askAssistant} title="Ask the assistant">
                 <Icon name="chat" />
-                Ask the assistant
+                <span className="foot-label">Ask the assistant</span>
               </button>
             )}
             {role && role.stage !== 'saved' && autofill}
@@ -487,7 +487,8 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
                 {saveError}
               </span>
             ) : (
-              showForm && dirty && <span className="foot-hint">{MOD}Enter to save</span>
+              // Hidden while Delete is armed, so its wider label never pushes Save out.
+              showForm && dirty && !armed && <span className="foot-hint">{MOD}Enter to save</span>
             )}
             <button type="button" className="btn" onClick={requestClose}>
               Cancel

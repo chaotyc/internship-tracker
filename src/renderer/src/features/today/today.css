@@ -830,7 +830,9 @@
 }
 .ns-time input:disabled {
   background: var(--surface-sunken);
-  cursor: not-allowed;
+  border-color: transparent;
+  color: var(--ink-3);
+  cursor: default;
 }
 /* The date button's "· in 3 days" suffix turns red once the step is overdue. */
 .ns .date-btn small.is-overdue {

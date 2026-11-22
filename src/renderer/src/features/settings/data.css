@@ -154,12 +154,20 @@
 .dp-facts strong {
   font-weight: 600;
 }
-.dp-facts svg {
+.dp-facts-label {
+  margin: 4px 0 -4px;
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  color: var(--ink-3);
+}
+/* Neutral bullets: these are facts about the network, not reassurance. */
+.dp-fact-dot {
   flex: none;
-  width: 14px;
-  height: 14px;
-  margin-top: 2px;
-  color: var(--ok);
+  width: 5px;
+  height: 5px;
+  margin: 7px 4px 0;
+  border-radius: 50%;
+  background: var(--ink-3);
 }
 .dp-row {
   display: flex;
@@ -201,6 +209,10 @@
   padding: 14px 16px 16px;
   border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--line));
   border-radius: var(--r-lg);
+}
+/* The Delete box has its own frame, so the section above it drops its divider. */
+.dp .settings-section:has(+ .dp-danger) {
+  border-bottom: 0;
 }
 .dp-danger.settings-section:last-child {
   border-bottom: 1px solid color-mix(in srgb, var(--danger) 35%, var(--line));

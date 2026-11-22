@@ -361,7 +361,12 @@ body.is-dragging * {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-/* Future dates sit inline with the step: one block that wraps naturally. */
+/* Future dates sit inline with the step: one block that wraps naturally. The date takes the
+   step's size, keeping only the label weight. */
+.card-next.is-inline .card-next-due {
+  font-size: inherit;
+  letter-spacing: normal;
+}
 .card-next-sep {
   color: var(--ink-3);
 }
@@ -495,24 +500,30 @@ body.is-dragging * {
   text-overflow: ellipsis;
 }
 
-/* Beside the assistant the lane is narrow: the age reads "3w" and "Found for you" reads "Found".
-   The full wording stays in the tooltip, and the short label never clips. */
+/* On a narrow card (beside the assistant or in a narrow window) the age reads "3w" and
+   "Found for you" reads "Found". The full wording stays in the tooltip, and the short label never clips.
+   220px of content is a card about 245px wide. */
+.card {
+  container: card / inline-size;
+}
 .card-foot-short {
   display: none;
 }
-.app.has-panel .card-foot {
-  gap: 4px 8px;
-}
-.app.has-panel .card-foot-full {
-  display: none;
-}
-.app.has-panel .card-foot-short {
-  display: inline;
-}
-.app.has-panel .card-foot > .card-age,
-.app.has-panel .card-foot > .card-found {
-  flex-shrink: 0;
-  min-width: auto;
+@container card (max-width: 220px) {
+  .card-foot {
+    gap: 4px 8px;
+  }
+  .card-foot-full {
+    display: none;
+  }
+  .card-foot-short {
+    display: inline;
+  }
+  .card-foot > .card-age,
+  .card-foot > .card-found {
+    flex-shrink: 0;
+    min-width: auto;
+  }
 }
 
 /* Role dialog: a group heading after the first one sits outside the grids, with the same rule above it. */

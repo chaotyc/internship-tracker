@@ -92,7 +92,7 @@ a:hover {
   opacity: 1;
   background: var(--surface-sunken);
   border-color: transparent;
-  color: var(--ink-4);
+  color: var(--ink-3);
 }
 .btn-ghost:disabled {
   opacity: 0.45;
@@ -111,7 +111,7 @@ input[type='time']::-webkit-calendar-picker-indicator {
   cursor: pointer;
 }
 input[type='time']:disabled::-webkit-calendar-picker-indicator {
-  cursor: not-allowed;
+  cursor: default;
 }
 @media (prefers-color-scheme: dark) {
   input[type='date']::-webkit-calendar-picker-indicator,
@@ -150,6 +150,13 @@ input[type='time']:disabled::-webkit-calendar-picker-indicator {
   background: var(--danger-fill);
   border-color: var(--danger-fill);
   color: #fff;
+}
+/* Armed but not ready (e.g. waiting for DELETE to be typed): the same flat neutral as other disabled buttons. */
+.btn-danger.is-armed:disabled {
+  opacity: 1;
+  background: var(--surface-sunken);
+  border-color: transparent;
+  color: var(--ink-3);
 }
 .btn-sm {
   height: 26px;
@@ -233,6 +240,16 @@ select.input {
   outline: none;
   border-color: var(--accent);
   box-shadow: var(--ring);
+}
+/* Not available yet (e.g. a time before there's a date): flat and sunken, like disabled buttons. */
+.input:disabled,
+.field input:disabled,
+.field select:disabled,
+.field textarea:disabled {
+  background-color: var(--surface-sunken);
+  border-color: transparent;
+  color: var(--ink-3);
+  cursor: default;
 }
 .field .req {
   color: var(--danger);
@@ -401,6 +418,12 @@ select.input {
   height: 14px;
   flex: none;
   color: var(--ink-3);
+}
+.date-btn > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .date-btn small {
   font-size: var(--fs-meta);

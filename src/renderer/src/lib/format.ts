@@ -91,6 +91,13 @@ export function dueLabel(due: string, time: string): string {
   return `${shortDate(due)}${t}`
 }
 
+/** A posting deadline as one short label: "Due Thu", "Due Nov 30", or "Deadline passed" once it's gone. */
+export function deadlineLabel(deadline: string): string {
+  const d = daysUntil(deadline)
+  if (d == null) return `Due ${deadline}`
+  return d < 0 ? 'Deadline passed' : `Due ${dueLabel(deadline, '')}`
+}
+
 function formatTime(hhmm: string): string {
   const [h = 0, m = 0] = hhmm.split(':').map(Number)
   const d = new Date(2000, 0, 1, h, m)

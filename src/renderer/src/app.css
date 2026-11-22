@@ -112,7 +112,9 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  width: 220px;
+  /* Gives way first when the window narrows, so the buttons beside it never clip. */
+  flex: 0 1 200px;
+  min-width: 120px;
   height: 32px;
   padding: 0 8px 0 10px;
   border-radius: var(--r-md);
@@ -166,7 +168,13 @@
 }
 @media (max-width: 1180px) {
   .search {
-    width: 170px;
+    flex-basis: 170px;
+  }
+}
+/* Narrow windows: the role count goes first; the top bar's controls keep their room. */
+@media (max-width: 1060px) {
+  .brand p {
+    display: none;
   }
 }
 .no-match {
@@ -536,6 +544,22 @@
   font-size: var(--fs-meta);
   color: var(--ink-3);
   margin-right: 4px;
+}
+/* A crowded footer squeezes the hint and the left-hand ghost buttons, never Cancel or Save. */
+.dialog-foot > .foot-hint {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dialog-foot > .btn-ghost {
+  min-width: 0;
+  overflow: hidden;
+}
+.dialog-foot > .btn-ghost > .foot-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .grid-auto {
   display: grid;

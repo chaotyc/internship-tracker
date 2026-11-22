@@ -16,7 +16,7 @@ import {
 import { Icon } from '@renderer/components/Icon'
 import { useToast } from '@renderer/components/Toast'
 import { api, useRoles } from '@renderer/lib/api'
-import { deadlineTone, dueLabel, plural, shortDate } from '@renderer/lib/format'
+import { deadlineLabel, deadlineTone, dueLabel, plural, shortDate } from '@renderer/lib/format'
 import { Monogram } from '@renderer/features/board/RoleCard'
 import { EmailDrop } from './EmailDrop'
 import { ProposalCard } from './ProposalCard'
@@ -152,6 +152,8 @@ export function TodayView({
   }
   const onRowKey = (e: KeyboardEvent<HTMLLIElement>, item: TodayItem) => {
     const row = e.currentTarget
+    // The snooze menu handles its own keys (arrows cycle its items).
+    if ((e.target as HTMLElement).closest('.td-menu')) return
     if (e.key === 'ArrowDown' || e.key === 'j') {
       e.preventDefault()
       focusRow(row, 1)
@@ -403,9 +405,10 @@ function Row({
           : section === 'undated'
             ? ' is-none'
             : ''
-  const due = item.due ? dueLabel(item.due, item.time) : 'No date'
-  const folded = item.deadline ? dueLabel(item.deadline, '') : ''
-  const label = `${item.text}, ${item.company}, ${item.title}, ${item.kind === 'deadline' ? 'deadline ' : ''}${due}, ${folded ? `posting due ${folded}, ` : ''}${stageLabel(item.stage)}`
+  // Past deadlines read "Deadline passed", as on the board's cards; past steps say how overdue they are.
+  const due = step ? (item.due ? capitalize(dueLabel(item.due, item.time)) : 'No date') : item.due ? deadlineLabel(item.due) : 'No date'
+  const folded = item.deadline ? deadlineLabel(item.deadline) : ''
+  const label = `${item.text}, ${item.company}, ${item.title}, ${due}, ${folded ? `posting ${folded.toLowerCase()}, ` : ''}${stageLabel(item.stage)}`
   // Overdue and today rows always show their actions; later rows show them on hover or focus.
   const pinned = section === 'overdue' || section === 'today'
   return (
@@ -423,20 +426,15 @@ function Row({
           {item.deadline && (
             <span className={`td-row-deadline ${deadlineTone(item.deadline)}`}>
               <Icon name="flag" />
-              Due {folded}
+              {folded}
             </span>
           )}
         </div>
       </div>
-      <span className={`td-due${tone}`}>
-        {step ? (
-          capitalize(due)
-        ) : (
-          <>
-            <Icon name="flag" className="td-due-flag" />
-            Due {due}
-          </>
-        )}
+      {/* Fixed-width column: long labels end in an ellipsis, with the full text in the tooltip. */}
+      <span className={`td-due${tone}`} title={due}>
+        {!step && <Icon name="flag" className="td-due-flag" />}
+        {due}
       </span>
       <span className="td-stage" style={stageStyle(item.stage)}>
         {stageLabel(item.stage)}
@@ -493,7 +491,22 @@ function SnoozeMenu({ onSnooze, today, label }: { onSnooze: (w: SnoozeKey) => vo
           e.stopPropagation()
           setOpen(false)
           ref.current?.querySelector<HTMLButtonElement>('.td-act')?.focus()
+          return
         }
+        // Up and down cycle the menu's items instead of moving between rows.
+        if (open && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+          const items = Array.from(ref.current?.querySelectorAll<HTMLButtonElement>('.td-menu button') ?? [])
+          if (!items.length) return
+          e.preventDefault()
+          e.stopPropagation()
+          const i = items.indexOf(document.activeElement as HTMLButtonElement)
+          const step = e.key === 'ArrowDown' ? 1 : -1
+          items[i < 0 ? 0 : (i + step + items.length) % items.length]?.focus()
+        }
+      }}
+      // Closes when focus moves elsewhere, so a stale menu doesn't stay open over the next row.
+      onBlur={(e) => {
+        if (open && !ref.current?.contains(e.relatedTarget as Node | null)) setOpen(false)
       }}
     >
       <button

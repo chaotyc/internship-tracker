@@ -1,7 +1,7 @@
 import type { HTMLAttributes } from 'react'
 import type { Fit, Role } from '@shared/roles'
 import { Icon } from '@renderer/components/Icon'
-import { ago, daysUntil, deadlineTone, dueLabel, hueFor, monogram, shortDate } from '@renderer/lib/format'
+import { ago, daysUntil, deadlineLabel, deadlineTone, dueLabel, hueFor, monogram, shortDate } from '@renderer/lib/format'
 
 // Kept for features that import it from here.
 export { dueLabel }
@@ -50,8 +50,8 @@ export function FitMeter({ fit }: { fit: Fit }) {
 function DeadlineChip({ deadline }: { deadline: string }) {
   const d = daysUntil(deadline)
   if (d == null) return null
-  if (d < 0) return <span className="chip danger">Deadline passed</span>
-  const label = `Due ${dueLabel(deadline, '')}`
+  const label = deadlineLabel(deadline)
+  if (d < 0) return <span className="chip danger">{label}</span>
   // Only near deadlines get a color; distant ones are plain facts.
   const tone = deadlineTone(deadline)
   return (
@@ -127,6 +127,8 @@ export function RoleCard({ role, ghost, ...rest }: Props) {
   const alerts = (saved && (live === 'closed' || live === 'expiring')) || showDeadline
   const showFit = !finished && !!role.fit
   const hasNext = !!role.nextStep && !role.nextStep.done && !finished
+  const showFound = saved && role.source === 'autosearch'
+  const showAge = !saved && !!role.appliedOn && role.stage !== 'closed'
   return (
     <article
       className={`card${ghost ? ' is-ghost' : ''}${live === 'closed' && saved ? ' is-stale' : ''}${finished ? ' is-finished' : ''}`}
@@ -198,17 +200,17 @@ export function RoleCard({ role, ghost, ...rest }: Props) {
           )}
         </div>
       )}
-      {(showFit || role.appliedOn || (saved && role.source === 'autosearch')) && (
+      {(showFit || showFound || showAge) && (
         <div className="card-foot">
           {showFit && <FitMeter fit={role.fit} />}
-          {saved && role.source === 'autosearch' && (
+          {showFound && (
             <span className="card-found" title="Found for you">
               <Icon name="sparkle" />
               <span className="card-foot-full">Found for you</span>
               <span className="card-foot-short">Found</span>
             </span>
           )}
-          {!saved && role.appliedOn && role.stage !== 'closed' && (
+          {showAge && (
             <span className="card-age" title={`Applied ${ago(role.appliedOn)}`}>
               <span className="card-foot-full">Applied {ago(role.appliedOn)}</span>
               <span className="card-foot-short">{shortAgo(role.appliedOn)}</span>

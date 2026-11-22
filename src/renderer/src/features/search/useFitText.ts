@@ -18,12 +18,14 @@ export function wordCandidates(text: string): string[] {
  * Whether the text fits without clipping. Height uses scroll metrics (whole lines); width compares the
  * text's own fractional extent with the box, because Chromium rounds scrollWidth and hides the sub-pixel
  * overflow that still triggers an ellipsis. Single-line boxes must take their width from the container.
+ * Multi-line boxes wrap, so only their height counts (a range spanning lines is as wide as the box).
  */
 function fits(el: HTMLElement): boolean {
   if (el.scrollHeight > el.clientHeight + 0.5) return false
+  const cs = getComputedStyle(el)
+  if (cs.whiteSpace !== 'nowrap') return true
   const range = document.createRange()
   range.selectNodeContents(el)
-  const cs = getComputedStyle(el)
   const box = el.getBoundingClientRect().width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
   return range.getBoundingClientRect().width <= box - 0.5
 }

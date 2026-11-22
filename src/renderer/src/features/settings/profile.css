@@ -53,8 +53,9 @@
 .pf .field select:disabled,
 .pf .field input:disabled {
   background-color: var(--surface-sunken);
-  color: var(--ink-4);
-  cursor: not-allowed;
+  border-color: transparent;
+  color: var(--ink-3);
+  cursor: default;
 }
 .pf .field input::placeholder,
 .pf .field textarea::placeholder {
