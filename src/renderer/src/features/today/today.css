@@ -880,3 +880,11 @@
 .td-spin {
   animation: td-spin 0.9s linear infinite;
 }
+
+/* Deadline rows mark the date, not the title, so every title lines up. */
+.td-due-flag {
+  width: 12px;
+  height: 12px;
+  margin-right: 4px;
+  vertical-align: -1px;
+}

@@ -81,7 +81,11 @@ function CheckLine({ st, board, off, always = false }: { st?: BoardStatus; board
   if (off) return <span className="watch-check">Source turned off</span>
   if (st?.error) {
     const fail = boardFailure(board, st.error)
-    const parts = [[fail.text, st.errorAt && since(st.errorAt)].filter(Boolean).join(' '), st.lastOk && `last worked ${since(st.lastOk)}`]
+    const parts = [
+      [fail.text, st.errorAt && since(st.errorAt)].filter(Boolean).join(' '),
+      st.lastOk && `last worked ${since(st.lastOk)}`,
+      fail.tone === 'warn' && 'Find roles will try again',
+    ]
     return (
       <span className={`watch-check ${fail.tone}`} title={st.error}>
         {parts.filter(Boolean).join(' · ')}

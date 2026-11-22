@@ -48,15 +48,19 @@
   min-width: 46px;
 }
 .app.has-panel .board {
-  gap: 8px;
+  gap: 6px;
+  padding-inline: 12px;
 }
 .app.has-panel .col.is-collapsed {
-  flex-basis: 36px;
-  min-width: 36px;
+  flex-basis: 28px;
+  min-width: 28px;
+}
+.app.has-panel .lane {
+  padding-block: 12px;
 }
 .app.has-panel .col {
-  /* Cards stay readable beside the assistant; the board scrolls under the pinned rails instead. */
-  min-width: 260px;
+  /* With slimmer rails and gaps (below), all four active stages fit beside the assistant at 1440px. */
+  min-width: 226px;
 }
 /* Collapsed Rejected/Closed rails stay pinned to the right edge while the board scrolls. */
 .col.is-collapsed {
@@ -69,7 +73,7 @@
   right: calc(46px + 12px);
 }
 .app.has-panel .col.is-collapsed:has(+ .col.is-collapsed) {
-  right: calc(36px + 8px);
+  right: calc(28px + 6px);
 }
 /* Fill the gap between the pinned rails and the board's right padding, so cards never show through. */
 .col.is-collapsed:last-child {
@@ -79,7 +83,7 @@
   box-shadow: -12px 0 0 0 var(--canvas), 18px 0 0 0 var(--canvas);
 }
 .app.has-panel .col.is-collapsed + .col.is-collapsed {
-  box-shadow: -8px 0 0 0 var(--canvas), 18px 0 0 0 var(--canvas);
+  box-shadow: -6px 0 0 0 var(--canvas), 12px 0 0 0 var(--canvas);
 }
 /* When cards continue under the pinned rails, fade them out where they are cut. */
 .board.fade-right .col.is-collapsed:not(.col.is-collapsed + .col.is-collapsed)::before {

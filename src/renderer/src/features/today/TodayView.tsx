@@ -325,14 +325,22 @@ function Row({
       <Monogram name={item.company} size={30} />
       <div className="td-row-main">
         <div className="td-row-step">
-          {!step && <Icon name="flag" />}
           <span>{item.text}</span>
         </div>
         <div className="td-row-sub">
           <strong>{item.company}</strong> · {item.title}
         </div>
       </div>
-      <span className={`td-due${tone}`}>{capitalize(due)}</span>
+      <span className={`td-due${tone}`}>
+        {step ? (
+          capitalize(due)
+        ) : (
+          <>
+            <Icon name="flag" className="td-due-flag" />
+            Due {due}
+          </>
+        )}
+      </span>
       <span className="td-stage" style={stageStyle(item.stage)}>
         {stageLabel(item.stage)}
       </span>

@@ -455,7 +455,7 @@ function TrackCard({ track, index, count, profileAnswers, encrypted, autoFocusNa
         <div className="trk-answers-head">
           <div>
             <h4 className="settings-sub">Answer overrides</h4>
-            <p className="pf-hint">Used instead of your saved answer to the same question for roles on this track.</p>
+            <p className="pf-hint">Used instead of your saved answer for roles on this track.</p>
           </div>
           {encrypted && draft.answers.length > 0 && (
             <button type="button" className="btn btn-sm" onClick={() => addAnswer('')}>

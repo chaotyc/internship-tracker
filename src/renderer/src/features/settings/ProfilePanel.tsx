@@ -62,6 +62,8 @@ function TextField({ label, value, onChange, error, onBlur, hint, wide, ...rest 
       <input
         id={id}
         value={value}
+        // Long values (links) can be cut off by the field width; show the whole value on hover.
+        title={value || undefined}
         onChange={(e) => onChange(e.target.value)}
         onBlur={onBlur}
         aria-invalid={error ? true : undefined}

@@ -549,9 +549,18 @@
 }
 /* The first group opens the form: no rule, and a little space before its first field label. */
 .role-form > .form-group:first-child {
-  margin: 0 0 2px;
+  margin: 0 0 -4px;
   padding-top: 0;
   border-top: 0;
+}
+/* Delete stays quiet (red text, no frame) until hovered; the confirm step is unchanged. */
+.dialog-foot .btn-danger:not(.is-armed) {
+  border-color: transparent;
+  background: transparent;
+}
+.dialog-foot .btn-danger:not(.is-armed):hover {
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--line));
+  background: var(--danger-soft);
 }
 .next-step-row {
   display: grid;
