@@ -9,3 +9,4 @@ release/
 *.db
 user-data/
 screenshots/
+out-*/
