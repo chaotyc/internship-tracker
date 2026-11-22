@@ -49,8 +49,8 @@
   --fs-label: 11px; /* uppercase group labels, tiny badges */
   --fs-meta: 12.5px; /* secondary text, hints, chips */
   --fs-body: 13.5px; /* body, inputs, buttons */
-  --fs-title: 15px; /* card company, panel and section titles */
-  --fs-view: 21px; /* view titles (Today, Settings panes) */
+  --fs-title: 15px; /* card company, panel and section titles, Settings pane titles (inside a dialog) */
+  --fs-view: 21px; /* full-view titles (Today, the empty board); all titles use weight 650 */
   --fs-dialog: 18px; /* dialog titles */
   /* Control heights: 32 regular, 26 small. */
   --h-ctl: 32px;

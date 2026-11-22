@@ -159,11 +159,18 @@ export function DataPanel() {
         <ul className="dp-facts">
           <li>
             <Icon name="check" />
-            <span>Nothing is sent anywhere unless you use an AI feature, and then only to the AI provider you connected.</span>
+            <span>
+              AI features (the assistant, Fill in from link, Find roles ranking and email matching) send the profile and resume excerpts they need, plus the posting text, to the AI
+              provider you connected. Nothing goes to any other provider.
+            </span>
           </li>
           <li>
             <Icon name="check" />
-            <span>Find roles and Recheck postings only read public job-board pages. No analytics, no tracking.</span>
+            <span>Find roles and Recheck postings read public job-board pages. No analytics, no tracking.</span>
+          </li>
+          <li>
+            <Icon name="check" />
+            <span>If you connect email, the app signs in to your mailbox read-only to fetch recent mail and matches it to your board on this computer first.</span>
           </li>
         </ul>
       </section>

@@ -131,6 +131,20 @@
   color: var(--ink);
   box-shadow: var(--shadow-1);
 }
+/* Quiet count on the Today tab: email updates plus overdue and due-today items. Neutral, not an alarm. */
+.view-count {
+  min-width: 18px;
+  height: 16px;
+  margin-right: -3px;
+  padding: 0 5px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: color-mix(in srgb, var(--accent) 70%, var(--ink-3));
+  font-size: var(--fs-label);
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+}
 .topbar-actions {
   margin-left: auto;
   display: flex;
@@ -319,7 +333,7 @@
 }
 .empty-card h2 {
   margin: 0;
-  font: 700 var(--fs-view)/1.2 var(--font-display);
+  font: 650 var(--fs-view)/1.2 var(--font-display);
   letter-spacing: -0.02em;
 }
 .empty-card > p {
@@ -594,12 +608,13 @@
   }
 }
 
-/* Keep the destructive action apart from navigation in the role dialog footer. */
-.dialog-foot .btn-danger + .btn-ghost {
-  margin-left: 4px;
-  padding-left: 14px;
-  border-left: 1px solid var(--line);
-  border-radius: 0 var(--r-md) var(--r-md) 0;
+/* Keep the destructive action apart from navigation in the role dialog footer. A separate rule,
+   so "Ask the assistant" keeps its rounded edge on hover and focus. */
+.dialog-foot .foot-divider {
+  flex: none;
+  width: 1px;
+  height: 18px;
+  background: var(--line);
 }
 
 /* Board cues inside the role dialog's selects: stage dot, fit meter. */

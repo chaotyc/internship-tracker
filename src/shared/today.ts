@@ -12,7 +12,7 @@ export interface TodayItem {
   due: string
   /** HH:MM or '' */
   time: string
-  /** The role's posting deadline, shown beside a next step due on or before it (instead of a separate row). */
+  /** The role's posting deadline, shown beside a next step due on or before it in the same section (instead of a separate row). */
   deadline?: string
 }
 
@@ -20,7 +20,7 @@ export type TodaySectionKey = 'overdue' | 'today' | 'week' | 'later' | 'undated'
 
 export const TODAY_SECTIONS: { key: TodaySectionKey; label: string }[] = [
   { key: 'overdue', label: 'Overdue' },
-  { key: 'today', label: 'Today' },
+  { key: 'today', label: 'Due today' },
   { key: 'week', label: 'This week' },
   { key: 'later', label: 'Later' },
   { key: 'undated', label: 'No date yet' },
@@ -120,8 +120,9 @@ export function todayItems(
     const hasStep = !!ns && !ns.done && !!(ns.text.trim() || ns.due)
     const stepDue = hasStep && isIsoDate(ns!.due) ? ns!.due : ''
     const deadline = r.deadline && isIsoDate(r.deadline) && dayDiff(today, r.deadline) >= -STALE_DEADLINE_DAYS ? r.deadline : ''
-    // One row per role when its dated step comes first: the deadline rides along on that row.
-    const fold = !!deadline && !!stepDue && stepDue <= deadline
+    // One row per role when its dated step comes first and both land in the same section: the deadline
+    // rides along on that row. Otherwise the deadline gets its own row, so per-section counts stay right.
+    const fold = !!deadline && !!stepDue && stepDue <= deadline && sectionOf({ due: stepDue }, today) === sectionOf({ due: deadline }, today)
     if (hasStep)
       items.push({
         ...base,
@@ -135,6 +136,34 @@ export function todayItems(
       items.push({ ...base, kind: 'deadline', text: r.stage === 'saved' ? 'Application due' : 'Deadline', due: deadline, time: '' })
   }
   return items.sort(compareItems)
+}
+
+/* ---------------------------------- filter ---------------------------------- */
+
+/** True when every word of the filter appears somewhere in `fields` (case-insensitive), like the board's filter. */
+function matchesWords(fields: (string | null | undefined)[], query: string): boolean {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean)
+  if (!words.length) return true
+  const hay = fields.filter(Boolean).join(' ').toLowerCase()
+  return words.every((w) => hay.includes(w))
+}
+
+/** Filters Today rows by company, title and step text. */
+export function itemMatches(item: Pick<TodayItem, 'company' | 'title' | 'text'>, query: string): boolean {
+  return matchesWords([item.company, item.title, item.text], query)
+}
+
+/** Filters email proposals by company, title, summary and proposed step text. */
+export function proposalMatches(p: Pick<EmailProposal, 'company' | 'title' | 'summary' | 'nextStep'>, query: string): boolean {
+  return matchesWords([p.company, p.title, p.summary, p.nextStep?.text], query)
+}
+
+/** How many things want a look today: pending proposals plus overdue and due-today rows. */
+export function attentionCount(items: Pick<TodayItem, 'due'>[], proposals: number, today: string): number {
+  return proposals + items.filter((i) => {
+    const s = sectionOf(i, today)
+    return s === 'overdue' || s === 'today'
+  }).length
 }
 
 /* ------------------------------ done and snooze ------------------------------ */

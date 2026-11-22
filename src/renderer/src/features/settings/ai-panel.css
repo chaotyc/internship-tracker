@@ -128,7 +128,6 @@
   flex: none;
   height: 18px;
   padding: 0 6px;
-  color: var(--ink-3);
 }
 .ai-pill.is-muted {
   background: transparent;

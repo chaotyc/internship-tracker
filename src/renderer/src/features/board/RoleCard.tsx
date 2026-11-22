@@ -73,6 +73,12 @@ function similar(a: string, b: string): boolean {
   return shared / wb.size >= 0.6
 }
 
+/** "3w", "13d", "1d", "today": the age without "Applied" or "ago", for narrow lanes. */
+function shortAgo(iso: string): string {
+  const a = ago(iso)
+  return a === 'yesterday' ? '1d' : a.replace(/ ago$/, '')
+}
+
 function nextTone(due: string): string {
   const d = daysUntil(due)
   if (d == null) return ''
@@ -169,15 +175,18 @@ export function RoleCard({ role, ghost, ...rest }: Props) {
         <div className="card-foot">
           {showFit && <FitMeter fit={role.fit} />}
           {saved && role.source === 'autosearch' && (
-            <span className="card-found">
+            <span className="card-found" title="Found for you">
               <Icon name="sparkle" />
-              Found for you
+              <span className="card-foot-full">Found for you</span>
+              <span className="card-foot-short">Found</span>
             </span>
           )}
-          {!saved && role.appliedOn && role.stage !== 'closed' && <span className="card-age" title={`Applied ${ago(role.appliedOn)}`}>
-              Applied <span className="card-age-full">{ago(role.appliedOn)}</span>
-              <span className="card-age-short">{ago(role.appliedOn).replace(/ ago$/, '').replace(/^yesterday$/, '1d').replace(/^today$/, 'today')}</span>
-            </span>}
+          {!saved && role.appliedOn && role.stage !== 'closed' && (
+            <span className="card-age" title={`Applied ${ago(role.appliedOn)}`}>
+              <span className="card-foot-full">Applied {ago(role.appliedOn)}</span>
+              <span className="card-foot-short">{shortAgo(role.appliedOn)}</span>
+            </span>
+          )}
         </div>
       )}
       {!finished && role.notes && !(hasNext && similar(role.notes, role.nextStep!.text)) && <div className="card-note">{role.notes}</div>}

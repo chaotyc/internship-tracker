@@ -3,7 +3,9 @@ import type { Role } from '@shared/roles'
 import {
   completeStep,
   groupToday,
+  itemMatches,
   localIso,
+  proposalMatches,
   snoozeDate,
   snoozeStep,
   type EmailProposal,
@@ -26,12 +28,27 @@ const keyOf = (i: TodayItem) => `${i.roleId}:${i.kind}`
 const openSettings = (tab: string) => window.dispatchEvent(new CustomEvent('app:open-settings', { detail: tab }))
 
 /** Overdue, today, this week, later and undated next steps and deadlines, with email updates on top. */
-export function TodayView({ onOpenRole }: { onOpenRole: (id: string) => void }) {
+export function TodayView({
+  onOpenRole,
+  onAddRole,
+  query = '',
+  onClearQuery,
+  onMatchCount,
+}: {
+  onOpenRole: (id: string) => void
+  onAddRole: () => void
+  /** The top bar's filter; narrows rows and email proposals by company, title and step text. */
+  query?: string
+  onClearQuery: () => void
+  /** Reports how many rows and proposals are on screen while filtering, for the top bar's count. */
+  onMatchCount?: (n: number) => void
+}) {
   const toast = useToast()
   const { roles } = useRoles()
   const [items, setItems] = useState<TodayItem[] | null>(null)
   const [proposals, setProposals] = useState<EmailProposal[]>([])
   const [error, setError] = useState('')
+  const [proposalsError, setProposalsError] = useState('')
   const [pasteOpen, setPasteOpen] = useState(false)
   const [dragging, setDragging] = useState(false)
   const [incoming, setIncoming] = useState<{ raw: string; n: number } | null>(null)
@@ -39,6 +56,16 @@ export function TodayView({ onOpenRole }: { onOpenRole: (id: string) => void }) 
   const [today, setToday] = useState(localIso())
   const listRef = useRef<HTMLDivElement>(null)
   const dragDepth = useRef(0)
+
+  const loadProposals = useCallback(() => {
+    api
+      .invoke('today:proposals')
+      .then((r) => {
+        setProposals(r)
+        setProposalsError('')
+      })
+      .catch((e: Error) => setProposalsError(e.message))
+  }, [])
 
   const load = useCallback(() => {
     setToday(localIso())
@@ -50,11 +77,8 @@ export function TodayView({ onOpenRole }: { onOpenRole: (id: string) => void }) 
         setError('')
       })
       .catch((e: Error) => setError(e.message))
-    api
-      .invoke('today:proposals')
-      .then(setProposals)
-      .catch(() => {})
-  }, [])
+    loadProposals()
+  }, [loadProposals])
 
   useEffect(() => {
     load()
@@ -74,8 +98,17 @@ export function TodayView({ onOpenRole }: { onOpenRole: (id: string) => void }) 
 
   const byId = useMemo(() => new Map((roles ?? []).map((r) => [r.id, r])), [roles])
   const visible = useMemo(() => (items ?? []).filter((i) => !leaving.has(keyOf(i))), [items, leaving])
-  const sections = useMemo(() => groupToday(visible, today), [visible, today])
-  const count = (k: TodaySectionKey) => sections.find((s) => s.key === k)?.items.length ?? 0
+  // The header sums up the whole day; the filter only narrows the lists below it.
+  const allSections = useMemo(() => groupToday(visible, today), [visible, today])
+  const count = (k: TodaySectionKey) => allSections.find((s) => s.key === k)?.items.length ?? 0
+  const q = query.trim()
+  const matched = useMemo(() => (q ? visible.filter((i) => itemMatches(i, q)) : visible), [visible, q])
+  const sections = useMemo(() => (q ? groupToday(matched, today) : allSections), [q, matched, today, allSections])
+  const shownProposals = useMemo(() => (q ? proposals.filter((p) => proposalMatches(p, q)) : proposals), [proposals, q])
+  const matchCount = matched.length + shownProposals.length
+  useEffect(() => {
+    onMatchCount?.(matchCount)
+  }, [onMatchCount, matchCount])
 
   /* ---------------------------------- actions ---------------------------------- */
 
@@ -175,6 +208,9 @@ export function TodayView({ onOpenRole }: { onOpenRole: (id: string) => void }) 
 
   const loading = items == null && !error
   const nothing = items != null && items.length === 0
+  // While roles are still loading, assume there are some, so the empty state doesn't flash "Add a role".
+  const hasRoles = roles == null || roles.length > 0
+  const noMatch = !!q && items != null && items.length > 0 && matched.length === 0
   const overdue = count('overdue')
   const dueToday = count('today')
   const dateLine = new Date(today + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
@@ -211,24 +247,33 @@ export function TodayView({ onOpenRole }: { onOpenRole: (id: string) => void }) 
         </header>
 
         {error && (
-          <div className="banner error">
+          <div className="banner error" role="alert">
             <Icon name="alert" />
             Couldn't load Today: {error}
             <button type="button" className="btn btn-sm" onClick={load}>
-              Try again
+              Retry
             </button>
           </div>
         )}
 
-        {(proposals.length > 0 || pasteOpen) && (
+        {(shownProposals.length > 0 || pasteOpen || proposalsError) && (
           <section className="td-section td-email" aria-labelledby="td-email-h">
             <div className="td-section-head">
               <h3 id="td-email-h">Email updates</h3>
-              {proposals.length > 0 && <span className="td-count tabular">{proposals.length}</span>}
+              {shownProposals.length > 0 && <span className="td-count tabular">{shownProposals.length}</span>}
             </div>
-            {proposals.length > 0 && (
+            {proposalsError && (
+              <div className="td-inline-error" role="alert">
+                <Icon name="alert" />
+                <span>Couldn't load email updates: {proposalsError}</span>
+                <button type="button" className="btn btn-sm" onClick={loadProposals}>
+                  Retry
+                </button>
+              </div>
+            )}
+            {shownProposals.length > 0 && (
               <div className="td-proposals">
-                {proposals.map((p) => (
+                {shownProposals.map((p) => (
                   <ProposalCard key={p.id} p={p} role={byId.get(p.roleId) ?? null} onOpenRole={onOpenRole} onDone={(id) => setProposals((cur) => cur.filter((x) => x.id !== id))} />
                 ))}
               </div>
@@ -237,8 +282,20 @@ export function TodayView({ onOpenRole }: { onOpenRole: (id: string) => void }) 
           </section>
         )}
 
-        {loading ? null : nothing ? (
-          <TodayEmpty onPaste={() => setPasteOpen(true)} hasRoles={!!roles?.length} />
+        {loading ? (
+          <TodaySkeleton />
+        ) : error ? null : nothing ? (
+          <TodayEmpty onPaste={() => setPasteOpen(true)} onAddRole={onAddRole} hasRoles={hasRoles} />
+        ) : noMatch ? (
+          <div className="no-match td-no-match">
+            <p>
+              {shownProposals.length > 0 ? 'No next steps or deadlines match ' : 'Nothing on Today matches '}
+              <strong>“{q}”</strong>.
+            </p>
+            <button type="button" className="btn" onClick={onClearQuery}>
+              Clear filter
+            </button>
+          </div>
         ) : (
           <div ref={listRef} className="td-sections">
             {sections.length === 0 && (
@@ -315,7 +372,22 @@ function Row({
   onSnooze: (w: SnoozeKey) => void
 }) {
   const step = item.kind === 'next-step'
-  const tone = section === 'overdue' ? ' is-overdue' : section === 'today' ? ' is-today' : section === 'undated' ? ' is-none' : ''
+  // Deadline rows take the board's deadline colours (red within 3 days, amber within 10); steps follow their section.
+  const dl = step ? null : deadlineTone(item.due)
+  const tone =
+    dl != null
+      ? dl === 'danger'
+        ? ' is-overdue'
+        : dl === 'warn'
+          ? ' is-today'
+          : ''
+      : section === 'overdue'
+        ? ' is-overdue'
+        : section === 'today'
+          ? ' is-today'
+          : section === 'undated'
+            ? ' is-none'
+            : ''
   const due = item.due ? dueLabel(item.due, item.time) : 'No date'
   const label = `${item.text}, ${item.company}, ${item.title}, ${item.kind === 'deadline' ? 'deadline ' : ''}${due}, ${stageLabel(item.stage)}`
   // Overdue and today rows always show their actions; later rows show them on hover or focus.
@@ -367,9 +439,21 @@ function Row({
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
+/** Space the snooze menu needs below its trigger: two items, padding and a gap. */
+const MENU_ROOM = 96
+
 function SnoozeMenu({ onSnooze, today, label }: { onSnooze: (w: SnoozeKey) => void; today: string; label: string }) {
   const [open, setOpen] = useState(false)
+  // Opens upward when there isn't room below the trigger (last rows near the bottom of the view).
+  const [up, setUp] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const toggle = () => {
+    if (!open && ref.current) {
+      const below = ref.current.closest('.td')?.getBoundingClientRect().bottom ?? window.innerHeight
+      setUp(below - ref.current.getBoundingClientRect().bottom < MENU_ROOM)
+    }
+    setOpen((o) => !o)
+  }
   useEffect(() => {
     if (!open) return
     const close = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false)
@@ -399,13 +483,13 @@ function SnoozeMenu({ onSnooze, today, label }: { onSnooze: (w: SnoozeKey) => vo
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={`Snooze: ${label}`}
-        onClick={() => setOpen((o) => !o)}
+        onClick={toggle}
         title="Snooze (S tomorrow, W next week)"
       >
         <Icon name="clock" />
       </button>
       {open && (
-        <div className="td-menu" role="menu">
+        <div className={`td-menu${up ? ' is-up' : ''}`} role="menu">
           <button type="button" role="menuitem" onClick={() => pick('tomorrow')}>
             Tomorrow
             <small>{shortDate(snoozeDate('tomorrow', today))}</small>
@@ -420,7 +504,31 @@ function SnoozeMenu({ onSnooze, today, label }: { onSnooze: (w: SnoozeKey) => vo
   )
 }
 
-function TodayEmpty({ onPaste, hasRoles }: { onPaste: () => void; hasRoles: boolean }) {
+function TodaySkeleton() {
+  return (
+    <div className="td-sections" aria-busy="true" aria-label="Loading Today">
+      <section className="td-section">
+        <div className="td-section-head">
+          <span className="td-skel td-skel-label" />
+        </div>
+        <ul className="td-list" aria-hidden="true">
+          {[0, 1, 2].map((i) => (
+            <li key={i} className="td-skel-row">
+              <span className="td-skel td-skel-mono" />
+              <span className="td-skel-lines">
+                <span className="td-skel" style={{ width: `${46 - i * 8}%` }} />
+                <span className="td-skel" style={{ width: `${30 + i * 6}%` }} />
+              </span>
+              <span className="td-skel td-skel-due" />
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  )
+}
+
+function TodayEmpty({ onPaste, onAddRole, hasRoles }: { onPaste: () => void; onAddRole: () => void; hasRoles: boolean }) {
   return (
     <div className="td-empty">
       <span className="td-empty-icon">
@@ -431,16 +539,29 @@ function TodayEmpty({ onPaste, hasRoles }: { onPaste: () => void; hasRoles: bool
         Next steps and deadlines from your board show up here, sorted into overdue, today, this week and later.
         {hasRoles ? ' Open a role and add a next step with a date, or let recruiter emails suggest them.' : ' Add a role to your board first, then give it a next step with a date.'}
       </p>
-      <div className="td-empty-actions">
-        <button type="button" className="btn" onClick={onPaste}>
-          <MailIcon className="td-btn-icon" />
-          Add an email
-        </button>
-        <button type="button" className="btn btn-primary" onClick={() => openSettings('email')}>
-          Connect email
-          <Icon name="arrowRight" />
-        </button>
-      </div>
+      {hasRoles ? (
+        <div className="td-empty-actions">
+          <button type="button" className="btn" onClick={onPaste}>
+            <MailIcon className="td-btn-icon" />
+            Add an email
+          </button>
+          <button type="button" className="btn btn-primary" onClick={() => openSettings('email')}>
+            Connect email
+            <Icon name="arrowRight" />
+          </button>
+        </div>
+      ) : (
+        <div className="td-empty-actions">
+          <button type="button" className="btn" onClick={() => openSettings('email')}>
+            <MailIcon className="td-btn-icon" />
+            Connect email
+          </button>
+          <button type="button" className="btn btn-primary" onClick={onAddRole}>
+            <Icon name="plus" />
+            Add a role
+          </button>
+        </div>
+      )}
     </div>
   )
 }

@@ -152,7 +152,7 @@
 }
 .settings-pane-head h2 {
   margin: 0;
-  font: 700 var(--fs-title)/1.3 var(--font-display);
+  font: 650 var(--fs-title)/1.3 var(--font-display);
   color: var(--ink);
   letter-spacing: -0.01em;
 }

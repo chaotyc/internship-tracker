@@ -462,7 +462,7 @@
   box-shadow: var(--shadow-2);
 }
 .sugg.is-skeleton {
-  height: 184px;
+  height: 197px;
   background: linear-gradient(90deg, var(--surface) 0%, var(--surface-hover) 50%, var(--surface) 100%);
 }
 .sugg-top {
@@ -508,13 +508,42 @@
   font-size: var(--fs-meta);
   line-height: 1.35;
 }
-/* Fills the rest of the row so its width doesn't depend on its text (useFitText measures against it). */
+/* Posting age after the fit: "Strong fit · 93% · 2d ago". */
 .sugg-meta-text {
   flex: 1;
   min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+/* "Location · pay" on its own line, like the board card's meta: location shrinks, pay stays whole. */
+.sugg-place {
+  overflow: hidden;
+  color: var(--ink-3);
+  font-size: var(--fs-meta);
+  line-height: 1.35;
+  white-space: nowrap;
+}
+/* Separators lead each part; the row starts 11px left so the first one falls outside the clip. */
+.sugg-place-inner {
+  display: flex;
+  flex-wrap: nowrap;
+  margin-left: -11px;
+  min-width: 0;
+}
+.sugg-place-inner > span {
+  white-space: nowrap;
+}
+.sugg-place-inner > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sugg-place-inner > span::before {
+  content: '·';
+  display: inline-block;
+  width: 11px;
+  text-align: center;
 }
 /* Reason always gets two full lines, so cards line up. Text is cut after a whole word in JS (useFitText). */
 .sugg-reason {
@@ -805,62 +834,6 @@
 }
 .src-row + .src-row {
   border-top: 1px solid var(--line);
-}
-.src-switch {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  cursor: pointer;
-}
-.src-switch input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-.src-switch-track {
-  position: relative;
-  flex: none;
-  width: 32px;
-  height: 18px;
-  margin-top: 1px;
-  border-radius: 999px;
-  background: var(--line-strong);
-  transition: background 0.15s;
-}
-.src-switch-track::after {
-  content: '';
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--surface);
-  box-shadow: var(--shadow-1);
-  transition: transform 0.15s;
-}
-.src-switch input:checked + .src-switch-track {
-  background: var(--accent);
-}
-.src-switch input:checked + .src-switch-track::after {
-  transform: translateX(14px);
-}
-.src-switch input:focus-visible + .src-switch-track {
-  box-shadow: var(--ring);
-}
-.src-switch-text {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-weight: 550;
-}
-.src-switch-text small {
-  font-weight: 400;
-  font-size: var(--fs-meta);
-  line-height: 1.4;
-  color: var(--ink-3);
 }
 /* Under a switch's hint, lined up with its text: last check, disclosures. */
 .src-extra {

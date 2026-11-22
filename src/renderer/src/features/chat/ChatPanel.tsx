@@ -9,12 +9,13 @@ import { useScrollFade } from './useScrollFade'
 import './chat.css'
 
 const SUGGESTIONS: { label: string; prompt: string; send: boolean }[] = [
-  { label: 'Find roles that fit my resume', prompt: 'Find roles that fit my resume.', send: true },
+  { label: 'What roles should I look for?', prompt: 'What roles should I look for?', send: true },
   { label: 'Draft answers for an application', prompt: 'Draft answers for these application questions:\n\n', send: false },
   { label: 'What should I apply to this week?', prompt: 'What should I apply to this week?', send: true },
   { label: 'Update what I’m looking for', prompt: 'Update what I’m looking for: ', send: false },
 ]
 
+const MOD = navigator.userAgent.includes('Mac') ? '⌘' : 'Ctrl+'
 const NO_AI = /no ai connection/i
 /** Errors from the ai feature that are fixed in Settings > AI connections. */
 const SETTINGS_HINT = /no ai connection|AI connections/i
@@ -214,7 +215,7 @@ export function ChatPanel({ roleId, onClose, onOpenSettings }: Props) {
       <header className="side-head chat-head">
         <h2>Assistant</h2>
         {list.length > 0 && <MoreMenu buttonRef={moreBtnRef} active={confirmClear} onClear={() => setConfirmClear(true)} />}
-        <button type="button" className="icon-btn" onClick={onClose} aria-label="Close assistant" title="Close (⌘J)">
+        <button type="button" className="icon-btn" onClick={onClose} aria-label="Close assistant" title={`Close (${MOD}J)`}>
           <Icon name="close" />
         </button>
       </header>

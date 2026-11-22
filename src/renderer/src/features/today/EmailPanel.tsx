@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useId, useState, type KeyboardEvent } from 'react'
 import type { EmailSettings, EmailStatus } from '@shared/today'
 import { Icon } from '@renderer/components/Icon'
+import { Switch } from '@renderer/components/Switch'
 import { useToast } from '@renderer/components/Toast'
 import { api, useRoles } from '@renderer/lib/api'
 import { PaneHeader } from '@renderer/features/settings/PaneHeader'
 import { EmailDrop } from './EmailDrop'
-import { ShieldIcon, Switch, sinceLabel } from './parts'
+import { ShieldIcon, sinceLabel } from './parts'
+import '@renderer/features/settings/profile.css'
 import './today.css'
 
 const PRESETS = [
@@ -54,7 +56,15 @@ export function EmailPanel() {
         <p className="settings-empty">Couldn't load email settings: {loadError}</p>
       </>
     )
-  if (!status) return header
+  if (!status)
+    return (
+      <>
+        {header}
+        <div className="pf-loading" role="status" aria-busy="true">
+          <span className="visually-hidden">Loading email settings…</span>
+        </div>
+      </>
+    )
 
   return (
     <>
@@ -295,6 +305,10 @@ function ConnectForm({ onConnected, canStore }: { onConnected: (s: EmailStatus) 
               </li>
               <li>
                 <strong>iCloud:</strong> create an app-specific password at <code>account.apple.com</code> under Sign-In and Security. Server <code>imap.mail.me.com</code>, port <code>993</code>.
+              </li>
+              <li>
+                <strong>Fastmail:</strong> go to Settings, then Privacy &amp; Security, then Integrations, and create a new app password with IMAP access. Server{' '}
+                <code>imap.fastmail.com</code>, port <code>993</code>.
               </li>
             </ol>
           )}

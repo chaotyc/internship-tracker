@@ -727,7 +727,7 @@
   box-shadow: none;
 }
 .chat-input textarea::placeholder {
-  color: var(--ink-4);
+  color: var(--ink-3);
 }
 .chat-send {
   display: grid;

@@ -20,19 +20,6 @@ export function ShieldIcon(props: { className?: string }) {
   )
 }
 
-export function Switch({ checked, onChange, label, hint, disabled }: { checked: boolean; onChange: (v: boolean) => void; label: string; hint?: string; disabled?: boolean }) {
-  return (
-    <label className="td-switch">
-      <input type="checkbox" role="switch" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
-      <span className="td-switch-track" aria-hidden="true" />
-      <span className="td-switch-text">
-        {label}
-        {hint && <small>{hint}</small>}
-      </span>
-    </label>
-  )
-}
-
 /** "just now", "5 min ago", "2 h ago", or a date. */
 /** Kept for existing imports; the one relative-time rule lives in lib/format. */
 export function sinceLabel(iso: string, now = Date.now()): string {

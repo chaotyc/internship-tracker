@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import type { NextStep, StageKey } from '@shared/roles'
-import { completeStep, groupToday, nextMonday, sectionOf, snoozeDate, snoozeStep, todayItems, type TodayItem } from '@shared/today'
+import {
+  attentionCount,
+  completeStep,
+  groupToday,
+  itemMatches,
+  nextMonday,
+  proposalMatches,
+  sectionOf,
+  snoozeDate,
+  snoozeStep,
+  todayItems,
+  type TodayItem,
+} from '@shared/today'
 import { reminderDue, reminderText } from './reminder'
 
 const TODAY = '2026-11-21' // a Saturday
@@ -18,14 +30,36 @@ describe('todayItems', () => {
         role('Gone', 'rejected', step('Nope', TODAY)),
         role('Done', 'interviewing', step('Did it', TODAY, '', true)),
         role('Later', 'interviewing', step('Ask about team', '')),
-        role('Offer', 'offer', step('Decide', TODAY, '09:00'), '2026-11-28'),
+        role('Offer', 'offer', step('Decide', '2026-11-23', '09:00'), '2026-11-26'),
       ],
       TODAY,
     )
-    // Offer's step comes before its deadline, so the deadline rides on the step row instead of its own.
+    // Offer's step comes before its deadline in the same week, so the deadline rides on the step row instead of its own.
     expect(items.map((i) => `${i.company}:${i.kind}`)).toEqual(['Vectorline:next-step', 'Offer:next-step', 'Kite:deadline', 'Later:next-step'])
     expect(items.find((i) => i.company === 'Kite')!.text).toBe('Application due')
-    expect(items.find((i) => i.company === 'Offer')!.deadline).toBe('2026-11-28')
+    expect(items.find((i) => i.company === 'Offer')!.deadline).toBe('2026-11-26')
+  })
+
+  it('folds the deadline only when the step and deadline fall in the same section', () => {
+    const items = todayItems(
+      [
+        role('SameDay', 'applied', step('Call', TODAY, '10:00'), TODAY),
+        role('TodayThenWeek', 'applied', step('Prep', TODAY), '2026-11-24'),
+        role('OverdueThenToday', 'saved', step('Draft', '2026-11-20'), TODAY),
+        role('WeekThenLater', 'applied', step('Email', '2026-11-23'), '2026-12-05'),
+      ],
+      TODAY,
+    )
+    const rows = (company: string) => items.filter((i) => i.company === company)
+    expect(rows('SameDay').map((i) => [i.kind, i.deadline])).toEqual([['next-step', TODAY]])
+    for (const c of ['TodayThenWeek', 'OverdueThenToday', 'WeekThenLater']) {
+      expect(rows(c).map((i) => i.kind).sort()).toEqual(['deadline', 'next-step'])
+      expect(rows(c).every((i) => i.deadline === undefined)).toBe(true)
+    }
+    // The deadline due today counts as its own row under Due today.
+    const dueToday = groupToday(items, TODAY).find((s) => s.key === 'today')!
+    expect(dueToday.label).toBe('Due today')
+    expect(dueToday.items.map((i) => `${i.company}:${i.kind}`)).toEqual(['SameDay:next-step', 'TodayThenWeek:next-step', 'OverdueThenToday:deadline'])
   })
 
   it('keeps a separate deadline row when the step is later than the deadline', () => {
@@ -66,6 +100,28 @@ describe('groupToday', () => {
     expect(groupToday([], TODAY)).toEqual([])
     expect(sectionOf({ due: '2026-11-27' }, TODAY)).toBe('week')
     expect(sectionOf({ due: '2026-11-28' }, TODAY)).toBe('later')
+  })
+})
+
+describe('filter and attention count', () => {
+  const item = (company: string, text: string, due = TODAY): TodayItem => ({ roleId: company, company, title: 'ML Intern', stage: 'applied', kind: 'next-step', text, due, time: '' })
+
+  it('matches every word against company, title and step text', () => {
+    expect(itemMatches(item('Stripe', 'Follow up'), '')).toBe(true)
+    expect(itemMatches(item('Stripe', 'Follow up'), 'stripe')).toBe(true)
+    expect(itemMatches(item('Stripe', 'Follow up'), 'ml follow')).toBe(true)
+    expect(itemMatches(item('Stripe', 'Follow up'), 'stripe recruiter')).toBe(false)
+    const p = { company: 'Ramp', title: 'SWE Intern', summary: 'Invites you to a phone screen.', nextStep: { text: 'Pick a time', due: '', time: '' } }
+    expect(proposalMatches(p, 'ramp')).toBe(true)
+    expect(proposalMatches(p, 'phone screen')).toBe(true)
+    expect(proposalMatches(p, 'pick')).toBe(true)
+    expect(proposalMatches({ ...p, nextStep: null }, 'pick')).toBe(false)
+  })
+
+  it('counts pending proposals plus overdue and due-today rows', () => {
+    const items = [item('A', 'x', '2026-11-19'), item('B', 'x'), item('C', 'x', '2026-11-23'), item('D', 'x', '')]
+    expect(attentionCount(items, 2, TODAY)).toBe(4)
+    expect(attentionCount([], 0, TODAY)).toBe(0)
   })
 })
 

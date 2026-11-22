@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { Icon } from '@renderer/components/Icon'
 import { api } from '@renderer/lib/api'
+import { Monogram } from '@renderer/features/board/RoleCard'
 import { PaneHeader } from '@renderer/features/settings/PaneHeader'
 import { ChipInput, fullDate, Note, words } from '@renderer/features/settings/ProfilePanel'
 import {
@@ -19,6 +20,7 @@ import './tracks.css'
 let localId = 0
 const newAnswerId = () => `new-${Date.now().toString(36)}-${localId++}`
 const SAVE_DELAY = 900
+const NAME_REQUIRED = 'Give this track a name.'
 
 // ---------------------------------------------------------------------------
 // Resume for one track
@@ -96,7 +98,7 @@ function TrackResume({ track, onProfile }: { track: ApplicationTrack; onProfile:
             <>
               <button type="button" className="settings-disclosure" aria-expanded={showText} onClick={() => setShowText((s) => !s)}>
                 <Icon name="chevronDown" />
-                {showText ? 'Hide extracted text' : 'Preview extracted text'}
+                {showText ? 'Hide extracted text' : 'Show extracted text'}
               </button>
               {showText && (
                 <pre className="pf-resume-text" tabIndex={0} aria-label={`Text read from the resume for ${track.name}`}>
@@ -262,13 +264,15 @@ function TrackCard({ track, index, count, profileAnswers, encrypted, autoFocusNa
   }, [autoFocusName])
 
   const errors = validateTrack({ ...track, ...draft })
+  // A cleared name isn't saved; say so under the name instead of failing quietly.
+  const nameErr = state === 'error' && !draft.name.trim() ? NAME_REQUIRED : undefined
 
   const flush = useCallback(async () => {
     if (timer.current) clearTimeout(timer.current)
     timer.current = null
     if (!dirty.current) return
     const d = latest.current
-    if (Object.keys(validateTrack({ ...track, ...d })).length) {
+    if (!d.name.trim() || Object.keys(validateTrack({ ...track, ...d })).length) {
       setState('error')
       return
     }
@@ -354,28 +358,36 @@ function TrackCard({ track, index, count, profileAnswers, encrypted, autoFocusNa
         <Icon name="check" />
         Saved
       </span>
-    ) : state === 'error' && error ? (
+    ) : state === 'error' ? (
       <span className="trk-status is-error">Not saved</span>
     ) : null
 
   return (
     <article ref={cardRef} className={`trk-card${isDefault ? ' is-default' : ''}`} aria-labelledby={`${uid}-name`} onBlur={(e) => !e.currentTarget.contains(e.relatedTarget as Node | null) && void flush()}>
       <header className="trk-card-head">
-        <span className="trk-badge" aria-hidden="true">
-          {(draft.name.trim()[0] ?? '?').toUpperCase()}
+        <span className="trk-badge">
+          <Monogram name={draft.name} size={34} />
         </span>
         <div className="trk-title">
           <input
             ref={nameRef}
             id={`${uid}-name`}
-            className="trk-name"
+            className={`trk-name${nameErr ? ' is-invalid' : ''}`}
             value={draft.name}
             maxLength={80}
             aria-label="Track name"
+            aria-invalid={nameErr ? true : undefined}
+            aria-describedby={nameErr ? `${uid}-name-err` : undefined}
+            title="Rename"
             placeholder="Name this track"
             onChange={(e) => edit((d) => ({ ...d, name: e.target.value }))}
             onKeyDown={(e) => e.key === 'Enter' && (e.currentTarget.blur(), void flush())}
           />
+          {nameErr && (
+            <small id={`${uid}-name-err`} className="pf-error trk-name-error">
+              {nameErr}
+            </small>
+          )}
           <input
             className="trk-desc"
             value={draft.description}
@@ -443,12 +455,12 @@ function TrackCard({ track, index, count, profileAnswers, encrypted, autoFocusNa
 
       <div className="trk-grid">
         <ChipInput
-          label="Target roles"
+          label="Target roles for this track"
           values={draft.targetRoles}
           onChange={(v) => edit((d) => ({ ...d, targetRoles: v }), true)}
           placeholder="e.g. Photonics intern"
         />
-        <ChipInput label="Keywords" values={draft.keywords} onChange={(v) => edit((d) => ({ ...d, keywords: v }), true)} placeholder="e.g. silicon photonics, optics" />
+        <ChipInput label="Keywords for this track" values={draft.keywords} onChange={(v) => edit((d) => ({ ...d, keywords: v }), true)} placeholder="e.g. silicon photonics, optics" />
       </div>
 
       <div className="trk-answers">

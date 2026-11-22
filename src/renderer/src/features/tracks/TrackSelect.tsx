@@ -5,9 +5,10 @@ import './tracks.css'
 
 /**
  * Picks the application track (resume + answers) for a role. Hidden while the
- * user has a single track. Shows which resume file the role will use.
+ * user has a single track. Shows which resume file the role will use, and an
+ * optional note under it (the role dialog's "save first" hint).
  */
-export function TrackSelect({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+export function TrackSelect({ value, onChange, note }: { value: string; onChange: (id: string) => void; note?: string }) {
   const id = useId()
   const [profile, setProfile] = useState<Profile | null>(null)
   useEffect(() => {
@@ -39,11 +40,12 @@ export function TrackSelect({ value, onChange }: { value: string; onChange: (id:
   return (
     <div className="field">
       <label htmlFor={id}>Application track</label>
-      <select id={id} value={current.id} onChange={(e) => onChange(e.target.value)} aria-describedby={`${id}-d`}>
+      <select id={id} value={current.id} onChange={(e) => onChange(e.target.value)} aria-describedby={note ? `${id}-d ${id}-n` : `${id}-d`}>
+        {/* "(default)" marks the first track in the list only; the closed select shows just the name. */}
         {tracks.map((t, i) => (
           <option key={t.id} value={t.id}>
             {t.name}
-            {i === 0 ? ' (default)' : ''}
+            {i === 0 && t.id !== current.id ? ' (default)' : ''}
           </option>
         ))}
       </select>
@@ -57,6 +59,11 @@ export function TrackSelect({ value, onChange }: { value: string; onChange: (id:
       ) : (
         <span id={`${id}-d`} className="hint trk-select-resume is-empty">
           {description}
+        </span>
+      )}
+      {note && (
+        <span id={`${id}-n`} className="hint trk-select-note">
+          {note}
         </span>
       )}
     </div>

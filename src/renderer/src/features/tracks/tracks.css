@@ -87,21 +87,14 @@
   align-items: flex-start;
   gap: 10px;
 }
+/* Every track gets the same monogram tile; the Default chip marks the default. */
 .trk-badge {
   flex: none;
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
+  display: flex;
   margin-top: 1px;
-  border-radius: var(--r-md);
-  background: var(--surface-sunken);
-  color: var(--ink-2);
-  font: 650 var(--fs-title)/1 var(--font-display);
 }
-.trk-card.is-default .trk-badge {
-  background: var(--accent-soft);
-  color: var(--accent);
+.trk-badge .monogram {
+  border-radius: var(--r-md);
 }
 .trk-title {
   flex: 1;
@@ -109,7 +102,7 @@
   display: flex;
   flex-direction: column;
 }
-/* Name and description edit in place: they look like text until hovered or focused. */
+/* Name and description edit in place: text at rest, a field outline on hover, a ring on focus. */
 .trk-name,
 .trk-desc {
   width: 100%;
@@ -137,8 +130,13 @@
 .trk-desc::placeholder {
   color: var(--ink-4);
 }
+.trk-name,
+.trk-desc {
+  cursor: text;
+}
 .trk-name:hover,
 .trk-desc:hover {
+  border-color: var(--line-strong);
   background: var(--surface-hover);
 }
 .trk-name:focus,
@@ -146,6 +144,17 @@
   border-color: var(--accent);
   background: var(--surface);
   box-shadow: var(--ring);
+}
+.trk-name.is-invalid,
+.trk-name.is-invalid:hover {
+  border-color: var(--danger);
+}
+.trk-name.is-invalid:focus {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 22%, transparent);
+}
+.trk-name-error {
+  margin: 2px 0 3px;
 }
 .trk-head-side {
   flex: none;

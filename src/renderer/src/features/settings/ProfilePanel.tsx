@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useImperativeHandle, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode, type Ref } from 'react'
 import { Icon } from '@renderer/components/Icon'
+import { Switch } from '@renderer/components/Switch'
 import { api } from '@renderer/lib/api'
 import {
   displayName,
@@ -198,19 +199,6 @@ export function ChipInput({
         </small>
       )}
     </div>
-  )
-}
-
-function Switch({ checked, onChange, label, hint }: { checked: boolean; onChange: (v: boolean) => void; label: string; hint?: string }) {
-  return (
-    <label className="pf-switch">
-      <input type="checkbox" role="switch" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-      <span className="pf-switch-track" aria-hidden="true" />
-      <span className="pf-switch-text">
-        {label}
-        {hint && <small>{hint}</small>}
-      </span>
-    </label>
   )
 }
 
@@ -850,7 +838,11 @@ export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<Profile
 
         <ResumeSection resume={draft.resume} defaultTrack={draft.tracks[0]?.name} onImported={onResumeImported} onRemoved={onResumeRemoved} />
 
-        <Section id="prefs" title="What you’re looking for" hint="Find roles and the assistant use this to pick and rank roles. Press Enter or a comma after each item.">
+        <Section
+          id="prefs"
+          title="What you’re looking for"
+          hint="Applies to every track; each track can add its own. Find roles and the assistant use it to rank roles. Press Enter or a comma after each item."
+        >
           <ChipInput label="Target roles" placeholder="e.g. ML inference intern" values={draft.preferences.targetRoles} onChange={setPref('targetRoles')} />
           <ChipInput label="Locations" placeholder="e.g. San Francisco Bay Area" values={draft.preferences.locations} onChange={setPref('locations')} />
           <Switch

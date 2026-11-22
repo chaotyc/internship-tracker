@@ -14,6 +14,7 @@ import {
   type WatchCompany,
 } from '@shared/search'
 import { Icon } from '@renderer/components/Icon'
+import { Switch } from '@renderer/components/Switch'
 import { useToast } from '@renderer/components/Toast'
 import { api } from '@renderer/lib/api'
 import { since } from '@renderer/lib/format'
@@ -88,14 +89,7 @@ function CheckLine({ st, board, off, always = false }: { st?: BoardStatus; board
 function SourceSwitch({ checked, onChange, label, hint, children }: { checked: boolean; onChange: (v: boolean) => void; label: string; hint: ReactNode; children?: ReactNode }) {
   return (
     <li className="src-row">
-      <label className="src-switch">
-        <input type="checkbox" role="switch" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-        <span className="src-switch-track" aria-hidden="true" />
-        <span className="src-switch-text">
-          {label}
-          <small>{hint}</small>
-        </span>
-      </label>
+      <Switch checked={checked} onChange={onChange} label={label} hint={hint} />
       {children && <div className="src-extra">{children}</div>}
     </li>
   )

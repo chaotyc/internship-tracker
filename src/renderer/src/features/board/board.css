@@ -162,15 +162,11 @@
   display: flex;
   gap: 2px;
 }
+/* Always visible at full strength: secondary ink clears 3:1 on the lane in both themes. */
 .col-add {
   width: 26px;
   height: 26px;
-  opacity: 0.4;
-  transition: opacity 0.12s;
-}
-.col:hover .col-add,
-.col-add:focus-visible {
-  opacity: 1;
+  color: var(--ink-3);
 }
 .col-body {
   flex: 1;
@@ -480,13 +476,31 @@ body.is-dragging * {
   text-overflow: ellipsis;
 }
 
-/* Beside the assistant the lane is narrow: "Applied 6w" keeps the verb and drops "ago". */
-.card-age-short {
+/* Beside the assistant the lane is narrow: the age reads "3w" and "Found for you" reads "Found".
+   The full wording stays in the tooltip, and the short label never clips. */
+.card-foot-short {
   display: none;
 }
-.app.has-panel .card-age-full {
+.app.has-panel .card-foot {
+  gap: 4px 8px;
+}
+.app.has-panel .card-foot-full {
   display: none;
 }
-.app.has-panel .card-age-short {
+.app.has-panel .card-foot-short {
   display: inline;
+}
+.app.has-panel .card-foot > .card-age,
+.app.has-panel .card-foot > .card-found {
+  flex-shrink: 0;
+  min-width: auto;
+}
+
+/* Role dialog: a group heading after the first one sits outside the grids, with the same rule above it. */
+.role-form > .form-group:not(:first-child) {
+  margin-top: 8px;
+}
+/* "Save to use this track for autofill" under the track select. */
+.role-form .trk-select-note {
+  color: var(--ink-2);
 }

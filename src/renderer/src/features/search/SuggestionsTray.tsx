@@ -7,7 +7,7 @@ import { ago } from '@renderer/lib/format'
 import { FitMeter, Monogram } from '@renderer/features/board/RoleCard'
 import { fitFromScore } from './labels'
 import { useEdgeFade } from './useEdgeFade'
-import { partCandidates, useFitText, wordCandidates } from './useFitText'
+import { useFitText, wordCandidates } from './useFitText'
 import { setSuggestionState, useSuggestionState } from './useSuggestionState'
 import './search.css'
 
@@ -65,8 +65,7 @@ function FitText({ as: Tag = 'span', className, candidates, title }: { as?: 'spa
 
 /** One suggestion card. */
 function SuggestionCard({ s, busy, act }: { s: Suggestion; busy: boolean; act: (s: Suggestion, kind: 'add' | 'dismiss') => void }) {
-  const meta = metaParts(s)
-  const metaTitle = [s.postedAt && `Posted ${ago(s.postedAt)}`, s.location, s.pay].filter(Boolean).join(' · ')
+  const place = [s.location, s.pay].filter(Boolean)
   const from = sourceLine(s)
   const title = useFitText<HTMLAnchorElement>(wordCandidates(displayTitle(s.title)))
   return (
@@ -84,7 +83,23 @@ function SuggestionCard({ s, busy, act }: { s: Suggestion; busy: boolean; act: (
       </div>
       <div className="sugg-meta">
         <MatchMeter score={s.score} rankedBy={s.rankedBy} />
-        {meta.length > 0 && <FitText className="sugg-meta-text" candidates={partCandidates(meta)} title={metaTitle} />}
+        {s.postedAt && (
+          <span className="sugg-meta-text" title={`Posted ${ago(s.postedAt)}`}>
+            {ago(s.postedAt)}
+          </span>
+        )}
+      </div>
+      {/* Location and pay get their own line: location gives way with an ellipsis, pay stays whole. */}
+      <div className="sugg-place" title={place.join(' · ') || undefined}>
+        {place.length > 0 ? (
+          <div className="sugg-place-inner">
+            {place.map((m, i) => (
+              <span key={i}>{m}</span>
+            ))}
+          </div>
+        ) : (
+          '\u00a0'
+        )}
       </div>
       <FitText as="p" className="sugg-reason" candidates={wordCandidates(s.reason)} title={s.reason} />
       {from ? <FitText as="div" className="sugg-source" candidates={wordCandidates(from)} title={from} /> : <div className="sugg-source">{'\u00a0'}</div>}

@@ -50,7 +50,7 @@ export function AiPanel() {
       .catch((e: Error) => finish({ ok: false, detail: e.message }))
   }
 
-  const description = 'Which AI the assistant, autofill and search use. Nothing goes to any other provider.'
+  const description = 'Which AI the assistant, Fill in from link, Find roles and email matching use. Nothing goes to any other provider.'
   const header = <PaneHeader title="AI connections" description={description} />
   if (error && !statuses)
     return (
@@ -238,6 +238,7 @@ function ProviderCard(props: {
       {missing ? (
         <p className="ai-hint">{withCode(info.hint)}</p>
       ) : (
+        (info.kind === 'api' || isActive) && (
         <div className="ai-fields">
           {info.kind === 'api' && (
             <div className="field">
@@ -287,6 +288,7 @@ function ProviderCard(props: {
           </div>
           )}
         </div>
+        )
       )}
     </article>
   )

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { STAGES, type Role, type StageKey } from '@shared/roles'
 import { orderAt } from '@shared/order'
+import { attentionCount, localIso, todayItems } from '@shared/today'
 import { Icon } from './components/Icon'
 import { useToast } from './components/Toast'
 import { api, useRoles } from './lib/api'
@@ -26,6 +27,9 @@ export function App() {
   const [settings, setSettings] = useState<{ open: boolean; tab: SettingsTab }>({ open: false, tab: 'profile' })
   const [tray, setTray] = useState(false)
   const [view, setView] = useState<'board' | 'today'>('board')
+  const [todayMatches, setTodayMatches] = useState(0)
+  const [pendingEmails, setPendingEmails] = useState(0)
+  const [day, setDay] = useState(localIso())
   const searchRef = useRef<HTMLInputElement>(null)
   const csvRef = useRef<HTMLInputElement>(null)
 
@@ -89,6 +93,23 @@ export function App() {
     }
   }, [])
 
+  // The Today tab's count: pending email proposals, plus what's overdue or due today. Rolls over at midnight.
+  useEffect(() => {
+    const loadPending = () =>
+      api
+        .invoke('today:proposals')
+        .then((p) => setPendingEmails(p.length))
+        .catch(() => {})
+    loadPending()
+    const off = api.on('today:changed', loadPending)
+    const tick = setInterval(() => setDay(localIso()), 60_000)
+    return () => {
+      off()
+      clearInterval(tick)
+    }
+  }, [])
+  const attention = useMemo(() => attentionCount(todayItems(roles ?? [], day), pendingEmails, day), [roles, pendingEmails, day])
+
   // Keyboard: / filter, N add, ⌘J assistant, ⌘, settings.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -121,7 +142,9 @@ export function App() {
     return STAGES.map((s) => ({ ...s, n: g[s.key].length }))
   }, [roles])
   const active = counts.filter((c) => c.key === 'applied' || c.key === 'interviewing' || c.key === 'offer').reduce((a, c) => a + c.n, 0)
-  const visibleCount = useMemo(() => (roles ?? []).filter((r) => matchesQuery(r, query)).length, [roles, query])
+  const boardCount = useMemo(() => (roles ?? []).filter((r) => matchesQuery(r, query)).length, [roles, query])
+  // The filter count follows the view on screen.
+  const visibleCount = view === 'today' ? todayMatches : boardCount
   const editing: Role | null = dialog.id ? (roles?.find((r) => r.id === dialog.id) ?? null) : null
 
   return (
@@ -147,9 +170,22 @@ export function App() {
             <Icon name="board" />
             Board
           </button>
-          <button type="button" role="tab" aria-selected={view === 'today'} className={view === 'today' ? 'is-on' : ''} onClick={() => setView('today')}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === 'today'}
+            className={view === 'today' ? 'is-on' : ''}
+            onClick={() => setView('today')}
+            title={attention ? `${attention} to look at: email updates, overdue and due today` : undefined}
+          >
             <Icon name="sun" />
             Today
+            {attention > 0 && (
+              <span className="view-count tabular">
+                {attention}
+                <span className="visually-hidden"> to look at</span>
+              </span>
+            )}
           </button>
         </div>
         <div className="topbar-actions">
@@ -216,14 +252,14 @@ export function App() {
             </div>
           )}
           {view === 'today' ? (
-            <TodayView onOpenRole={openRole} />
+            <TodayView onOpenRole={openRole} onAddRole={() => addRole()} query={query} onClearQuery={() => setQuery('')} onMatchCount={setTodayMatches} />
           ) : roles && roles.length === 0 ? (
             <EmptyState
               onAdd={() => addRole()}
               onImport={() => csvRef.current?.click()}
               onProfile={() => setSettings({ open: true, tab: 'profile' })}
             />
-          ) : query && roles && visibleCount === 0 ? (
+          ) : query && roles && boardCount === 0 ? (
             <div className="no-match">
               <p>
                 No roles match <strong>“{query}”</strong>.

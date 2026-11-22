@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { FITS, STAGES, type NextStep, type Role, type RoleInput, type StageKey } from '@shared/roles'
+import { normalizeLink } from '@shared/profile'
 import { NextStepField } from '@renderer/features/today/NextStepField'
 import { TrackSelect } from '@renderer/features/tracks/TrackSelect'
 import { DateField } from '@renderer/components/DateField'
@@ -53,6 +54,18 @@ const EMPTY: Form = {
 
 const DETAIL_KEYS: (keyof Form)[] = ['why', 'watch', 'priority', 'postingStatus']
 const MOD = navigator.userAgent.includes('Mac') ? '⌘' : 'Ctrl+'
+
+/** The link as a fetchable https URL ("boards.greenhouse.io/x" gains https://), or '' when it isn't a web link. */
+function webLink(v: string): string {
+  const n = normalizeLink(v)
+  if (!n) return ''
+  try {
+    const u = new URL(n)
+    return /^https?:$/.test(u.protocol) && u.hostname.includes('.') ? n : ''
+  } catch {
+    return ''
+  }
+}
 
 interface Props {
   open: boolean
@@ -141,11 +154,12 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
   }
 
   const readLink = async () => {
-    const url = form.link.trim()
-    if (!/^https?:\/\//.test(url)) {
-      setReadNote({ text: 'Paste a full link that starts with https://', tone: 'error' })
+    const url = webLink(form.link)
+    if (!url) {
+      setReadNote({ text: 'Paste the posting link, like boards.greenhouse.io/…', tone: 'error' })
       return
     }
+    if (url !== form.link) setForm((f) => ({ ...f, link: url }))
     setReading(true)
     setReadNote({ text: 'Reading the posting…', tone: '' })
     try {
@@ -186,11 +200,12 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
     }
     setSaving(true)
     try {
+      const data = { ...form, link: webLink(form.link) || form.link.trim() }
       if (role) {
-        await api.invoke('roles:update', { id: role.id, patch: form })
+        await api.invoke('roles:update', { id: role.id, patch: data })
         toast(`Saved ${form.company}.`)
       } else {
-        await api.invoke('roles:create', { ...form, source: 'manual' })
+        await api.invoke('roles:create', { ...data, source: 'manual' })
         toast(`Added ${form.company} to ${STAGES.find((s) => s.key === form.stage)?.label}.`)
       }
       if (pendingLeave === 'assistant' && role) onAskAssistant(role.id)
@@ -219,8 +234,145 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
   }
 
   const cls = (k: keyof Form) => [filled.has(k) ? 'is-filled' : '', errors[k as 'company'] ? 'is-invalid' : ''].join(' ').trim() || undefined
-  const linkOk = /^https?:\/\//.test(form.link.trim())
-  const linkChanged = !!role && form.link.trim() !== role.link
+  const linkUrl = webLink(form.link)
+  const linkOk = !!linkUrl
+  const linkChanged = !!role && (linkUrl || form.link.trim()) !== (webLink(role.link) || role.link)
+  // Autofill reads the saved role, so a changed link or track must be saved first.
+  const trackChanged = !!role && form.trackId !== (role.trackId ?? '')
+
+  // Editing opens on Progress (what changes most); adding stays link-first with Posting on top.
+  const postingGroup = (
+    <>
+      {showForm && <h3 className="form-group">Posting</h3>}
+      <section className={`link-row${showForm ? '' : ' is-start'}`}>
+        <label className="field link-field">
+          <span>Link</span>
+          <div className="link-input">
+            <Icon name="link" />
+            <input
+              value={form.link}
+              placeholder="https://job-boards.greenhouse.io/…"
+              onChange={(e) => set('link', e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) {
+                  e.preventDefault()
+                  void readLink()
+                }
+              }}
+              data-autofocus={role ? undefined : true}
+              spellCheck={false}
+            />
+            {linkOk && (
+              <a className="icon-btn" href={linkUrl} target="_blank" rel="noreferrer" title={`Open on ${hostOf(linkUrl)}`}>
+                <Icon name="external" />
+              </a>
+            )}
+          </div>
+        </label>
+        <button
+          type="button"
+          className={`btn${role ? ' btn-ghost' : !showForm ? ' btn-primary' : ''}`}
+          onClick={readLink}
+          disabled={reading || !form.link.trim()}
+        >
+          <Icon name={role ? 'refresh' : 'wand'} />
+          {reading ? 'Reading…' : role ? 'Re-read posting' : 'Fill in from link'}
+        </button>
+      </section>
+      {readNote.text && <p className={`read-note ${readNote.tone}`}>{readNote.text}</p>}
+      {linkChanged && role?.link !== undefined && linkOk && <p className="read-note">Save to use Autofill with the new link.</p>}
+      {!showForm && (
+        <button type="button" className="manual-link" onClick={() => setManual(true)}>
+          No link? Enter the details yourself
+        </button>
+      )}
+      {showForm && (
+        <div className="grid-2">
+          <label className="field">
+            <span>
+              Company<span className="req">*</span>
+            </span>
+            <input id="rd-company" className={cls('company')} value={form.company} onChange={(e) => set('company', e.target.value)} aria-invalid={!!errors.company} />
+            {errors.company && <span className="field-error">{errors.company}</span>}
+          </label>
+          <label className="field">
+            <span>
+              Role<span className="req">*</span>
+            </span>
+            <input id="rd-title" className={cls('title')} value={form.title} onChange={(e) => set('title', e.target.value)} aria-invalid={!!errors.title} />
+            {errors.title && <span className="field-error">{errors.title}</span>}
+          </label>
+          <label className="field">
+            <span>Location</span>
+            <input className={cls('location')} value={form.location} onChange={(e) => set('location', e.target.value)} />
+          </label>
+          <label className="field">
+            <span>Pay</span>
+            <input className={cls('pay')} value={form.pay} placeholder="$45–60/hr" onChange={(e) => set('pay', e.target.value)} />
+          </label>
+        </div>
+      )}
+    </>
+  )
+  const progressGroup = (
+    <>
+      <h3 className="form-group">Progress</h3>
+      <div className="grid-2">
+        <label className="field">
+          <span>Stage</span>
+          {/* Same stage dot as the board, beside the selected value. */}
+          <div className="select-adorn" style={{ ['--stage' as string]: `var(--stage-${form.stage})` }}>
+            <span className="adorn-dot" aria-hidden="true" />
+            <select value={form.stage} onChange={(e) => set('stage', e.target.value as StageKey)}>
+              {STAGES.map((s) => (
+                <option key={s.key} value={s.key}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </label>
+        <label className="field">
+          <span>Job fit</span>
+          {/* Same four-bar meter as the cards, beside the selected value. */}
+          <div className={`select-adorn${form.fit ? '' : ' is-bare'}`}>
+            {form.fit && (
+              <span className="adorn-meter fit-bars" aria-hidden="true">
+                {[1, 2, 3, 4].map((i) => (
+                  <i key={i} className={i <= ({ Strong: 4, Good: 3, Moderate: 2, Weak: 1 } as const)[form.fit as 'Strong'] ? 'on' : ''} />
+                ))}
+              </span>
+            )}
+            <select className={cls('fit')} value={form.fit} onChange={(e) => set('fit', e.target.value as Form['fit'])}>
+              <option value="">Not rated</option>
+              {FITS.map((f) => (
+                <option key={f}>{f}</option>
+              ))}
+            </select>
+          </div>
+        </label>
+        <div className="wide track-row">
+          <TrackSelect
+            value={form.trackId}
+            onChange={(id) => set('trackId', id)}
+            note={trackChanged && role?.link ? 'Save to use this track for autofill.' : undefined}
+          />
+        </div>
+        <DateField id="rd-deadline" label="Deadline" className={cls('deadline')} value={form.deadline} onChange={(v) => set('deadline', v)} />
+        <DateField id="rd-applied" label="Applied on" value={form.appliedOn} onChange={(v) => set('appliedOn', v)} placeholder="Not yet" />
+        <NextStepField value={form.nextStep} onChange={(v) => set('nextStep', v)} />
+        <label className="field wide">
+          <span>Notes</span>
+          <textarea
+            rows={2}
+            value={form.notes}
+            placeholder="Next step, interview times, recruiter name"
+            onChange={(e) => set('notes', e.target.value)}
+          />
+        </label>
+      </div>
+    </>
+  )
 
   return (
     <Dialog
@@ -241,7 +393,7 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
         )
       }
       subtitle={role ? undefined : 'Paste the posting link and the details fill in for you.'}
-      headerExtra={role && role.link && !linkChanged ? <AutofillButton roleId={role.id} link={role.link} /> : undefined}
+      headerExtra={role && role.link && !linkChanged && !trackChanged ? <AutofillButton roleId={role.id} link={role.link} /> : undefined}
       footer={
         !showForm && !confirmClose ? undefined : confirmClose ? (
           <div className="discard-bar" role="alert">
@@ -265,6 +417,7 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
                 {armed ? 'Click again to delete' : 'Delete'}
               </button>
             )}
+            {role && <span className="foot-divider" aria-hidden="true" />}
             {role && (
               <button type="button" className="btn btn-ghost" onClick={askAssistant}>
                 <Icon name="chat" />
@@ -300,126 +453,20 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
           }
         }}
       >
-        {showForm && <h3 className="form-group">Posting</h3>}
-        <section className={`link-row${showForm ? '' : ' is-start'}`}>
-          <label className="field link-field">
-            <span>Link</span>
-            <div className="link-input">
-              <Icon name="link" />
-              <input
-                value={form.link}
-                placeholder="https://job-boards.greenhouse.io/…"
-                onChange={(e) => set('link', e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) {
-                    e.preventDefault()
-                    void readLink()
-                  }
-                }}
-                data-autofocus={role ? undefined : true}
-                spellCheck={false}
-              />
-              {linkOk && (
-                <a className="icon-btn" href={form.link} target="_blank" rel="noreferrer" title={`Open on ${hostOf(form.link)}`}>
-                  <Icon name="external" />
-                </a>
-              )}
-            </div>
-          </label>
-          <button
-            type="button"
-            className={`btn${role ? ' btn-ghost' : !showForm ? ' btn-primary' : ''}`}
-            onClick={readLink}
-            disabled={reading || !form.link.trim()}
-          >
-            <Icon name={role ? 'refresh' : 'wand'} />
-            {reading ? 'Reading…' : role ? 'Re-read posting' : 'Fill in from link'}
-          </button>
-        </section>
-        {readNote.text && <p className={`read-note ${readNote.tone}`}>{readNote.text}</p>}
-        {linkChanged && role?.link !== undefined && linkOk && <p className="read-note">Save to use Autofill with the new link.</p>}
-        {!showForm && (
-          <button type="button" className="manual-link" onClick={() => setManual(true)}>
-            No link? Enter the details yourself
-          </button>
+        {role ? (
+          <>
+            {progressGroup}
+            {postingGroup}
+          </>
+        ) : (
+          <>
+            {postingGroup}
+            {showForm && progressGroup}
+          </>
         )}
 
         {showForm && (
           <>
-            <div className="grid-2">
-              <label className="field">
-                <span>
-                  Company<span className="req">*</span>
-                </span>
-                <input id="rd-company" className={cls('company')} value={form.company} onChange={(e) => set('company', e.target.value)} aria-invalid={!!errors.company} />
-                {errors.company && <span className="field-error">{errors.company}</span>}
-              </label>
-              <label className="field">
-                <span>
-                  Role<span className="req">*</span>
-                </span>
-                <input id="rd-title" className={cls('title')} value={form.title} onChange={(e) => set('title', e.target.value)} aria-invalid={!!errors.title} />
-                {errors.title && <span className="field-error">{errors.title}</span>}
-              </label>
-              <label className="field">
-                <span>Location</span>
-                <input className={cls('location')} value={form.location} onChange={(e) => set('location', e.target.value)} />
-              </label>
-              <label className="field">
-                <span>Pay</span>
-                <input className={cls('pay')} value={form.pay} placeholder="$45–60/hr" onChange={(e) => set('pay', e.target.value)} />
-              </label>
-              <h3 className="form-group wide">Progress</h3>
-              <label className="field">
-                <span>Stage</span>
-                {/* Same stage dot as the board, beside the selected value. */}
-                <div className="select-adorn" style={{ ['--stage' as string]: `var(--stage-${form.stage})` }}>
-                  <span className="adorn-dot" aria-hidden="true" />
-                  <select value={form.stage} onChange={(e) => set('stage', e.target.value as StageKey)}>
-                    {STAGES.map((s) => (
-                      <option key={s.key} value={s.key}>
-                        {s.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </label>
-              <label className="field">
-                <span>Job fit</span>
-                {/* Same four-bar meter as the cards, beside the selected value. */}
-                <div className={`select-adorn${form.fit ? '' : ' is-bare'}`}>
-                  {form.fit && (
-                    <span className="adorn-meter fit-bars" aria-hidden="true">
-                      {[1, 2, 3, 4].map((i) => (
-                        <i key={i} className={i <= ({ Strong: 4, Good: 3, Moderate: 2, Weak: 1 } as const)[form.fit as 'Strong'] ? 'on' : ''} />
-                      ))}
-                    </span>
-                  )}
-                  <select className={cls('fit')} value={form.fit} onChange={(e) => set('fit', e.target.value as Form['fit'])}>
-                    <option value="">Not rated</option>
-                    {FITS.map((f) => (
-                      <option key={f}>{f}</option>
-                    ))}
-                  </select>
-                </div>
-              </label>
-              <div className="wide track-row">
-                <TrackSelect value={form.trackId} onChange={(id) => set('trackId', id)} />
-              </div>
-              <DateField id="rd-deadline" label="Deadline" className={cls('deadline')} value={form.deadline} onChange={(v) => set('deadline', v)} />
-              <DateField id="rd-applied" label="Applied on" value={form.appliedOn} onChange={(v) => set('appliedOn', v)} placeholder="Not yet" />
-              <NextStepField value={form.nextStep} onChange={(v) => set('nextStep', v)} />
-              <label className="field wide">
-                <span>Notes</span>
-                <textarea
-                  rows={2}
-                  value={form.notes}
-                  placeholder="Next step, interview times, recruiter name"
-                  onChange={(e) => set('notes', e.target.value)}
-                />
-              </label>
-            </div>
-
             <details className="more" open={moreOpen} onToggle={(e) => setMoreOpen((e.target as HTMLDetailsElement).open)}>
               <summary>
                 <Icon name="chevronDown" />

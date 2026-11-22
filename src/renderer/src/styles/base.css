@@ -283,6 +283,75 @@ select.input {
   background: var(--accent-soft);
 }
 
+/* Switch (components/Switch.tsx): the one on/off control. A white thumb in both themes;
+   the off track is darker than the surface in light and lighter than it in dark. */
+.switch {
+  --switch-off: var(--line-strong);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: fit-content;
+  cursor: pointer;
+}
+.switch input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.switch-track {
+  position: relative;
+  flex: none;
+  width: 32px;
+  height: 18px;
+  margin-top: 1px;
+  border-radius: 999px;
+  background: var(--switch-off);
+  transition: background 0.15s;
+}
+.switch-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s;
+}
+.switch input:checked + .switch-track {
+  background: var(--accent);
+}
+.switch input:checked + .switch-track::after {
+  transform: translateX(14px);
+}
+.switch input:focus-visible + .switch-track {
+  box-shadow: var(--ring);
+}
+.switch:has(input:disabled) {
+  cursor: default;
+  opacity: 0.55;
+}
+.switch-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-weight: 550;
+}
+.switch-text small {
+  font-weight: 400;
+  font-size: var(--fs-meta);
+  line-height: 1.4;
+  color: var(--ink-3);
+}
+@media (prefers-color-scheme: dark) {
+  .switch {
+    --switch-off: var(--ink-4);
+  }
+}
+
 .kbd {
   font: 500 var(--fs-label)/1 var(--font-mono);
   padding: 2px 5px;
