@@ -19,6 +19,6 @@ First public release.
 - **Autofill** for Greenhouse, Ashby and Lever applications. It never submits.
 - **AI connections** through Claude Code, Codex or Gemini CLI sign-ins, or Anthropic, OpenAI and Gemini API keys.
 - Encrypted local profile, JSON export and erase-everything.
-- Installers for macOS (Apple Silicon and Intel), Windows and Linux.
+- Installers for macOS (Apple Silicon and Intel), Windows and Linux (`.deb` and AppImage), smoke-tested on all three in CI.
 
 [1.0.0]: https://github.com/chaotyc/internship-tracker/releases/tag/v1.0.0

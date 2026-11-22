@@ -7,6 +7,7 @@ import { Settings, settingsMigration } from './settings'
 import { features } from './features'
 import { seedDemo } from './demo'
 import { isHeadless } from './headless'
+import { isSmoke, runSmoke } from './smoke'
 import type { FeatureContext, Services } from './context'
 
 let mainWindow: BrowserWindow | null = null
@@ -84,7 +85,7 @@ async function start(): Promise<void> {
   const store = await openStore(demo ? null : join(dataDir, 'tracker.sqlite'))
   store.migrate([settingsMigration, secretsMigration, ...features.flatMap((f) => f.migrations)])
 
-  const secrets = new Secrets(store)
+  const secrets = new Secrets(store, { memory: demo })
   await secrets.load()
   const ctx: FeatureContext = {
     store,
@@ -98,6 +99,7 @@ async function start(): Promise<void> {
   if (demo) seedDemo(ctx.services.roles)
 
   mainWindow = createWindow()
+  if (isSmoke()) runSmoke(mainWindow, { view: process.env['TRACKER_VIEW'] ?? '' })
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow()
   })

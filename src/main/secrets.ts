@@ -15,15 +15,41 @@ export const secretsMigration = {
  * at once and writes the encrypted value in the background, in order; `flush()`
  * waits for those writes (call it before quitting or exporting).
  */
+/**
+ * On Linux without a keyring (GNOME Keyring, KWallet), Electron falls back to a
+ * hard-coded password ("basic_text"). That isn't real protection, so treat it as no
+ * keychain: the app then says so instead of claiming the data is encrypted.
+ */
+export function insecureLinuxBackend(platform: string = process.platform): boolean {
+  if (platform !== 'linux') return false
+  try {
+    const backend = safeStorage.getSelectedStorageBackend()
+    return backend === 'basic_text' || backend === 'unknown'
+  } catch {
+    return false
+  }
+}
+
 export class Secrets {
   private readonly cache = new Map<string, string>()
   private ok = false
   private writes: Promise<void> = Promise.resolve()
 
-  constructor(private readonly store: Store) {}
+  /**
+   * `memory`: keep secrets in memory only and never touch the OS keychain. Used for
+   * the throwaway demo database, so demo and test runs never trigger a keychain prompt.
+   */
+  constructor(
+    private readonly store: Store,
+    private readonly opts: { memory?: boolean } = {},
+  ) {}
 
   async load(): Promise<void> {
-    this.ok = await safeStorage.isAsyncEncryptionAvailable()
+    if (this.opts.memory) {
+      this.ok = true
+      return
+    }
+    this.ok = (await safeStorage.isAsyncEncryptionAvailable()) && !insecureLinuxBackend()
     if (!this.ok) return
     const rows = this.store.all<{ key: string; value: Uint8Array }>('SELECT key, value FROM secrets')
     for (const row of rows) {
@@ -58,12 +84,14 @@ export class Secrets {
 
   delete(key: string): void {
     this.cache.delete(key)
+    if (this.opts.memory) return
     this.writes = this.writes.then(() => this.store.run('DELETE FROM secrets WHERE key = ?', [key]))
   }
 
   /** Forgets every secret, in memory and on disk. */
   clear(): void {
     this.cache.clear()
+    if (this.opts.memory) return
     this.writes = this.writes.then(() => this.store.run('DELETE FROM secrets'))
   }
 
@@ -73,6 +101,7 @@ export class Secrets {
   }
 
   private queue(key: string, value: string): void {
+    if (this.opts.memory) return
     this.writes = this.writes
       .then(async () => {
         // Skip if the value changed or was deleted while this write waited its turn.

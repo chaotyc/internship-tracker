@@ -17,13 +17,16 @@ Get the latest installer from [Releases](https://github.com/chaotyc/internship-t
 | macOS (Apple Silicon) | `Internship-Tracker-<version>-mac-arm64.dmg` |
 | macOS (Intel) | `Internship-Tracker-<version>-mac-x64.dmg` |
 | Windows 10/11 | `Internship-Tracker-<version>-win-x64.exe` |
-| Linux | `Internship-Tracker-<version>-linux-x86_64.AppImage` |
+| Linux (Debian, Ubuntu) | `Internship-Tracker-<version>-linux-amd64.deb` |
+| Linux (other) | `Internship-Tracker-<version>-linux-x86_64.AppImage` |
 
 The builds aren't signed with a paid developer certificate yet, so your system will ask before the first launch:
 
 - **macOS:** open the app once, then go to **System Settings → Privacy & Security** and click **Open Anyway**.
 - **Windows:** on the SmartScreen prompt, click **More info → Run anyway**.
-- **Linux:** make the AppImage executable (`chmod +x Internship-Tracker-*.AppImage`) and run it.
+- **Linux:** install the `.deb` with `sudo apt install ./Internship-Tracker-*.deb`, or make the AppImage executable (`chmod +x Internship-Tracker-*.AppImage`) and run it. On Ubuntu 24.04 and later, the AppImage can't start Electron's sandbox; use the `.deb` there.
+
+On Linux, encryption uses your desktop's keyring (GNOME Keyring or KWallet). Without one, the app still works, but it says encryption is off and won't store saved answers, demographic answers, API keys or an inbox password.
 
 ## Features
 
@@ -74,6 +77,7 @@ npm run dev                  # run the app with hot reload
 TRACKER_DEMO=1 npm run dev   # with a sample board in a throwaway database
 npm run check                # type check and unit tests
 npm run dist                 # installers for your system, in ./release
+npm run dist:dir && npm run smoke   # package, then open each view off-screen and check it renders
 ```
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for how the code is organised and [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.

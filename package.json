@@ -28,7 +28,9 @@
     "dist": "electron-vite build && electron-builder",
     "dist:mac": "electron-vite build && electron-builder --mac",
     "dist:win": "electron-vite build && electron-builder --win",
-    "dist:linux": "electron-vite build && electron-builder --linux"
+    "dist:linux": "electron-vite build && electron-builder --linux",
+    "dist:dir": "electron-vite build && electron-builder --dir",
+    "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
     "imapflow": "2.11.0",
@@ -116,9 +118,17 @@
     "linux": {
       "icon": "build/icon.png",
       "category": "Office",
+      "maintainer": "chaotyc <chaotyc@users.noreply.github.com>",
+      "synopsis": "Track internship and job applications on your own computer",
       "target": [
         {
           "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
           "arch": [
             "x64"
           ]

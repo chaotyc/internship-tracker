@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
@@ -21,3 +22,67 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  # Packages the app on each system, opens it off-screen with the demo board and
+  # checks every main view renders. Screenshots are kept as a workflow artifact.
+  smoke:
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            pack: --mac dir --arm64
+          - os: windows-latest
+            pack: --win dir --x64
+          - os: ubuntu-latest
+            pack: --linux dir --x64
+    runs-on: ${{ matrix.os }}
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx electron-builder ${{ matrix.pack }} --publish never
+
+      - name: Smoke test (macOS, Windows)
+        if: runner.os != 'Linux'
+        run: node scripts/smoke.mjs
+        env:
+          SMOKE_EXPECT_KEYCHAIN: ok
+
+      - name: Linux setup
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb gnome-keyring dbus-x11
+          # Match an installed .deb: Electron's sandbox helper must be owned by root and setuid.
+          sudo chown root:root release/linux-unpacked/chrome-sandbox
+          sudo chmod 4755 release/linux-unpacked/chrome-sandbox
+
+      - name: Smoke test (Linux, no keyring)
+        if: runner.os == 'Linux'
+        # Without a keyring the app must still work, and must not claim encryption.
+        run: xvfb-run -a node scripts/smoke.mjs board today settings
+        env:
+          SMOKE_EXPECT_KEYCHAIN: unavailable
+
+      - name: Smoke test (Linux, GNOME keyring)
+        if: runner.os == 'Linux'
+        run: |
+          dbus-run-session -- bash -c '
+            echo -n ci | gnome-keyring-daemon --unlock --components=secrets > /dev/null
+            XDG_CURRENT_DESKTOP=GNOME SMOKE_EXPECT_KEYCHAIN=ok xvfb-run -a node scripts/smoke.mjs
+          '
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-screenshots-${{ runner.os }}
+          path: release/smoke/*.png
+          if-no-files-found: ignore

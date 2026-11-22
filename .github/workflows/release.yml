@@ -1,8 +1,7 @@
 name: Release
 
-# Push a tag like v1.0.0 to build the app for macOS, Windows and Linux.
-# electron-builder uploads the installers to a draft GitHub release with the same
-# name; review it and click Publish.
+# Push a tag like v1.0.0. The checks and smoke tests run first; then each system's
+# installers are built and attached to a draft GitHub release. Review it and publish.
 on:
   push:
     tags: ['v*']
@@ -11,7 +10,11 @@ permissions:
   contents: write
 
 jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+
   build:
+    needs: test
     strategy:
       fail-fast: false
       matrix:
@@ -30,8 +33,6 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run typecheck
-      - run: npm test
       - run: npm run build
       - run: npx electron-builder ${{ matrix.target }} --publish always
         env:
