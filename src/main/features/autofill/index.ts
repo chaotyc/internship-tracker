@@ -1,16 +1,18 @@
 import type { BrowserWindow } from 'electron'
-import type { AutofillEvents, AutofillReport, AutofillStep } from '@shared/autofill'
+import { BOARD_NAMES, type AutofillEvents, type AutofillReport, type AutofillStep } from '@shared/autofill'
 import type { Feature } from '../../context'
 import { handle } from '../../ipc'
 import { isHeadless } from '../../headless'
+import { adapterFor, detectLink } from './boards'
 import { isProfileEmpty } from './match'
+import { prepareFill } from './prepare'
 import { fillApplication } from './runner'
-import { parseGreenhouseLink } from './url'
 import { createApplicationWindow, loadApplication } from './window'
 
 /**
- * Greenhouse autofill: opens the application in its own locked-down window,
- * fills it from the profile and stops. The user reviews and submits.
+ * Autofill for Greenhouse, Ashby and Lever: opens the application in its own
+ * locked-down window, fills it from the profile and the role's track resume, and
+ * stops. The user reviews and submits.
  */
 export const autofillFeature: Feature = {
   name: 'autofill',
@@ -27,18 +29,29 @@ export const autofillFeature: Feature = {
     const progress = (roleId: string, step: AutofillStep, message: string) => send('autofill:progress', { roleId, step, message })
 
     handle('autofill:supported', ({ url }) => {
-      const supported = !!parseGreenhouseLink(url)
-      return { supported, board: supported ? 'greenhouse' : '' }
+      const link = detectLink(url)
+      return { supported: !!link, board: link?.board ?? '' }
     })
 
     handle('autofill:open', async ({ roleId }) => {
       const role = ctx.services.roles.get(roleId)
       if (!role) throw new Error('That role no longer exists.')
-      const link = parseGreenhouseLink(role.link)
-      if (!link) throw new Error('Autofill works with Greenhouse application links.')
-      const profile = ctx.services.profile.get()
-      const base: AutofillReport = { roleId, url: role.link, filled: [], needsYou: [], resumeAttached: false, profileEmpty: false, notes: [] }
-      if (isProfileEmpty(profile)) return { ...base, profileEmpty: true }
+      const link = detectLink(role.link)
+      if (!link) throw new Error('Autofill works with Greenhouse, Ashby and Lever application links.')
+      const adapter = adapterFor(link.board)
+      const { profile, resume, resumeTrack } = prepareFill(ctx.services.profile, role)
+      const base: AutofillReport = {
+        roleId,
+        url: role.link,
+        board: link.board,
+        filled: [],
+        needsYou: [],
+        resumeAttached: false,
+        resumeFile: null,
+        profileEmpty: false,
+        notes: [],
+      }
+      if (isProfileEmpty(profile)) return { ...base, board: '', profileEmpty: true }
       if (running.has(roleId)) throw new Error('Autofill is already working on this application.')
 
       running.add(roleId)
@@ -46,18 +59,20 @@ export const autofillFeature: Feature = {
         let win = windows.get(roleId)
         let url = role.link
         if (win && !win.isDestroyed()) {
-          // Already open: fill whatever is still empty on the current page.
+          // Already open: fill whatever is still empty on the current page (the runner checks it's still the form).
           if (!isHeadless()) win.focus()
           url = win.webContents.getURL()
         } else {
-          progress(roleId, 'opening', 'Opening the application…')
+          progress(roleId, 'opening', `Opening the ${BOARD_NAMES[link.board]} application…`)
           win = createApplicationWindow(`Apply: ${role.company} – ${role.title}`)
           windows.set(roleId, win)
           win.on('closed', () => windows.delete(roleId))
           url = await loadApplication(win, link)
         }
-        const result = await fillApplication(win.webContents, profile, (step, message) => progress(roleId, step, message))
-        const report: AutofillReport = { ...base, url, ...result }
+        const result = await fillApplication(win.webContents, adapter, profile, resume, (step, message) => progress(roleId, step, message))
+        const notes = [...result.notes]
+        if (result.resumeFile && resumeTrack) notes.unshift(`Attached ${result.resumeFile}, the resume for your ${resumeTrack} track.`)
+        const report: AutofillReport = { ...base, url, ...result, notes }
         progress(roleId, 'done', `Filled ${report.filled.length} fields.`)
         send('autofill:report', report)
         return report

@@ -104,6 +104,16 @@
   gap: 6px;
   padding: 0 14px 12px 52px;
 }
+.af-resume {
+  max-width: 100%;
+  min-width: 0;
+}
+.af-resume-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .af-needs {
   border-top: 1px solid var(--line);
   padding: 10px 14px 12px;

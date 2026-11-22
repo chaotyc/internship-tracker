@@ -153,6 +153,23 @@ export function parseYearMonth(s: string): { year: number; month: number | null 
 }
 const clampMonth = (n: number) => (n >= 1 && n <= 12 ? n : null)
 
+/** A full calendar date as "YYYY-MM-DD": "2027-05-26", "05/26/2027", "May 26, 2027", "26 May 2027". Null without a day. */
+export function isoDate(s: string): string | null {
+  const t = s.trim()
+  let y = 0
+  let m = 0
+  let d = 0
+  let x: RegExpExecArray | null
+  if ((x = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(t))) [y, m, d] = [Number(x[1]), Number(x[2]), Number(x[3])]
+  else if ((x = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(t))) [y, m, d] = [Number(x[3]), Number(x[1]), Number(x[2])]
+  else if ((x = /^([a-z]{3,})\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})$/i.exec(t))) [y, m, d] = [Number(x[3]), monthOf(x[1]!) ?? 0, Number(x[2])]
+  else if ((x = /^(\d{1,2})(?:st|nd|rd|th)?\s+([a-z]{3,})\.?,?\s+(\d{4})$/i.exec(t))) [y, m, d] = [Number(x[3]), monthOf(x[2]!) ?? 0, Number(x[1])]
+  else return null
+  const date = new Date(Date.UTC(y, m - 1, d))
+  if (!m || date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) return null
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+}
+
 /** "B.S." -> bachelor, "Master of Business Administration (M.B.A.)" -> mba. */
 export function degreeKind(s: string): string {
   const n = s.toLowerCase().replace(/[.'’]/g, '')
@@ -456,7 +473,7 @@ export function classify(f: FieldDescriptor, p: Profile, now: Date = new Date())
   // Education
   const edu = p.education[eduIndex(f)]
   const fid = f.id.toLowerCase()
-  if (/^school--\d+$|school_name/.test(fid) || /^(school|university|college|institution)( name)?$/.test(l)) {
+  if (/^school--\d+$|school_name/.test(fid) || /^(name of )?(school|university|college|institution|college or university|university or college|college\s*\/\s*university|university\s*\/\s*college)( name)?$/.test(l)) {
     const school = edu?.school.trim()
     return school ? { what: `education.${eduIndex(f)}.school`, text: school, search: school, want: { type: 'text', targets: [school] } } : null
   }
@@ -464,7 +481,7 @@ export function classify(f: FieldDescriptor, p: Profile, now: Date = new Date())
     const degree = edu?.degree.trim()
     return degree ? { what: `education.${eduIndex(f)}.degree`, text: degree, want: { type: 'degree', degree } } : null
   }
-  if (/^discipline--\d+$|education_discipline/.test(fid) || /^(discipline|major|field of study|area of study|major\s*\/\s*field of study)$/.test(l)) {
+  if (/^discipline--\d+$|education_discipline/.test(fid) || /^(discipline|major|field of study|area of study|(major|concentration)\s*(\/|or)\s*(field|area) of study)$/.test(l)) {
     const field = edu?.field.trim()
     return field ? { what: `education.${eduIndex(f)}.field`, text: field, search: field, want: { type: 'text', targets: [field] } } : null
   }
@@ -489,6 +506,8 @@ export function classify(f: FieldDescriptor, p: Profile, now: Date = new Date())
 
   // Work authorization
   if (/sponsor/.test(l)) {
+    // The saved answers are about the US; sponsorship elsewhere is a different question.
+    if (OTHER_COUNTRY.test(label)) return null
     // "Are you authorized to work in the US without sponsorship?" asks the opposite of "Do you need sponsorship?"
     if (/without/.test(l) && /authori[sz]ed|eligible|able|legally/.test(l)) {
       if (OTHER_COUNTRY.test(label)) return null
@@ -568,6 +587,11 @@ function toAction(f: FieldDescriptor, intent: Intent): FillAction | null {
         return intent.search ? { ...base, want: intent.want, search: intent.search } : null
       }
       return { ...base, want: intent.want, search: intent.search ?? intent.text }
+    }
+    case 'date': {
+      // Date pickers need a full date. A month-precision value (graduation "2027-05") is left for the user.
+      const iso = isoDate(intent.text)
+      return iso ? { ...base, value: iso } : null
     }
     case 'number': {
       const n = intent.text.replace(/[^\d.]/g, '')

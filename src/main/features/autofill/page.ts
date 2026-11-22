@@ -5,24 +5,32 @@
  * scripts can't see it or call it. It must stay self-contained: no imports and no
  * references to anything outside its body.
  *
+ * The generic behavior follows Greenhouse's forms. A board's dialect (boards/*.ts)
+ * is serialized alongside and supplies hooks where its forms differ: where the form
+ * lives, how questions are labeled and grouped, custom comboboxes and the resume input.
+ *
  * It only reads the form, sets values the way a person typing would, and draws the
  * review banner. It never clicks a submit button and blocks submits while filling.
  * Opening react-select menus and typing into them needs trusted input, which the
  * main process sends through the DevTools protocol (see runner.ts).
  */
-export function pageAgent(win: any): any {
+export function pageAgent(win: any, dialect: any): any {
   const doc: any = win.document
   const byKey = new Map<string, any>()
   const keyOf = new WeakMap<any, string>()
   let seq = 0
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
+  // Required markers: "*" (Greenhouse, Ashby) and "✱" (Lever), sometimes both.
   const clean = (s: any): string =>
     String(s ?? '')
       .replace(/\s+/g, ' ')
-      .replace(/\s*\*\s*$/, '')
+      .replace(/(\s*[*✱])+\s*$/, '')
       .trim()
-  const starred = (s: any): boolean => /\*\s*$/.test(String(s ?? '').trim())
+  const starred = (s: any): boolean => /[*✱]\s*$/.test(String(s ?? '').trim())
+  /** Board hooks; each returns null/undefined to keep the generic behavior. */
+  const D: any = dialect ? dialect(win, { clean }) : {}
+  const hook = (name: string, ...args: any[]): any => (typeof D[name] === 'function' ? D[name](...args) : null)
 
   function keyFor(el: any): string {
     let k = keyOf.get(el)
@@ -64,6 +72,13 @@ export function pageAgent(win: any): any {
     return lg ? lg.textContent : ''
   }
 
+  const labelOf = (el: any): string => hook('label', el) ?? rawLabel(el)
+  const groupLabelOf = (el: any): string => hook('groupLabel', el) ?? groupLabel(el)
+
+  /** Pressed Yes/No buttons count like checked radios. */
+  const isOn = (m: any): boolean => (m.tagName === 'BUTTON' ? m.getAttribute('aria-pressed') === 'true' : !!m.checked)
+  const optionLabel = (m: any): string => (m.tagName === 'BUTTON' ? clean(m.textContent) : clean(rawLabel(m)))
+
   function visible(el: any): boolean {
     const target = el.type === 'file' || el.type === 'radio' || el.type === 'checkbox' ? el.closest('label, fieldset, [role="group"], div') ?? el : el
     if (!target.getClientRects().length) return false
@@ -79,10 +94,13 @@ export function pageAgent(win: any): any {
     if (el.classList.contains('iti__search-input')) return true
     if (/recaptcha/i.test(el.name || '') || /recaptcha/i.test(el.id || '')) return true
     if (el.closest('[data-tracker-autofill]')) return true
+    if (hook('skip', el)) return true
     return !visible(el)
   }
 
   function comboValue(el: any): string {
+    const own = hook('comboValue', el)
+    if (own !== null) return own
     const ctl = el.closest('.select__control') ?? el.closest('[class*="control"]') ?? el.parentElement
     if (!ctl) return ''
     const vals = ctl.querySelectorAll('.select__single-value, .select__multi-value__label, [class*="singleValue"], [class*="multiValue"] > div:first-child')
@@ -94,7 +112,7 @@ export function pageAgent(win: any): any {
 
   function hasValue(el: any, kind: string): boolean {
     if (kind === 'combobox') return comboValue(el) !== ''
-    if (kind === 'radio' || kind === 'checkboxes') return (el as any[]).some((r: any) => r.checked)
+    if (kind === 'radio' || kind === 'checkboxes') return (el as any[]).some(isOn)
     if (kind === 'checkbox') return el.checked
     if (kind === 'file') return el.files && el.files.length > 0
     if (kind === 'select') return Array.from(el.selectedOptions).some((o: any) => o.value !== '')
@@ -102,6 +120,8 @@ export function pageAgent(win: any): any {
   }
 
   function kindOf(el: any): string {
+    const own = hook('kind', el)
+    if (own) return own
     if (el.tagName === 'SELECT') return 'select'
     if (el.tagName === 'TEXTAREA') return 'textarea'
     if (el.getAttribute('role') === 'combobox') return 'combobox'
@@ -111,31 +131,53 @@ export function pageAgent(win: any): any {
   }
 
   function formRoot(): any {
-    return doc.querySelector('#application-form') ?? doc.getElementById('first_name')?.closest('form') ?? doc.querySelector('form') ?? doc.body
+    return hook('formRoot') ?? doc.querySelector('#application-form') ?? doc.getElementById('first_name')?.closest('form') ?? doc.querySelector('form') ?? doc.body
   }
 
   function collect(): any[] {
     const root = formRoot()
     const out: any[] = []
     const groups = new Set<string>()
+    // Groups the dialect recognizes (fieldsets, Yes/No buttons) come first; their members are then skipped.
+    const claimed = new Set<any>()
+    for (const g of (hook('groups', root) ?? []) as any[]) {
+      const members = (g.members as any[]).filter((m: any) => !m.disabled)
+      members.forEach((m: any) => claimed.add(m))
+      if (!members.length || !visible(members[0])) continue
+      const k = keyFor(members[0])
+      byKey.set(k, members)
+      out.push({
+        key: k,
+        label: clean(g.label),
+        name: g.name || '',
+        id: g.id || '',
+        kind: g.kind,
+        autocomplete: '',
+        options: members.map(optionLabel),
+        required: !!g.required,
+        multi: g.kind === 'checkboxes',
+        hasValue: members.some(isOn),
+        group: '',
+      })
+    }
     for (const el of Array.from(root.querySelectorAll('input, select, textarea')) as any[]) {
-      if (skip(el)) continue
+      if (claimed.has(el) || skip(el)) continue
       const type = (el.getAttribute('type') || '').toLowerCase()
       if (el.tagName === 'INPUT' && (type === 'radio' || type === 'checkbox')) {
         const members = el.name
           ? (Array.from(root.querySelectorAll(`input[type="${type}"][name="${win.CSS.escape(el.name)}"]`)) as any[])
           : [el]
         if (type === 'checkbox' && members.length === 1) {
-          const label = clean(rawLabel(el)) || clean(groupLabel(el))
-          out.push(desc(el, 'checkbox', label, [], !!(el.required || el.getAttribute('aria-required') === 'true' || starred(rawLabel(el))), false))
+          const label = clean(labelOf(el)) || clean(groupLabelOf(el))
+          out.push(desc(el, 'checkbox', label, [], !!(el.required || el.getAttribute('aria-required') === 'true' || starred(labelOf(el))), false))
           continue
         }
         if (groups.has(type + el.name)) continue
         groups.add(type + el.name)
         const options = members.map((m: any) => clean(rawLabel(m)))
-        const gl = groupLabel(el)
+        const gl = groupLabelOf(el)
         const fs = el.closest('fieldset, [role="group"], [role="radiogroup"]')
-        const required = !!(fs?.getAttribute('aria-required') === 'true' || members.some((m: any) => m.required) || starred(gl))
+        const required = !!(hook('required', el) || fs?.getAttribute('aria-required') === 'true' || members.some((m: any) => m.required) || starred(gl))
         const k = keyFor(members[0])
         byKey.set(k, members)
         out.push({
@@ -154,8 +196,8 @@ export function pageAgent(win: any): any {
         continue
       }
       const kind = kindOf(el)
-      const raw = kind === 'file' ? groupLabel(el) || rawLabel(el) : rawLabel(el)
-      const req = !!(el.required || el.getAttribute('aria-required') === 'true' || starred(raw) || (kind === 'file' && el.closest('[aria-required="true"]')))
+      const raw = kind === 'file' ? groupLabelOf(el) || labelOf(el) : labelOf(el)
+      const req = !!(hook('required', el) || el.required || el.getAttribute('aria-required') === 'true' || starred(raw) || (kind === 'file' && el.closest('[aria-required="true"]')))
       let options: string[] = []
       if (kind === 'select') options = Array.from(el.options).filter((o: any) => o.value !== '').map((o: any) => clean(o.textContent))
       const multi = kind === 'select' ? !!el.multiple : kind === 'combobox' ? !!el.closest('[class*="--is-multi"], [class*="is-multi"]') : false
@@ -169,7 +211,7 @@ export function pageAgent(win: any): any {
       key: keyFor(el),
       label,
       name: el.getAttribute('name') || '',
-      id: el.id || '',
+      id: hook('id', el) ?? (el.id || ''),
       kind,
       autocomplete: el.getAttribute('autocomplete') || '',
       options,
@@ -215,13 +257,50 @@ export function pageAgent(win: any): any {
     return true
   }
 
-  function check(key: string, text: string): boolean {
+  async function check(key: string, text: string): Promise<boolean> {
     const members = byKey.get(key)
     const list = Array.isArray(members) ? members : [members]
-    const target = text === 'true' && list.length === 1 ? list[0] : list.find((m: any) => clean(rawLabel(m)) === text)
+    const target = text === 'true' && list.length === 1 ? list[0] : list.find((m: any) => optionLabel(m) === text)
     if (!target) return false
-    if (!target.checked) target.click()
-    return target.checked
+    if (!isOn(target)) {
+      target.click()
+      // React may re-render the pressed state a tick later.
+      if (!isOn(target)) await sleep(60)
+    }
+    return isOn(target)
+  }
+
+  /** The text to type into a date field for an ISO date: native inputs take ISO, pickers a written date. */
+  function dateText(key: string, iso: string): string {
+    const e = el(key)
+    if (e.type === 'date') return iso
+    const [y, m, d] = iso.split('-')
+    const ph = String(e.getAttribute('placeholder') || '').toLowerCase()
+    if (/yyyy-mm-dd/.test(ph)) return iso
+    if (/dd\/mm/.test(ph)) return `${d}/${m}/${y}`
+    return `${m}/${d}/${y}`
+  }
+
+  /** Whether a text value can be set directly (native date inputs, or when trusted typing isn't available). */
+  function isNativeDate(key: string): boolean {
+    return el(key).type === 'date'
+  }
+
+  /** Dialect step after typing into a combobox (Lever starts its location search on keydown). */
+  function afterType(key: string): void {
+    hook('afterType', el(key))
+  }
+
+  /** Clears search text left in an input-based combobox when nothing was chosen. */
+  function clearSearch(key: string): void {
+    const e = el(key)
+    if (e.tagName !== 'INPUT' || !String(e.value ?? '')) return
+    if (e.closest('.select__control, [class*="-control"]')) return
+    const setter = Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype, 'value')?.set
+    if (setter) setter.call(e, '')
+    else e.value = ''
+    fire(e, 'input')
+    fire(e, 'change')
   }
 
   function focus(key: string): boolean {
@@ -236,7 +315,11 @@ export function pageAgent(win: any): any {
     if (doc.activeElement === e) e.blur()
   }
 
+  const optionText = (o: any): string => hook('optionText', o) ?? clean(o.textContent)
+
   function optionEls(e: any): any[] {
+    const own = hook('options', e)
+    if (own) return own
     const listId = e.getAttribute('aria-controls') || (e.id ? `react-select-${e.id}-listbox` : '')
     const list = listId ? doc.getElementById(listId) : null
     const found = list ? Array.from(list.querySelectorAll('[role="option"], [id*="-option-"]')) : []
@@ -246,21 +329,25 @@ export function pageAgent(win: any): any {
 
   function menu(key: string): { open: boolean; options: string[]; loading: boolean } {
     const e = el(key)
+    const own = hook('menuState', e)
+    if (own) return { open: !!own.open, options: optionEls(e).map(optionText), loading: !!own.loading && optionEls(e).length === 0 }
     const shell = e.closest('.select-shell, .select__container, .select') ?? e.parentElement
     const menuEl = shell?.querySelector('.select__menu, [class*="-menu"]')
     const text = String(menuEl?.textContent ?? '')
     return {
       open: e.getAttribute('aria-expanded') === 'true' || !!menuEl,
-      options: optionEls(e).map((o: any) => clean(o.textContent)),
+      options: optionEls(e).map(optionText),
       loading: /loading|searching/i.test(text) && optionEls(e).length === 0,
     }
   }
 
   function pick(key: string, text: string): boolean {
     const e = el(key)
-    const o = optionEls(e).find((x: any) => clean(x.textContent) === text)
+    const o = optionEls(e).find((x: any) => optionText(x) === text)
     if (!o) return false
     o.scrollIntoView({ block: 'nearest' })
+    const own = hook('pick', e, o)
+    if (own !== null) return !!own
     o.dispatchEvent(new win.MouseEvent('mouseover', { bubbles: true }))
     o.click()
     return true
@@ -271,22 +358,25 @@ export function pageAgent(win: any): any {
     if (!e || !(Array.isArray(e) ? e[0]?.isConnected : e.isConnected)) return ''
     if (Array.isArray(e))
       return e
-        .filter((m: any) => m.checked)
-        .map((m: any) => clean(rawLabel(m)))
+        .filter(isOn)
+        .map(optionLabel)
         .join(', ')
-    if (e.getAttribute('role') === 'combobox') return comboValue(e)
+    if (e.getAttribute('role') === 'combobox' || kindOf(e) === 'combobox') return comboValue(e)
     if (e.type === 'checkbox') return e.checked ? 'Checked' : ''
     if (e.tagName === 'SELECT') return clean(e.selectedOptions[0]?.textContent)
     return String(e.value ?? '')
   }
 
   // Submits are blocked while autofill is working, so nothing it does can send the form.
+  // Lever's and Ashby's submit buttons are plain buttons outside any <form> submit path.
+  const SUBMIT =
+    'button[type="submit"], input[type="submit"], form button:not([type]), #btn-submit, [data-qa="btn-submit"], .ashby-application-form-submit-button'
   const stopSubmit = (ev: any) => {
     ev.preventDefault()
     ev.stopImmediatePropagation()
   }
   const stopSubmitClick = (ev: any) => {
-    const t = ev.target?.closest?.('button[type="submit"], input[type="submit"], form button:not([type])')
+    const t = ev.target?.closest?.(SUBMIT)
     if (t) stopSubmit(ev)
   }
   function guard(on: boolean): void {
@@ -304,13 +394,14 @@ export function pageAgent(win: any): any {
   /** Marks the resume input so the DevTools protocol can find it by selector. */
   function resumeTarget(): string | null {
     const root = formRoot()
-    const files = Array.from(root.querySelectorAll('input[type="file"]')) as any[]
+    const files = (Array.from(root.querySelectorAll('input[type="file"]')) as any[]).filter((f) => !hook('skip', f))
     const target =
+      hook('resumeInput') ??
       files.find((f) => f.id === 'resume') ??
       files.find((f) => /resume|\bcv\b/i.test(`${f.id} ${f.name} ${groupLabel(f)} ${rawLabel(f)}`)) ??
       null
     if (!target) return null
-    resumeBox = target.closest('[role="group"], .file-upload') ?? target.parentElement
+    resumeBox = target.closest('[role="group"], .file-upload, [data-field-path], .application-question') ?? target.parentElement
     target.setAttribute('data-tracker-resume', '1')
     return 'input[data-tracker-resume="1"]'
   }
@@ -325,10 +416,12 @@ export function pageAgent(win: any): any {
 
   async function waitForForm(): Promise<boolean> {
     for (let i = 0; i < 60; i++) {
-      if (doc.querySelector('#first_name, #application-form input, form input[name*="first_name"]')) return true
+      const own = hook('formReady')
+      if (own === true) return true
+      if (own === null && doc.querySelector('#first_name, #application-form input, form input[name*="first_name"]')) return true
       await sleep(250)
     }
-    return !!doc.querySelector('form input')
+    return !!(hook('formReady') ?? doc.querySelector('form input'))
   }
 
   function requiredEmpty(): { key: string; label: string }[] {
@@ -342,6 +435,8 @@ export function pageAgent(win: any): any {
   let bannerTimer: any = null
 
   function outlineTarget(e: any): any {
+    const own = hook('outline', e)
+    if (own) return own
     if (Array.isArray(e)) return e[0]?.closest('fieldset, [role="group"]') ?? e[0]?.parentElement
     if (e.getAttribute?.('role') === 'combobox') return e.closest('.select__container') ?? e.closest('.select__control') ?? e
     if (e.type === 'file') return e.closest('[role="group"], .file-upload') ?? e.parentElement
@@ -365,7 +460,7 @@ export function pageAgent(win: any): any {
   function filledNow(key: string): boolean {
     const e = byKey.get(key)
     if (!e) return true
-    if (Array.isArray(e)) return e.some((m: any) => m.checked)
+    if (Array.isArray(e)) return e.some(isOn)
     const kind = kindOf(e)
     return hasValue(e, kind)
   }
@@ -484,8 +579,30 @@ export function pageAgent(win: any): any {
     doc.documentElement.append(host)
   }
 
-  return { collect, setText, setSelect, check, focus, blur, menu, pick, valueOf, guard, resumeTarget, resumeAttached, waitForForm, requiredEmpty, banner }
+  return {
+    collect,
+    setText,
+    setSelect,
+    check,
+    dateText,
+    isNativeDate,
+    focus,
+    blur,
+    menu,
+    pick,
+    afterType,
+    clearSearch,
+    valueOf,
+    guard,
+    resumeTarget,
+    resumeAttached,
+    waitForForm,
+    requiredEmpty,
+    banner,
+  }
 }
 
-/** Code that installs the agent once per document in the isolated world. */
-export const INSTALL_AGENT = `globalThis.__trackerAutofill ??= (${pageAgent.toString()})(window); true`
+/** Code that installs the agent, with the board's dialect, once per document in the isolated world. */
+export function installAgent(dialect: ((win: any, helpers: any) => any) | null): string {
+  return `globalThis.__trackerAutofill ??= (${pageAgent.toString()})(window, ${dialect ? dialect.toString() : 'null'}); true`
+}

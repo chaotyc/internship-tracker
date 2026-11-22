@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { AutofillReport, AutofillStep } from '@shared/autofill'
+import { BOARD_NAMES, type AutofillBoard, type AutofillReport, type AutofillStep } from '@shared/autofill'
 import { Icon } from '@renderer/components/Icon'
 import { api } from '@renderer/lib/api'
 import './autofill.css'
@@ -16,22 +16,23 @@ const STEP_LABEL: Partial<Record<AutofillStep, string>> = {
   resume: 'Attaching resume…',
 }
 
-/** Shown in the role dialog when the posting is a Greenhouse application. Fills it in its own window; never submits. */
+/** Shown in the role dialog when the posting is a Greenhouse, Ashby or Lever application. Fills it in its own window; never submits. */
 export function AutofillButton({ roleId, link }: { roleId: string; link: string }) {
-  const [supported, setSupported] = useState(false)
+  const [board, setBoard] = useState<AutofillBoard | ''>('')
+  const supported = board !== ''
   const [state, setState] = useState<State>({ kind: 'idle' })
   const btnRef = useRef<HTMLButtonElement>(null)
   const popRef = useRef<HTMLDivElement>(null)
 
-  // Ask main whether the link is a Greenhouse application. Debounced while the link is being edited.
+  // Ask main whether the link is an application autofill can fill. Debounced while the link is being edited.
   useEffect(() => {
     let live = true
     const url = link.trim()
     const t = setTimeout(() => {
       api
         .invoke('autofill:supported', { url })
-        .then((r) => live && setSupported(r.supported))
-        .catch(() => live && setSupported(false))
+        .then((r) => live && setBoard(r.supported ? r.board : ''))
+        .catch(() => live && setBoard(''))
     }, 200)
     return () => {
       live = false
@@ -108,7 +109,7 @@ export function AutofillButton({ roleId, link }: { roleId: string; link: string 
         onClick={() => void run()}
         disabled={running}
         aria-busy={running}
-        title="Opens the application in its own window and fills it from your profile. You review and submit."
+        title={`Opens the ${board ? BOARD_NAMES[board] : ''} application in its own window and fills it from your profile. You review and submit.`}
       >
         {running ? <span className="af-spinner" aria-hidden="true" /> : <Icon name="wand" />}
         {running ? STEP_LABEL[state.step] ?? 'Working…' : 'Autofill application'}
@@ -183,9 +184,9 @@ function Result({ report, onClose }: { report: AutofillReport; onClose: () => vo
         <CloseButton onClose={onClose} />
       </header>
       <div className="af-chips">
-        <span className={`chip ${report.resumeAttached ? 'ok' : 'warn'}`}>
+        <span className={`chip af-resume ${report.resumeAttached ? 'ok' : 'warn'}`} title={report.resumeFile ?? undefined}>
           <Icon name={report.resumeAttached ? 'check' : 'file'} />
-          {report.resumeAttached ? 'Resume attached' : 'Resume not attached'}
+          <span className="af-resume-name">{report.resumeAttached && report.resumeFile ? report.resumeFile : 'Resume not attached'}</span>
         </span>
         {report.needsYou.length === 0 && (
           <span className="chip ok">

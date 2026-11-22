@@ -1,8 +1,10 @@
 import { BrowserWindow, session, shell, type Session } from 'electron'
 import { headlessWindowOptions, isHeadless } from '../../headless'
+import { ashbyFormUrl, ashbyOrgFromHtml, parseAshbyLink } from './boards/ashby'
+import type { AshbyLink, BoardLink } from './boards/types'
 import { boardFromHtml, embedFormUrl, parseGreenhouseLink, type GreenhouseLink } from './url'
 
-/** Applications share one persistent session, so a Greenhouse sign-in or cookie banner choice sticks. */
+/** Applications share one persistent session, so a sign-in or cookie banner choice sticks. */
 export const PARTITION = 'persist:applications'
 
 let hardened: Session | null = null
@@ -63,10 +65,19 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 /** loadURL, tolerating ERR_ABORTED from a redirect or a page that navigates itself. */
 async function load(win: BrowserWindow, url: string): Promise<void> {
-  try {
-    await win.loadURL(url)
-  } catch (e) {
-    if (!/ERR_ABORTED|\(-3\)/.test(String(e))) throw new Error(`Couldn't open the application page: ${(e as Error).message}`)
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await win.loadURL(url)
+      return
+    } catch (e) {
+      if (/ERR_ABORTED|\(-3\)/.test(String(e))) return
+      // A bot check (Lever sits behind Cloudflare) can fail the first load; one retry after a pause.
+      if (attempt === 0 && !win.isDestroyed()) {
+        await sleep(1500)
+        continue
+      }
+      throw new Error(`Couldn't open the application page: ${(e as Error).message}`)
+    }
   }
 }
 
@@ -82,11 +93,77 @@ async function boardHasJob(board: string, jobId: string): Promise<boolean> {
   }
 }
 
+/** Loads the application form for a link and returns its URL. Never submits anything. */
+export async function loadApplication(win: BrowserWindow, link: BoardLink): Promise<string> {
+  switch (link.board) {
+    case 'greenhouse':
+      return loadGreenhouse(win, link.link)
+    case 'ashby':
+      return loadAshby(win, link.link)
+    case 'lever':
+      await load(win, link.link.formUrl)
+      return link.link.formUrl
+  }
+}
+
+/** Reads something from a company page, in its own isolated world. */
+async function probeCompanyPage(win: BrowserWindow, code: string): Promise<string> {
+  return (await win.webContents.executeJavaScriptInIsolatedWorld(4472, [{ code }]).catch(() => '')) as string
+}
+
+/** Checks a guessed Ashby org against Ashby's public job board API. */
+async function ashbyOrgHasJob(org: string, jobId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`https://api.ashbyhq.com/posting-api/job-board/${encodeURIComponent(org)}`, { signal: AbortSignal.timeout(6000) })
+    if (!res.ok) return false
+    const data = (await res.json()) as { jobs?: { id?: string }[] }
+    return !!data.jobs?.some((j) => String(j.id).toLowerCase() === jobId)
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Loads the Ashby-hosted form. Company pages that embed Ashby (`?ashby_jid=`) are
+ * skipped in favor of jobs.ashbyhq.com, found from the org in the URL host or the
+ * page's embed script.
+ */
+async function loadAshby(win: BrowserWindow, link: AshbyLink): Promise<string> {
+  if (link.kind === 'hosted') {
+    await load(win, link.formUrl)
+    return link.formUrl
+  }
+  for (const org of link.orgGuesses) {
+    if (await ashbyOrgHasJob(org, link.jobId)) {
+      const url = ashbyFormUrl(org, link.jobId)
+      await load(win, url)
+      return url
+    }
+  }
+  await load(win, link.pageUrl).catch(() => {})
+  for (let i = 0; i < 40; i++) {
+    if (win.isDestroyed()) throw new Error('The application window was closed.')
+    const found = await probeCompanyPage(
+      win,
+      `(() => { const f = document.querySelector('#ashby_embed_iframe, iframe[src*="ashbyhq.com"], script[src*="jobs.ashbyhq.com"]'); return f ? f.src : document.documentElement.outerHTML.slice(0, 3000000) })()`,
+    )
+    const direct = /^https:\/\//.test(found) ? parseAshbyLink(found) : null
+    const org = direct?.kind === 'hosted' ? direct.org : ashbyOrgFromHtml(found)
+    if (org) {
+      const url = ashbyFormUrl(org, link.jobId)
+      await load(win, url)
+      return url
+    }
+    await sleep(300)
+  }
+  throw new Error("Couldn't find the Ashby form on that page. Open the posting and use its Apply link instead.")
+}
+
 /**
  * Loads the Greenhouse form for a link. Company pages that embed Greenhouse are
  * skipped in favor of the Greenhouse-hosted form, found from the board token.
  */
-export async function loadApplication(win: BrowserWindow, link: GreenhouseLink): Promise<string> {
+async function loadGreenhouse(win: BrowserWindow, link: GreenhouseLink): Promise<string> {
   if (link.kind !== 'company') {
     await load(win, link.formUrl)
     return link.formUrl
@@ -102,13 +179,10 @@ export async function loadApplication(win: BrowserWindow, link: GreenhouseLink):
   await load(win, link.pageUrl).catch(() => {})
   for (let i = 0; i < 40; i++) {
     if (win.isDestroyed()) throw new Error('The application window was closed.')
-    const found = (await win.webContents
-      .executeJavaScriptInIsolatedWorld(4472, [
-        {
-          code: `(() => { const f = document.querySelector('#grnhse_iframe, iframe[src*="greenhouse.io"]'); return f ? f.src : document.documentElement.outerHTML.slice(0, 3000000) })()`,
-        },
-      ])
-      .catch(() => '')) as string
+    const found = await probeCompanyPage(
+      win,
+      `(() => { const f = document.querySelector('#grnhse_iframe, iframe[src*="greenhouse.io"]'); return f ? f.src : document.documentElement.outerHTML.slice(0, 3000000) })()`,
+    )
     const src = /^https:\/\//.test(found) ? parseGreenhouseLink(found) : null
     if (src && src.kind !== 'company') {
       await load(win, src.formUrl)

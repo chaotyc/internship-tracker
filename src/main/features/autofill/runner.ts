@@ -1,10 +1,11 @@
 import { existsSync } from 'node:fs'
 import type { WebContents } from 'electron'
-import type { Profile } from '@shared/profile'
+import type { Profile, StoredResume } from '@shared/profile'
 import type { AutofillField } from '@shared/autofill'
+import type { BoardAdapter } from './boards'
 import type { FieldDescriptor } from './fields'
-import { chooseOption, classify, planFill, type FillAction } from './match'
-import { INSTALL_AGENT } from './page'
+import { chooseOption, classify, type FillAction } from './match'
+import { installAgent } from './page'
 
 /** Isolated world for the page agent; the site's scripts can't reach it. */
 const WORLD = 4471
@@ -15,15 +16,26 @@ export interface RunResult {
   filled: AutofillField[]
   needsYou: string[]
   resumeAttached: boolean
+  resumeFile: string | null
   notes: string[]
 }
 
 /** Calls a method of the in-page agent with JSON arguments. */
 class Page {
-  constructor(private readonly wc: WebContents) {}
+  constructor(
+    private readonly wc: WebContents,
+    private readonly adapter: BoardAdapter,
+  ) {}
 
   async install(): Promise<void> {
-    await this.wc.executeJavaScriptInIsolatedWorld(WORLD, [{ code: INSTALL_AGENT }])
+    await this.wc.executeJavaScriptInIsolatedWorld(WORLD, [{ code: installAgent(this.adapter.dialect) }])
+  }
+
+  /** Throws unless the page is on the board's own application host. Checked before any profile data goes in. */
+  assertOrigin(): void {
+    if (this.wc.isDestroyed()) throw new Error('The application window was closed.')
+    if (!this.adapter.isFormUrl(this.wc.getURL()))
+      throw new Error(`This window is no longer on the ${this.adapter.name} application form, so nothing was filled.`)
   }
 
   async call<T>(method: string, ...args: unknown[]): Promise<T> {
@@ -80,19 +92,28 @@ interface Menu {
 }
 
 /**
- * Fills the Greenhouse form loaded in `wc` from the profile. Collects field
- * descriptors in the page, decides values with match.ts, applies them, attaches
- * the resume, then draws the review banner. Never submits.
+ * Fills the application form loaded in `wc` from the profile. Collects field
+ * descriptors in the page (with the board's dialect), decides values with the
+ * board's plan over match.ts, applies them, attaches the resume, then draws the
+ * review banner. Never submits.
  */
-export async function fillApplication(wc: WebContents, profile: Profile, onStep: (step: 'filling' | 'resume', message: string) => void): Promise<RunResult> {
-  const page = new Page(wc)
+export async function fillApplication(
+  wc: WebContents,
+  adapter: BoardAdapter,
+  profile: Profile,
+  resume: StoredResume | null,
+  onStep: (step: 'filling' | 'resume', message: string) => void,
+): Promise<RunResult> {
+  const page = new Page(wc, adapter)
   const input = new Input(wc)
   const done: { key: string; label: string; value: string }[] = []
   const notes: string[] = []
+  page.assertOrigin()
   await page.install()
   const ready = await page.call<boolean>('waitForForm')
   if (!ready) throw new Error("Couldn't find the application form on this page.")
-  await waitForHydration(wc)
+  if (adapter.hydrationProbe) await waitForHydration(wc, adapter.hydrationProbe)
+  page.assertOrigin()
 
   input.attach()
   if (!input.attached) notes.push('Dropdowns and the resume were skipped because developer tools are open on that window.')
@@ -102,9 +123,10 @@ export async function fillApplication(wc: WebContents, profile: Profile, onStep:
     const handled = new Set<string>()
     // Answers can reveal follow-up questions (e.g. race after Hispanic/Latino), so look again after each pass.
     for (let pass = 0; pass < 3; pass++) {
+      page.assertOrigin()
       const fields = (await page.call<FieldDescriptor[]>('collect')).filter((f) => !handled.has(f.key))
       if (input.attached) await readComboOptions(page, input, fields, profile)
-      const plan = planFill(fields, profile)
+      const plan = adapter.plan(fields, profile)
       if (!plan.actions.length) break
       for (const a of plan.actions) {
         handled.add(a.key)
@@ -126,21 +148,23 @@ export async function fillApplication(wc: WebContents, profile: Profile, onStep:
       filled.push({ label: d.label, value })
     }
 
-    const resume = profile.resume
     let resumeAttached = false
     if (resume?.storedPath) {
-      onStep('resume', 'Attaching your resume…')
-      if (!existsSync(resume.storedPath)) notes.push('Your saved resume file is missing. Upload it again in Settings > Profile.')
-      else if (!input.attached) notes.push('Attach your resume yourself.')
-      else resumeAttached = await attachResume(page, input, resume.storedPath, resume.fileName)
-      if (!resumeAttached && existsSync(resume.storedPath) && input.attached) notes.push("Couldn't attach your resume; attach it yourself.")
+      onStep('resume', `Attaching ${resume.fileName}…`)
+      if (!existsSync(resume.storedPath)) notes.push(`Your saved resume file (${resume.fileName}) is missing. Upload it again in Settings > Profile.`)
+      else if (!input.attached) notes.push(`Attach your resume (${resume.fileName}) yourself.`)
+      else {
+        page.assertOrigin()
+        resumeAttached = await attachResume(page, input, resume.storedPath, resume.fileName)
+      }
+      if (!resumeAttached && existsSync(resume.storedPath) && input.attached) notes.push(`Couldn't attach ${resume.fileName}; attach it yourself.`)
     } else {
-      notes.push('No resume saved in your profile.')
+      notes.push('No resume saved for this role\'s track or in your profile.')
     }
 
     const empties = await page.call<{ key: string; label: string }[]>('requiredEmpty')
     await page.call('banner', { filled: filled.length, needs: empties, resume: resume?.storedPath ? (resumeAttached ? 'attached' : 'missing') : '' })
-    return { filled, needsYou: [...new Set(empties.map((e) => e.label))], resumeAttached, notes }
+    return { filled, needsYou: [...new Set(empties.map((e) => e.label))], resumeAttached, resumeFile: resumeAttached && resume ? resume.fileName : null, notes }
   } finally {
     await page.call('guard', false).catch(() => {})
     input.detach()
@@ -149,11 +173,10 @@ export async function fillApplication(wc: WebContents, profile: Profile, onStep:
 
 /**
  * Greenhouse renders the form on the server and React takes it over a moment later;
- * values set before that are thrown away and dropdowns don't respond. This only
- * reads whether React has attached to the first field (main world, read-only).
+ * Ashby renders it client-side. Values set before React owns the inputs are thrown
+ * away. The probe only reads whether React has attached (main world, read-only).
  */
-async function waitForHydration(wc: WebContents): Promise<void> {
-  const probe = `(() => { const el = document.querySelector('#first_name, form input'); return !!el && Object.keys(el).some((k) => k.startsWith('__react')) })()`
+async function waitForHydration(wc: WebContents, probe: string): Promise<void> {
   for (let i = 0; i < 30; i++) {
     if (await wc.executeJavaScript(probe).catch(() => false)) {
       await sleep(300)
@@ -202,6 +225,8 @@ async function apply(page: Page, input: Input, a: FillAction): Promise<string | 
       return a.value && (await page.call<boolean>('check', a.key, a.value)) ? (a.kind === 'checkbox' ? 'Checked' : a.value) : null
     case 'combobox':
       return input.attached ? applyCombo(page, input, a) : null
+    case 'date':
+      return a.value ? applyDate(page, input, a.key, a.value) : null
     case 'file':
       return null
     default:
@@ -211,6 +236,7 @@ async function apply(page: Page, input: Input, a: FillAction): Promise<string | 
 
 async function applyCombo(page: Page, input: Input, a: FillAction): Promise<string | null> {
   if (!(await page.call<boolean>('focus', a.key))) return null
+  let typed = false
   try {
     await input.key('ArrowDown')
     let menu = await waitMenu(page, a.key, 1200)
@@ -222,10 +248,16 @@ async function applyCombo(page: Page, input: Input, a: FillAction): Promise<stri
       // Focus may have moved while waiting; never type into anything else.
       if (!(await page.call<boolean>('focus', a.key))) return null
       await input.type(search)
+      await page.call('afterType', a.key)
+      typed = true
       menu = await waitMenu(page, a.key, 7000, 400)
       choice = a.value && menu.options.includes(a.value) ? a.value : a.want ? chooseOption(menu.options, a.want) : null
     }
-    if (!choice) return null
+    if (!choice) {
+      // Don't leave half-typed search text that reads as an answer.
+      if (typed) await page.call('clearSearch', a.key).catch(() => {})
+      return null
+    }
     if (!(await page.call<boolean>('pick', a.key, choice))) return null
     await sleep(200)
     const shown = await page.call<string>('valueOf', a.key)
@@ -235,6 +267,23 @@ async function applyCombo(page: Page, input: Input, a: FillAction): Promise<stri
     if (m?.open) await input.key('Escape').catch(() => {})
     await page.call('blur', a.key).catch(() => {})
   }
+}
+
+/** Date pickers (Ashby's react-datepicker) take typed text; native date inputs take an ISO value. */
+async function applyDate(page: Page, input: Input, key: string, iso: string): Promise<string | null> {
+  const text = await page.call<string>('dateText', key, iso)
+  if (!input.attached || (await page.call<boolean>('isNativeDate', key))) return (await page.call<boolean>('setText', key, text)) ? text : null
+  if (!(await page.call<boolean>('focus', key))) return null
+  try {
+    await input.type(text)
+    await sleep(150)
+    await input.key('Escape')
+  } finally {
+    await page.call('blur', key).catch(() => {})
+  }
+  await sleep(150)
+  const shown = await page.call<string>('valueOf', key)
+  return shown ? shown : null
 }
 
 async function attachResume(page: Page, input: Input, path: string, fileName: string): Promise<boolean> {
