@@ -184,7 +184,16 @@ function ghPay(j: GhJob, text: string): string {
   return payFromText(text)
 }
 
-export function normalizeGreenhouse(j: GhJob, company: string): JobPosting {
+/**
+ * Greenhouse's absolute_url often points at the company's own careers site with ?gh_jid=,
+ * and many of those pages ignore the id and show the general careers page. The
+ * Greenhouse-hosted page always shows the posting itself, so links use that when the board is known.
+ */
+export function greenhouseJobUrl(slug: string, id: number | string, eu = false): string {
+  return `https://job-boards${eu ? '.eu' : ''}.greenhouse.io/${encodeURIComponent(slug)}/jobs/${encodeURIComponent(String(id))}`
+}
+
+export function normalizeGreenhouse(j: GhJob, company: string, board?: { slug: string; eu?: boolean }): JobPosting {
   const description = j.content ? escapedHtmlToText(j.content, 12_000) : ''
   return {
     board: 'greenhouse',
@@ -192,7 +201,7 @@ export function normalizeGreenhouse(j: GhJob, company: string): JobPosting {
     company: j.company_name?.trim() || company,
     title: j.title.trim(),
     location: j.location?.name?.trim() ?? '',
-    url: j.absolute_url,
+    url: board?.slug ? greenhouseJobUrl(board.slug, j.id, board.eu) : j.absolute_url,
     postedAt: isoDay(j.first_published ?? j.updated_at ?? ''),
     compensation: ghPay(j, description),
     description,
@@ -304,7 +313,7 @@ export async function fetchBoard(ref: BoardRef, company: string, opts: RequestOp
   }
   if (ref.board === 'greenhouse') {
     const d = await getJson<{ jobs: GhJob[] }>(`https://boards-api.greenhouse.io/v1/boards/${enc(ref.slug)}/jobs?content=true`, o)
-    return (d.jobs ?? []).map((j) => normalizeGreenhouse(j, company))
+    return (d.jobs ?? []).map((j) => normalizeGreenhouse(j, company, ref))
   }
   if (ref.board === 'ashby') {
     const d = await getJson<{ jobs: AshbyJob[] }>(`https://api.ashbyhq.com/posting-api/job-board/${enc(ref.slug)}?includeCompensation=true`, o)
@@ -383,7 +392,7 @@ export async function fetchPosting(ref: PostingRef, opts: RequestOptions & { pag
   if (ref.board === 'greenhouse') {
     try {
       const j = await getJson<GhJob>(`https://boards-api.greenhouse.io/v1/boards/${enc(slug)}/jobs/${enc(ref.id)}?pay_transparency=true`, opts)
-      return normalizeGreenhouse(j, titleizeSlug(slug))
+      return normalizeGreenhouse(j, titleizeSlug(slug), board)
     } catch (err) {
       if (!(err instanceof HttpError && err.status === 404)) throw err
       // A missing job and a missing board both answer 404; tell them apart.

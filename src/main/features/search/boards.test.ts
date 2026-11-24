@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { fetchBoard, fetchPosting, findBoardInHtml, parseBoardUrl, parsePostingUrl, titleizeSlug } from './boards'
+import { fetchBoard, fetchPosting, findBoardInHtml, normalizeGreenhouse, parseBoardUrl, parsePostingUrl, titleizeSlug } from './boards'
 import { USER_AGENT } from './http'
 import { fixture, mockFetch } from './fixtures/mockFetch'
 
@@ -124,6 +124,19 @@ describe('board clients', () => {
   it('throws a readable error when a board does not exist', async () => {
     mockFetch({})
     await expect(fetchBoard({ board: 'ashby', slug: 'nope' }, 'Nope')).rejects.toThrow(/404/)
+  })
+})
+
+describe('normalizeGreenhouse', () => {
+  const job = { id: 5479814008, title: 'Engineering Intern', absolute_url: 'https://acme.example/careers?gh_jid=5479814008' }
+
+  it('links to the posting on Greenhouse, not the company careers page', () => {
+    expect(normalizeGreenhouse(job, 'Acme', { slug: 'acme' }).url).toBe('https://job-boards.greenhouse.io/acme/jobs/5479814008')
+    expect(normalizeGreenhouse(job, 'Acme', { slug: 'acme', eu: true }).url).toBe('https://job-boards.eu.greenhouse.io/acme/jobs/5479814008')
+  })
+
+  it('keeps the given link when the board is unknown', () => {
+    expect(normalizeGreenhouse(job, 'Acme').url).toBe(job.absolute_url)
   })
 })
 

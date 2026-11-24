@@ -203,6 +203,12 @@ export function normalizeUrl(u: string): string {
     const url = new URL(u.trim())
     url.hash = ''
     for (const p of [...url.searchParams.keys()]) if (/^(utm_|gh_src|source|ref)/i.test(p)) url.searchParams.delete(p)
+    // Greenhouse serves one posting at boards.greenhouse.io and job-boards.greenhouse.io, sometimes with ?gh_jid=.
+    const gh = /^(?:job-)?boards(\.eu)?\.greenhouse\.io$/i.exec(url.hostname)
+    if (gh && /\/jobs\/\d+\/?$/.test(url.pathname)) {
+      url.hostname = `job-boards${gh[1] ?? ''}.greenhouse.io`
+      url.searchParams.delete('gh_jid')
+    }
     return (url.origin + url.pathname).replace(/\/+$/, '').toLowerCase() + (url.search || '')
   } catch {
     return u.trim().toLowerCase()

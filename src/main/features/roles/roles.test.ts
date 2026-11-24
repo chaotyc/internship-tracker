@@ -96,4 +96,11 @@ describe('RolesService', () => {
       normalizeUrl('https://boards.greenhouse.io/x/jobs/1/'),
     )
   })
+
+  it('treats both Greenhouse hosts as one posting', () => {
+    const a = normalizeUrl('https://job-boards.greenhouse.io/acme/jobs/123')
+    expect(normalizeUrl('https://boards.greenhouse.io/acme/jobs/123?gh_jid=123')).toBe(a)
+    expect(normalizeUrl('https://boards.greenhouse.io/acme/jobs/124')).not.toBe(a)
+    expect(normalizeUrl('https://boards.eu.greenhouse.io/acme/jobs/123')).toBe(normalizeUrl('https://job-boards.eu.greenhouse.io/acme/jobs/123'))
+  })
 })
