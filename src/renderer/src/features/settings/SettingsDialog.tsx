@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Dialog } from '@renderer/components/Dialog'
 import { Icon, type IconName } from '@renderer/components/Icon'
+import { api } from '@renderer/lib/api'
 import { WatchlistPanel } from '@renderer/features/search/WatchlistPanel'
 import { EmailPanel } from '@renderer/features/today/EmailPanel'
 import { TracksPanel } from '@renderer/features/tracks/TracksPanel'
@@ -21,18 +22,28 @@ const TABS: { key: SettingsTab; label: string; icon: IconName; hint: string }[] 
 ]
 
 /** Where the user was going when unsaved Profile edits stopped them. */
-type Leave = SettingsTab | 'close'
+type Leave = SettingsTab | 'close' | 'tour'
 
-export function SettingsDialog({ open, tab, onClose }: { open: boolean; tab: SettingsTab; onClose: () => void }) {
+export function SettingsDialog({ open, tab, onClose, onShowTour }: { open: boolean; tab: SettingsTab; onClose: () => void; onShowTour?: () => void }) {
   const [active, setActive] = useState<SettingsTab>(tab)
-  const [lastTab, setLastTab] = useState(tab)
-  if (tab !== lastTab) {
-    setLastTab(tab)
-    setActive(tab)
+  // Every open starts on the requested tab, even when it's the same one as last time
+  // (e.g. "Open AI connections" twice, with a visit to Profile in between).
+  const [last, setLast] = useState({ open, tab })
+  if (open !== last.open || tab !== last.tab) {
+    setLast({ open, tab })
+    if (open) setActive(tab)
   }
   const [dirty, setDirty] = useState(false)
   const [pending, setPending] = useState<Leave | null>(null)
   const [saving, setSaving] = useState(false)
+  const [version, setVersion] = useState('')
+  useEffect(() => {
+    if (!open || version) return
+    api
+      .invoke('profile:status')
+      .then((st) => setVersion(st.version))
+      .catch(() => {})
+  }, [open, version])
   const profile = useRef<ProfileActions>(null)
   const keepRef = useRef<HTMLButtonElement>(null)
   const paneRef = useRef<HTMLElement>(null)
@@ -79,6 +90,7 @@ export function SettingsDialog({ open, tab, onClose }: { open: boolean; tab: Set
   const go = (to: Leave) => {
     setPending(null)
     if (to === 'close') onClose()
+    else if (to === 'tour') onShowTour?.()
     else setActive(to)
   }
   const leave = (to: Leave) => {
@@ -126,6 +138,16 @@ export function SettingsDialog({ open, tab, onClose }: { open: boolean; tab: Set
               </span>
             </button>
           ))}
+          {onShowTour && (
+            <button type="button" className="settings-tab settings-tour" onClick={() => leave('tour')}>
+              <Icon name="flag" />
+              <span>
+                Show welcome tour
+                <small>Setup steps and a quick tour</small>
+              </span>
+            </button>
+          )}
+          {version && <p className={`settings-version${onShowTour ? '' : ' is-alone'}`}>Internship Tracker {version}</p>}
         </nav>
         <section ref={paneRef} className={`settings-pane${pending ? ' is-confirming' : ''}`} aria-label={current.label}>
           {active === 'profile' ? (
@@ -145,7 +167,7 @@ export function SettingsDialog({ open, tab, onClose }: { open: boolean; tab: Set
               <div className="settings-confirm-text">
                 <strong id="settings-confirm-t">You have unsaved changes</strong>
                 <span id="settings-confirm-d">
-                  {pending === 'close' ? 'Save your profile before closing Settings?' : `Save your profile before going to ${TABS.find((t) => t.key === pending)!.label}?`}
+                  {pending === 'close' || pending === 'tour' ? 'Save your profile before closing Settings?' : `Save your profile before going to ${TABS.find((t) => t.key === pending)!.label}?`}
                 </span>
               </div>
               <button ref={keepRef} type="button" className="btn btn-ghost" onClick={() => setPending(null)} disabled={saving}>

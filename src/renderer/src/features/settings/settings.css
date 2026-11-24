@@ -62,6 +62,19 @@
   background: var(--accent-soft);
   color: var(--accent);
 }
+.settings-tab.settings-tour {
+  /* Sits at the bottom of the nav, apart from the sections. */
+  margin-top: auto;
+}
+.settings-version {
+  margin: 6px 12px 0;
+  color: var(--ink-3);
+  font-size: var(--fs-meta);
+  user-select: text;
+}
+.settings-version.is-alone {
+  margin-top: auto;
+}
 .settings-tab.is-active small {
   color: color-mix(in srgb, var(--accent) 80%, var(--ink));
 }
@@ -76,6 +89,9 @@
    right side is 4px plus a stable 10px scrollbar gutter, so panes that overflow and
    panes that don't line up. scroll-padding keeps focused controls clear of the fade. */
 .settings-scroll {
+  /* Positioned, so visually hidden and absolutely placed content scrolls with the pane
+     instead of overflowing the dialog. */
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
