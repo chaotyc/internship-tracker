@@ -1,7 +1,7 @@
 import type { HTMLAttributes } from 'react'
 import type { Fit, Role } from '@shared/roles'
 import { Icon } from '@renderer/components/Icon'
-import { ago, daysUntil, deadlineLabel, deadlineTone, dueLabel, hueFor, monogram, shortDate } from '@renderer/lib/format'
+import { daysUntil, deadlineLabel, dueLabel, hueFor, monogram, shortDate } from '@renderer/lib/format'
 
 interface Props extends Omit<HTMLAttributes<HTMLElement>, 'role'> {
   role: Role
@@ -44,42 +44,11 @@ export function FitMeter({ fit }: { fit: Fit }) {
   )
 }
 
-function DeadlineChip({ deadline }: { deadline: string }) {
-  const d = daysUntil(deadline)
-  if (d == null) return null
-  const label = deadlineLabel(deadline)
-  if (d < 0) return <span className="chip danger">{label}</span>
-  // Only near deadlines get a color; distant ones are plain facts.
-  const tone = deadlineTone(deadline)
-  return (
-    <span className={`chip card-due ${tone}`} title={`Deadline ${shortDate(deadline)}`}>
-      <Icon name="flag" />
-      {label}
-    </span>
-  )
-}
-
-/** True when a note mostly repeats the next step, so the card doesn't say it twice. */
-function similar(a: string, b: string): boolean {
-  const words = (s: string) => new Set(s.toLowerCase().match(/[a-z0-9]{3,}/g) ?? [])
-  const wa = words(a)
-  const wb = words(b)
-  if (!wa.size || !wb.size) return false
-  let shared = 0
-  for (const w of wb) if (wa.has(w)) shared++
-  return shared / wb.size >= 0.6
-}
-
-/** "3w", "13d", "1d", "today": the age without "Applied" or "ago", for narrow lanes. */
-function shortAgo(iso: string): string {
-  const a = ago(iso)
-  return a === 'yesterday' ? '1d' : a.replace(/ ago$/, '')
-}
-
-function nextTone(due: string): string {
-  const d = daysUntil(due)
-  if (d == null) return ''
-  return d < 0 ? ' is-overdue' : d === 0 ? ' is-today' : ''
+interface Flag {
+  tone: 'danger' | 'warn'
+  label: string
+  text?: string
+  title?: string
 }
 
 function capitalize(s: string): string {
@@ -87,51 +56,41 @@ function capitalize(s: string): string {
 }
 
 /**
- * Today and overdue steps keep their own emphasised label line; future dates sit inline
- * ("Tue · Finish the application") so the block stays short.
+ * The one thing on a role that needs attention now, if any: a next step that is overdue or
+ * due today, a closed posting, or a deadline within three days. Everything else (location,
+ * pay, fit, notes, later steps) lives in the role dialog.
  */
-function NextStep({ step }: { step: NonNullable<Role['nextStep']> }) {
-  const d = step.due ? daysUntil(step.due) : null
-  const text = step.text || 'Next step'
-  if (d != null && d > 0) {
-    return (
-      <div className="card-next is-inline">
-        <span className="card-next-text">
-          <span className="card-next-due">{capitalize(dueLabel(step.due, step.time))}</span>
-          <span className="card-next-sep" aria-hidden="true">
-            {' · '}
-          </span>
-          {text}
-        </span>
-      </div>
-    )
+function attention(role: Role): Flag | null {
+  if (role.stage === 'rejected' || role.stage === 'closed') return null
+  const saved = role.stage === 'saved'
+  const live = role.liveness?.status
+  const step = role.nextStep
+  if (step && !step.done && step.due) {
+    const d = daysUntil(step.due)
+    if (d != null && d <= 0) {
+      return { tone: d < 0 ? 'danger' : 'warn', label: d < 0 ? 'Overdue' : capitalize(dueLabel(step.due, step.time)), text: step.text || 'Next step' }
+    }
   }
-  return (
-    <div className={`card-next${nextTone(step.due)}`}>
-      <span className="card-next-due">{step.due ? dueLabel(step.due, step.time) : 'Next step'}</span>
-      <span className="card-next-text">{text}</span>
-    </div>
-  )
+  if (saved && live === 'closed') return { tone: 'danger', label: 'Posting closed', title: role.liveness.detail }
+  if (role.deadline) {
+    const d = daysUntil(role.deadline)
+    if (d != null && d <= 3) return { tone: 'danger', label: deadlineLabel(role.deadline), title: `Deadline ${shortDate(role.deadline)}` }
+  }
+  if (saved && live === 'expiring') return { tone: 'warn', label: 'Closing soon', title: role.liveness.detail }
+  return null
 }
 
 export function RoleCard({ role, ghost, ...rest }: Props) {
-  const meta = [role.location, role.pay].filter(Boolean)
-  const live = role.liveness?.status
   const saved = role.stage === 'saved'
   const finished = role.stage === 'rejected' || role.stage === 'closed'
-  // Deadlines matter in every open stage (offer and interview deadlines most of all).
-  const showDeadline = !finished && !!role.deadline && !(saved && live === 'closed')
-  const alerts = (saved && (live === 'closed' || live === 'expiring')) || showDeadline
-  const showFit = !finished && !!role.fit
-  const hasNext = !!role.nextStep && !role.nextStep.done && !finished
-  const showFound = saved && role.source === 'autosearch'
-  const showAge = !saved && !!role.appliedOn && role.stage !== 'closed'
+  const flag = attention(role)
+  const flagTitle = flag ? (flag.title ?? [flag.label, flag.text].filter(Boolean).join(' · ')) : undefined
   return (
     <article
-      className={`card${ghost ? ' is-ghost' : ''}${live === 'closed' && saved ? ' is-stale' : ''}${finished ? ' is-finished' : ''}`}
+      className={`card${ghost ? ' is-ghost' : ''}${role.liveness?.status === 'closed' && saved ? ' is-stale' : ''}${finished ? ' is-finished' : ''}`}
       data-card={ghost ? undefined : role.id}
       tabIndex={ghost ? -1 : 0}
-      aria-label={`${role.company}, ${role.title}`}
+      aria-label={`${role.company}, ${role.title}${flagTitle ? `. ${flagTitle}` : ''}`}
       aria-describedby={ghost ? undefined : 'card-keys-hint'}
       {...rest}
     >
@@ -170,55 +129,10 @@ export function RoleCard({ role, ghost, ...rest }: Props) {
           </button>
         </div>
       </div>
-      {hasNext && <NextStep step={role.nextStep!} />}
-      {meta.length > 0 && (
-        <div className="card-meta" title={meta.join(' · ')}>
-          <div className="card-meta-inner">
-            {meta.map((m, i) => (
-              <span key={i}>{m}</span>
-            ))}
-          </div>
-        </div>
-      )}
-      {alerts && (
-        <div className="card-chips">
-          {saved && live === 'closed' && (
-            <span className="chip danger" title={role.liveness.detail}>
-              <Icon name="alert" />
-              Posting closed
-            </span>
-          )}
-          {showDeadline && <DeadlineChip deadline={role.deadline} />}
-          {saved && live === 'expiring' && !role.deadline && (
-            <span className="chip warn" title={role.liveness.detail}>
-              <Icon name="clock" />
-              Closing soon
-            </span>
-          )}
-        </div>
-      )}
-      {(showFit || showFound || showAge) && (
-        <div className="card-foot">
-          {showFit && <FitMeter fit={role.fit} />}
-          {showFound && (
-            <span className="card-found" title="Found for you">
-              <Icon name="sparkle" />
-              <span className="card-foot-full">Found for you</span>
-              <span className="card-foot-short">Found</span>
-            </span>
-          )}
-          {showAge && (
-            <span className="card-age" title={`Applied ${ago(role.appliedOn)}`}>
-              <span className="card-foot-full">Applied {ago(role.appliedOn)}</span>
-              <span className="card-foot-short">{shortAgo(role.appliedOn)}</span>
-            </span>
-          )}
-        </div>
-      )}
-      {!finished && role.notes && !(hasNext && similar(role.notes, role.nextStep!.text)) && (
-        <div className="card-note" title={role.notes}>
-          <Icon name="note" />
-          <span className="card-note-text">{role.notes}</span>
+      {flag && (
+        <div className={`card-flag is-${flag.tone}`} title={flagTitle}>
+          <span className="card-flag-label">{flag.label}</span>
+          {flag.text && <span className="card-flag-text">{flag.text}</span>}
         </div>
       )}
     </article>
