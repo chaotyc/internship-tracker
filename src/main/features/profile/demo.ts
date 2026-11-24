@@ -26,6 +26,8 @@ export const DEMO_PROFILE: Profile = {
   needsSponsorship: false,
   demographics: { gender: '', pronouns: 'they/them', hispanicLatino: 'decline', race: '', veteran: '', disability: '' },
   preferences: {
+    roleTypes: ['internship'],
+    degreeLevel: '',
     targetRoles: ['ML inference intern', 'GPU kernels intern', 'Photonics intern'],
     locations: ['San Francisco Bay Area', 'Seattle, WA'],
     remoteOk: true,
@@ -81,7 +83,7 @@ export const DEMO_TRACK_ML = 'demo-ml'
 export const DEMO_TRACK_PHOTONICS = 'demo-photonics'
 
 /** Companies whose demo roles go on the photonics track. */
-const PHOTONICS_COMPANIES = new Set(['Lumora Photonics', 'Prism Labs', 'Quanta Optics Lab'])
+const PHOTONICS_COMPANIES = new Set(['Lumora Photonics', 'Prismatic Optics', 'Quanta Optics Lab'])
 
 const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString()
 

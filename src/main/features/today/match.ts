@@ -114,7 +114,7 @@ function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-/** The company's name as a whole word or phrase ("Kite" doesn't match "metadata"). */
+/** The company's name as a whole word or phrase ("Kite" doesn't match "kitesurfing"). */
 export function mentionsCompany(text: string, company: string): boolean {
   const name = company.replace(/\(.*?\)/g, '').replace(/,?\s+(inc|llc|ltd|corp)\.?$/i, '').trim()
   if (name.length < 2 || !text) return false

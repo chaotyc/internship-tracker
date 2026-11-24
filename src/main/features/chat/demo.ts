@@ -10,8 +10,8 @@ export function seedDemoChat(chat: ChatStore): void {
     content: [
       'Three things are time-sensitive, in this order:',
       '',
-      '1. **Northwind AI · Software Engineer Intern, Inference** closes in 4 days. It’s your strongest fit on the board, so send it first.',
-      '2. **Prism Labs · Optical I/O Intern** looks close to closing. Apply this week or move it to Closed.',
+      '1. **Northwind AI · ML Inference Intern** closes in 4 days. It’s your strongest fit on the board, so send it first.',
+      '2. **Prismatic Optics · Optical I/O Intern** looks close to closing. Apply this week or move it to Closed.',
       '3. **Meridian Compute** wants an answer on your offer within 9 days. Worth asking whether they can wait until you hear back from Cobaltine AI.',
       '',
       'Also prep for the *Cobaltine AI* technical screen this afternoon at 2pm: review KV-cache batching and be ready to talk through your `vLLM` project.',

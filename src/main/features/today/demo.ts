@@ -11,28 +11,28 @@ export function seedTodayDemo(roles: { list(): Role[]; update(id: string, patch:
   const find = (company: string) => all.find((r) => r.company === company)
   const step = (text: string, due: string, time = '', source: NextStep['source'] = 'manual'): NextStep => ({ text, due, time, done: false, source })
   const steps: [string, NextStep][] = [
-    ['Granitecore', step('Submit the take-home', day(-1), '', 'email')],
-    ['Cobaltine AI', step('Technical screen with the inference team', today, '14:00')],
-    ['Kite', step('Follow up with the recruiter', today)],
+    ['Granite Machines', step('Submit the take-home', day(-1), '', 'email')],
+    ['Cobaltine AI', step('Technical screen with the serving team', today, '14:00')],
+    ['Orbitwise', step('Follow up with the recruiter', today)],
     // Well before the offer deadline (seeded in 9 days).
     ['Meridian Compute', step('Ask if they can extend the offer', day(3))],
-    ['Kestrel', step('Ask for a referral', day(5))],
+    ['Kestrel Compute', step('Ask for a referral', day(5))],
     // Before the posting closes (deadline in 4 days).
     ['Northwind AI', step('Finish the application', day(2), '', 'chat')],
-    ['Tessellate', step('Prepare for the recruiter call', '')],
+    ['Tessellate Chips', step('Prepare for the recruiter call', '')],
   ]
   for (const [company, ns] of steps) {
     const r = find(company)
     if (r) roles.update(r.id, { nextStep: ns })
   }
-  const vectorline = find('Vectorline')
+  const vectorline = find('Vectorline Silicon')
   if (vectorline && !proposals.byKey('demo:vectorline-assessment')) {
     proposals.add('demo:vectorline-assessment', {
       roleId: vectorline.id,
       company: vectorline.company,
       title: vectorline.title,
-      email: { from: 'Vectorline Recruiting <no-reply@ashbyhq.com>', subject: 'Next step: Vectorline online assessment', date: new Date(Date.now() - 2 * 3_600_000).toISOString() },
-      summary: 'Vectorline invited you to a 90-minute CodeSignal assessment, due in six days.',
+      email: { from: 'Vectorline Silicon Recruiting <recruiting@example.com>', subject: 'Next step: Vectorline Silicon online assessment', date: new Date(Date.now() - 2 * 3_600_000).toISOString() },
+      summary: 'Vectorline Silicon invited you to a 90-minute CodeSignal assessment, due in six days.',
       stage: 'interviewing',
       nextStep: { text: 'Complete the CodeSignal assessment', due: day(6), time: '' },
       via: 'ai',

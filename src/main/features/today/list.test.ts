@@ -169,7 +169,7 @@ describe('daily reminder', () => {
   )
 
   it('summarises what is due or overdue, and only then', () => {
-    expect(reminderText(items, TODAY)).toEqual({ title: '1 due today, 1 overdue', body: 'Vectorline: Follow up\nMeta: Call' })
+    expect(reminderText(items, TODAY)).toEqual({ title: '1 due today, 1 overdue', body: 'Vectorline: Follow up\nKite: Call' })
     expect(reminderText(items.filter((i) => i.company === 'Far'), TODAY)).toBeNull()
   })
 
