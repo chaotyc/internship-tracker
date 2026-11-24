@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { PROVIDER_ORDER, PROVIDERS, type AiSettings, type ProviderId, type ProviderStatus } from '@shared/ai'
+import { activeProvider, PROVIDER_ORDER, PROVIDERS, type AiSettings, type ProviderId, type ProviderStatus } from '@shared/ai'
 import { Icon } from '@renderer/components/Icon'
 import { api } from '@renderer/lib/api'
 import { PaneHeader } from './PaneHeader'
@@ -64,7 +64,7 @@ export function AiPanel() {
         {header}
         <div className="banner error settings-load-error" role="alert">
           <Icon name="alert" />
-          Couldn't load AI connections: {error}
+          Couldn’t load AI connections: {error}
           <button type="button" className="btn btn-sm" onClick={load}>
             Try again
           </button>
@@ -84,7 +84,7 @@ export function AiPanel() {
 
   const byId = new Map(statuses.map((s) => [s.id, s]))
   const chosen = settings.defaultProvider && byId.get(settings.defaultProvider)?.available ? settings.defaultProvider : null
-  const active = chosen ?? PROVIDER_ORDER.find((id) => byId.get(id)?.available) ?? null
+  const active = activeProvider(statuses, settings.defaultProvider)
 
   // Pinned providers that aren't usable fall back to the automatic choice.
   const automatic = active !== null && active !== chosen
@@ -332,7 +332,7 @@ function timeOf(at: number): string {
 }
 
 /** Renders `backticked` spans as code. */
-function withCode(text: string): ReactNode[] {
+export function withCode(text: string): ReactNode[] {
   return text.split('`').map((part, i) => (i % 2 ? <code key={i}>{part}</code> : part))
 }
 

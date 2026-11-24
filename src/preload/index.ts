@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { Api, IpcResult } from '@shared/ipc'
 
-const CHANNEL = /^(roles|profile|ai|search|chat|autofill|today):[A-Za-z]+$/
+const CHANNEL = /^(roles|profile|ai|search|chat|autofill|today|onboarding):[A-Za-z]+$/
 
 const api: Api = {
   async invoke(channel: string, ...req: unknown[]) {

@@ -19,6 +19,8 @@ export interface ProviderInfo {
   modelPlaceholder: string
   /** CLI: how to install it. API: where to get a key. */
   hint: string
+  /** API only: the provider's page for creating a key. */
+  keyUrl?: string
   supportsWebSearch: boolean
 }
 
@@ -61,6 +63,7 @@ export const PROVIDERS: Record<ProviderId, ProviderInfo> = {
     defaultModel: 'claude-opus-5-5',
     modelPlaceholder: 'claude-opus-5-5',
     hint: 'Create a key at platform.claude.com.',
+    keyUrl: 'https://platform.claude.com/settings/keys',
     supportsWebSearch: true,
   },
   'openai-api': {
@@ -71,6 +74,7 @@ export const PROVIDERS: Record<ProviderId, ProviderInfo> = {
     defaultModel: 'gpt-6.2-astra',
     modelPlaceholder: 'gpt-6.2-astra',
     hint: 'Create a key at platform.openai.com.',
+    keyUrl: 'https://platform.openai.com/api-keys',
     supportsWebSearch: true,
   },
   'gemini-api': {
@@ -81,12 +85,23 @@ export const PROVIDERS: Record<ProviderId, ProviderInfo> = {
     defaultModel: 'gemini-3.8-flash',
     modelPlaceholder: 'gemini-3.8-flash',
     hint: 'Create a key at aistudio.google.com.',
+    keyUrl: 'https://aistudio.google.com/apikey',
     supportsWebSearch: true,
   },
 }
 
 export function isProviderId(x: unknown): x is ProviderId {
   return typeof x === 'string' && (PROVIDER_ORDER as string[]).includes(x)
+}
+
+/**
+ * The provider AI features use right now: the saved default if it is available,
+ * else the first available one in PROVIDER_ORDER. Null when none is.
+ */
+export function activeProvider(statuses: Pick<ProviderStatus, 'id' | 'available'>[], defaultProvider: ProviderId | null): ProviderId | null {
+  const available = new Set(statuses.filter((s) => s.available).map((s) => s.id))
+  if (defaultProvider && available.has(defaultProvider)) return defaultProvider
+  return PROVIDER_ORDER.find((id) => available.has(id)) ?? null
 }
 
 export interface ProviderStatus {

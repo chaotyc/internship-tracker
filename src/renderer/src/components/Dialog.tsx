@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { Icon } from './Icon'
 import './dialog.css'
 
@@ -13,10 +13,13 @@ interface Props {
   headerExtra?: ReactNode
   /** No body padding: the content lays out its own edges (Settings' full-height nav). */
   flush?: boolean
+  /** Extra class on the <dialog>, for content that styles its own sheet. */
+  className?: string
 }
 
 /** Native <dialog> as a modal sheet. Escape and the backdrop close it. */
-export function Dialog({ open, onClose, title, subtitle, width = 620, children, footer, headerExtra, flush = false }: Props) {
+export function Dialog({ open, onClose, title, subtitle, width = 620, children, footer, headerExtra, flush = false, className }: Props) {
+  const titleId = useId()
   const ref = useRef<HTMLDialogElement>(null)
   const body = useRef<HTMLDivElement>(null)
   // True while the body has more content below, so the footer can show it sits over scrolled content.
@@ -46,7 +49,8 @@ export function Dialog({ open, onClose, title, subtitle, width = 620, children, 
   return (
     <dialog
       ref={ref}
-      className="dialog"
+      className={`dialog${className ? ` ${className}` : ''}`}
+      aria-labelledby={titleId}
       style={{ width: `min(${width}px, calc(100vw - 48px))` }}
       onCancel={(e) => {
         e.preventDefault()
@@ -60,7 +64,7 @@ export function Dialog({ open, onClose, title, subtitle, width = 620, children, 
         <div className="dialog-inner">
           <header className="dialog-head">
             <div className="dialog-titles">
-              <h2>{title}</h2>
+              <h2 id={titleId}>{title}</h2>
               {subtitle && <p>{subtitle}</p>}
             </div>
             {headerExtra}
