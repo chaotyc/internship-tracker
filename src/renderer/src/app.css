@@ -24,10 +24,10 @@
   -webkit-app-region: no-drag;
 }
 .brand {
+  flex: none;
   display: flex;
   align-items: center;
   gap: 10px;
-  min-width: 0;
 }
 .brand-mark {
   display: grid;
@@ -175,6 +175,18 @@
 @media (max-width: 1060px) {
   .brand p {
     display: none;
+  }
+}
+/* Narrowest windows (960px is the minimum): only the mark shows, so the title never runs under
+   the Board / Today switch. The heading stays for screen readers. */
+@media (max-width: 1000px) {
+  .brand > div {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 }
 .no-match {

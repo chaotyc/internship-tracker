@@ -44,7 +44,7 @@ export function EmailPanel() {
     try {
       setStatus(await api.invoke('today:saveSettings', patch))
     } catch (e) {
-      toast(`Couldn't save: ${(e as Error).message}`, { tone: 'error' })
+      toast(`Couldn’t save: ${(e as Error).message}`, { tone: 'error' })
       load()
     }
   }
@@ -56,7 +56,7 @@ export function EmailPanel() {
         {header}
         <div className="banner error settings-load-error" role="alert">
           <Icon name="alert" />
-          Couldn't load email settings: {loadError}
+          Couldn’t load email settings: {loadError}
           <button
             type="button"
             className="btn btn-sm"
@@ -170,7 +170,7 @@ function Connected({ status, onStatus, onSettings }: { status: EmailStatus; onSt
             {checking ? 'Checking…' : 'Check now'}
           </button>
           <button type="button" className={`btn btn-sm btn-danger${armed ? ' is-armed' : ''}`} onClick={() => void disconnect()}>
-            {armed ? 'Click to confirm' : 'Disconnect'}
+            {armed ? 'Click again to disconnect' : 'Disconnect'}
           </button>
         </div>
       </div>

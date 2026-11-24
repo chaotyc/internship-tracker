@@ -47,6 +47,8 @@
   font-size: var(--fs-body);
 }
 .dialog-body {
+  /* Positioned, so absolutely placed content (hidden inputs, live regions) scrolls inside the body. */
+  position: relative;
   overflow-y: auto;
   padding: 4px 20px 20px;
   display: flex;

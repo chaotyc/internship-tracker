@@ -35,7 +35,7 @@ export function TrackSelect({ value, onChange, note }: { value: string; onChange
   const borrowed = !current.resume && resume
   const description = resume
     ? `Resume: ${resume.fileName}${borrowed ? ' (from the default track)' : ''}`
-    : 'No resume on this track yet. Add one in Settings › Application tracks.'
+    : 'No resume on this track yet. Add one in Settings, under Application tracks.'
   // The resume sits under the select as helper text; the role dialog gives this field its own row.
   return (
     <div className="field">

@@ -113,12 +113,8 @@ input[type='time']::-webkit-calendar-picker-indicator {
 input[type='time']:disabled::-webkit-calendar-picker-indicator {
   cursor: default;
 }
-@media (prefers-color-scheme: dark) {
-  input[type='date']::-webkit-calendar-picker-indicator,
-  input[type='time']::-webkit-calendar-picker-indicator {
-    filter: invert(1);
-  }
-}
+/* No dark-mode invert: with color-scheme: dark the native icon is already light, and inverting it
+   made the time field's clock nearly invisible. */
 .btn svg {
   width: 15px;
   height: 15px;
@@ -315,6 +311,8 @@ select.input {
    the off track is darker than the surface in light and lighter than it in dark. */
 .switch {
   --switch-off: var(--line-strong);
+  /* Contains the hidden checkbox, so it never sizes a scrolling ancestor (it made Settings' whole dialog scroll). */
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 10px;

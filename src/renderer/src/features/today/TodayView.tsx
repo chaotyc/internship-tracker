@@ -133,7 +133,7 @@ export function TodayView({
         n.delete(keyOf(item))
         return n
       })
-      toast(`Couldn't update ${role.company}: ${(e as Error).message}`, { tone: 'error' })
+      toast(`Couldn’t update ${role.company}: ${(e as Error).message}`, { tone: 'error' })
     }
   }
 
@@ -259,9 +259,9 @@ export function TodayView({
         {error && (
           <div className="banner error" role="alert">
             <Icon name="alert" />
-            Couldn't load Today: {error}
+            Couldn’t load Today: {error}
             <button type="button" className="btn btn-sm" onClick={load}>
-              Retry
+              Try again
             </button>
           </div>
         )}
@@ -275,9 +275,9 @@ export function TodayView({
             {proposalsError && (
               <div className="td-inline-error" role="alert">
                 <Icon name="alert" />
-                <span>Couldn't load email updates: {proposalsError}</span>
+                <span>Couldn’t load email updates: {proposalsError}</span>
                 <button type="button" className="btn btn-sm" onClick={loadProposals}>
-                  Retry
+                  Try again
                 </button>
               </div>
             )}

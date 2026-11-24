@@ -508,6 +508,10 @@ function MoreMenu({ buttonRef, active, onClear }: { buttonRef: RefObject<HTMLBut
     <div
       className="chat-more"
       ref={rootRef}
+      // Tabbing away closes the menu, so it never stays open behind the focus.
+      onBlur={(e) => {
+        if (open && !rootRef.current?.contains(e.relatedTarget as Node | null)) setOpen(false)
+      }}
       onKeyDown={(e) => {
         if (e.key === 'Escape' && open) {
           e.stopPropagation()
@@ -551,7 +555,7 @@ function MoreMenu({ buttonRef, active, onClear }: { buttonRef: RefObject<HTMLBut
 
 function Thinking() {
   return (
-    <div className="chat-thinking" aria-label="The assistant is thinking">
+    <div className="chat-thinking" role="img" aria-label="The assistant is thinking">
       <span />
       <span />
       <span />
@@ -672,7 +676,14 @@ function ScopePicker({ roles, current, onChange }: { roles: Role[] | null; curre
   }
 
   return (
-    <div className="chat-context" ref={rootRef}>
+    <div
+      className="chat-context"
+      ref={rootRef}
+      // Tabbing away closes the picker, so it never stays open behind the focus.
+      onBlur={(e) => {
+        if (open && !rootRef.current?.contains(e.relatedTarget as Node | null)) close(false)
+      }}
+    >
       <span className="chat-context-label" aria-hidden="true">
         Context:
       </span>

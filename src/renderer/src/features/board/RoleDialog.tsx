@@ -344,14 +344,14 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
             <span>
               Company<span className="req">*</span>
             </span>
-            <input id="rd-company" className={cls('company')} value={form.company} onChange={(e) => set('company', e.target.value)} aria-invalid={!!errors.company} />
+            <input id="rd-company" className={cls('company')} value={form.company} onChange={(e) => set('company', e.target.value)} aria-required="true" aria-invalid={!!errors.company} />
             {errors.company && <span className="field-error">{errors.company}</span>}
           </label>
           <label className="field">
             <span>
               Role<span className="req">*</span>
             </span>
-            <input id="rd-title" className={cls('title')} value={form.title} onChange={(e) => set('title', e.target.value)} aria-invalid={!!errors.title} />
+            <input id="rd-title" className={cls('title')} value={form.title} onChange={(e) => set('title', e.target.value)} aria-required="true" aria-invalid={!!errors.title} />
             {errors.title && <span className="field-error">{errors.title}</span>}
           </label>
           <label className="field">
@@ -436,7 +436,7 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
           <span className="dlg-role-title">
             <Monogram name={role.company} size={32} />
             <span>
-              {role.company}
+              {role.company}{' '}
               <small>{role.title}</small>
             </span>
           </span>
@@ -502,6 +502,10 @@ export function RoleDialog({ open, role, initialStage, onClose, onAskAssistant }
         )
       }
     >
+      {/* Always present, so "Reading the posting…" and what it filled are announced as they change. */}
+      <p className="visually-hidden" role="status">
+        {readNote.text}
+      </p>
       <div
         className="role-form"
         onKeyDown={(e) => {

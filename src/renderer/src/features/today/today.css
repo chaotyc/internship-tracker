@@ -6,6 +6,8 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  /* Rows adapt to the view's width (narrower with the assistant open), not the window's. */
+  container-type: inline-size;
 }
 .td-inner {
   max-width: 880px;
@@ -1050,4 +1052,16 @@
 .td-row-deadline svg {
   width: 11px;
   height: 11px;
+}
+
+/* Narrow Today (the assistant open in a small window): the stage column goes (it's still in each
+   row's label and the role dialog) and the due column narrows, so the step itself stays readable. */
+@container (max-width: 640px) {
+  .td-row {
+    grid-template-columns: 30px minmax(0, 1fr) 148px 58px;
+    gap: 10px;
+  }
+  .td-row > .td-stage {
+    display: none;
+  }
 }

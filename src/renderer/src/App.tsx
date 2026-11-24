@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { STAGES, type Role, type StageKey } from '@shared/roles'
 import { orderAt } from '@shared/order'
 import { attentionCount, localIso, todayItems } from '@shared/today'
+import { isOnboardingStep, type OnboardingStep } from '@shared/onboarding'
 import { Icon } from './components/Icon'
 import { useToast } from './components/Toast'
 import { api, useRoles } from './lib/api'
@@ -9,10 +10,12 @@ import { plural } from './lib/format'
 import { Board, byStage, matchesQuery } from './features/board/Board'
 import { RoleDialog } from './features/board/RoleDialog'
 import { ChatPanel } from './features/chat/ChatPanel'
+import { Onboarding, type CsvResult } from './features/onboarding/Onboarding'
 import { chatRun } from './features/chat/chatStore'
 import { AutosearchButton } from './features/search/AutosearchButton'
 import { RefreshButton } from './features/search/RefreshButton'
 import { SuggestionsTray } from './features/search/SuggestionsTray'
+import { SkippedDialog, openSkipped } from './features/search/SkippedDialog'
 import { SettingsDialog, type SettingsTab } from './features/settings/SettingsDialog'
 import { TodayView } from './features/today/TodayView'
 import './app.css'
@@ -25,17 +28,29 @@ export function App() {
   const [query, setQuery] = useState('')
   const [dialog, setDialog] = useState<{ open: boolean; id: string | null; stage: StageKey }>({ open: false, id: null, stage: 'saved' })
   const [chat, setChat] = useState<{ open: boolean }>({ open: false })
+  const chatOpenRef = useRef(false)
+  chatOpenRef.current = chat.open
   const [settings, setSettings] = useState<{ open: boolean; tab: SettingsTab }>({ open: false, tab: 'profile' })
   const [tray, setTray] = useState(false)
+  // The welcome tour. `resume`: the tour stepped aside for another dialog and comes back when that one closes.
+  const [tour, setTour] = useState<{ open: boolean; step: OnboardingStep; resume: 'add' | 'settings' | null }>({ open: false, step: 'welcome', resume: null })
   const [view, setView] = useState<'board' | 'today'>('board')
   const [todayMatches, setTodayMatches] = useState(0)
   const [pendingEmails, setPendingEmails] = useState(0)
   const [day, setDay] = useState(localIso())
   const searchRef = useRef<HTMLInputElement>(null)
   const csvRef = useRef<HTMLInputElement>(null)
+  const chatBtnRef = useRef<HTMLButtonElement>(null)
 
   const openRole = useCallback((id: string) => setDialog({ open: true, id, stage: 'saved' }), [])
   const addRole = useCallback((stage: StageKey = 'saved') => setDialog({ open: true, id: null, stage }), [])
+  // Closing the assistant removes whatever had focus inside it; focus lands back on its toggle.
+  const closeChat = useCallback(() => {
+    setChat({ open: false })
+    requestAnimationFrame(() => {
+      if (!document.activeElement || document.activeElement === document.body) chatBtnRef.current?.focus()
+    })
+  }, [])
 
   const move = useCallback(
     (id: string, stage: StageKey, index: number) => {
@@ -46,34 +61,73 @@ export function App() {
         return cur.map((r) => (r.id === id ? { ...r, stage, order: orderAt(others, index) } : r))
       })
       api.invoke('roles:move', { id, stage, index }).catch((e: Error) => {
-        toast(`Couldn't move that card: ${e.message}`, { tone: 'error' })
+        toast(`Couldn’t move that card: ${e.message}`, { tone: 'error' })
         reload()
       })
     },
     [setRoles, reload, toast],
   )
 
-  const importCsv = async (file: File) => {
+  const importCsvFile = useCallback(async (file: File): Promise<CsvResult> => {
     try {
       const res = await api.invoke('roles:importCsv', { csv: await file.text() })
-      toast(
-        res.added
+      return {
+        ok: true,
+        text: res.added
           ? `Imported ${res.added} role${res.added === 1 ? '' : 's'}${res.skipped ? `, skipped ${res.skipped} already on the board` : ''}.`
           : 'Every role in that file is already on the board.',
-      )
+      }
     } catch (e) {
-      toast((e as Error).message, { tone: 'error' })
+      return { ok: false, text: (e as Error).message }
     }
+  }, [])
+  const importCsv = async (file: File) => {
+    const res = await importCsvFile(file)
+    toast(res.text, res.ok ? undefined : { tone: 'error' })
   }
 
-  // Screenshot views: #view=add | settings | settings-ai | settings-boards | chat | role
+  const showTour = useCallback((step: OnboardingStep = 'welcome') => setTour({ open: true, step, resume: null }), [])
+  const closeTour = (outcome: 'completed' | 'skipped') => {
+    setTour((t) => ({ ...t, open: false, resume: null }))
+    // Remembered in the app's own store, so it doesn't open by itself again. A failure only means it may show once more.
+    api.invoke('onboarding:finish', { outcome, step: tour.step }).catch(() => {})
+  }
+  // Another dialog closed: if the tour stepped aside for it, bring the tour back where it was.
+  const resumeTour = (from: 'add' | 'settings') => setTour((t) => (t.resume === from ? { ...t, open: true, resume: null } : t))
+
+  // First launch: the main process decides (never in demo mode, never once finished or skipped).
+  useEffect(() => {
+    const view = new URLSearchParams(location.hash.slice(1)).get('view') ?? ''
+    // Screenshot views: #view=onboarding | onboarding-ai | onboarding-profile | onboarding-roles | onboarding-done
+    if (view.startsWith('onboarding')) {
+      const step = view.split('-')[1]
+      return showTour(isOnboardingStep(step) ? step : 'welcome')
+    }
+    if (view) return
+    let live = true
+    api
+      .invoke('onboarding:status')
+      .then((s) => live && s.show && showTour())
+      .catch(() => {})
+    return () => {
+      live = false
+    }
+  }, [showTour])
+
+  // Screenshot views: #view=add | settings | settings-ai | settings-boards | chat | role | skipped
   useEffect(() => {
     const view = new URLSearchParams(location.hash.slice(1)).get('view')
     if (view === 'add') addRole()
-    else if (view?.startsWith('settings')) setSettings({ open: true, tab: (view.split('-')[1] as SettingsTab) ?? 'profile' })
+    else if (view?.startsWith('settings')) {
+      setSettings({ open: true, tab: (view.split('-')[1] as SettingsTab) ?? 'profile' })
+      // #view=settings&section=prefs scrolls to one profile section.
+      const section = new URLSearchParams(location.hash.slice(1)).get('section')
+      if (section) setTimeout(() => document.getElementById(`pf-${section}`)?.scrollIntoView({ block: 'start' }), 600)
+    }
     else if (view === 'chat') setChat({ open: true })
     else if (view === 'today') setView('today')
     else if (view === 'suggestions') setTray(true)
+    else if (view === 'skipped') openSkipped()
   }, [addRole])
   useEffect(() => {
     const view = new URLSearchParams(location.hash.slice(1)).get('view')
@@ -122,7 +176,8 @@ export function App() {
       }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'j') {
         e.preventDefault()
-        setChat((c) => ({ ...c, open: !c.open }))
+        if (chatOpenRef.current) closeChat()
+        else setChat({ open: true })
       } else if ((e.metaKey || e.ctrlKey) && e.key === ',') {
         e.preventDefault()
         setSettings({ open: true, tab: 'profile' })
@@ -136,7 +191,7 @@ export function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [addRole])
+  }, [addRole, closeChat])
 
   const counts = useMemo(() => {
     const g = byStage(roles ?? [])
@@ -166,15 +221,15 @@ export function App() {
             </p>
           </div>
         </div>
-        <div className="view-switch" role="tablist" aria-label="View">
-          <button type="button" role="tab" aria-selected={view === 'board'} className={view === 'board' ? 'is-on' : ''} onClick={() => setView('board')}>
+        {/* Two view buttons, not ARIA tabs: there is no tab panel or arrow-key model behind them. */}
+        <div className="view-switch" role="group" aria-label="View">
+          <button type="button" aria-pressed={view === 'board'} className={view === 'board' ? 'is-on' : ''} onClick={() => setView('board')}>
             <Icon name="board" />
             Board
           </button>
           <button
             type="button"
-            role="tab"
-            aria-selected={view === 'today'}
+            aria-pressed={view === 'today'}
             className={view === 'today' ? 'is-on' : ''}
             onClick={() => setView('today')}
             title={attention ? `${attention} to look at: email updates, overdue and due today` : undefined}
@@ -219,9 +274,10 @@ export function App() {
           </button>
           <span className="topbar-sep" />
           <button
+            ref={chatBtnRef}
             type="button"
             className={`icon-btn${chat.open ? ' is-on' : ''}`}
-            onClick={() => setChat((c) => ({ ...c, open: !c.open }))}
+            onClick={() => (chat.open ? closeChat() : setChat({ open: true }))}
             aria-label="Assistant"
             aria-pressed={chat.open}
             title={`Assistant (${MOD}J)`}
@@ -244,9 +300,9 @@ export function App() {
         <main className="main">
           <SuggestionsTray open={tray} onClose={() => setTray(false)} />
           {error && (
-            <div className="banner error">
+            <div className="banner error" role="alert">
               <Icon name="alert" />
-              Couldn't load your roles: {error}
+              Couldn’t load your roles: {error}
               <button type="button" className="btn btn-sm" onClick={reload}>
                 Try again
               </button>
@@ -270,9 +326,10 @@ export function App() {
               </button>
             </div>
           ) : !roles && error ? null : !roles ? (
-            <div className="board-loading" aria-busy="true">
+            <div className="board-loading" role="status" aria-busy="true">
+              <span className="visually-hidden">Loading your board…</span>
               {[0, 1, 2, 3].map((i) => (
-                <div key={i} className="skeleton-col">
+                <div key={i} className="skeleton-col" aria-hidden="true">
                   <span />
                   <span />
                   <span />
@@ -283,7 +340,7 @@ export function App() {
             <Board roles={roles} query={query} onOpen={openRole} onAdd={addRole} onMove={move} />
           )}
         </main>
-        {chat.open && <ChatPanel onClose={() => setChat({ open: false })} onOpenSettings={(tab) => setSettings({ open: true, tab })} />}
+        {chat.open && <ChatPanel onClose={closeChat} onOpenSettings={(tab) => setSettings({ open: true, tab })} />}
       </div>
 
       <input
@@ -297,11 +354,15 @@ export function App() {
           e.target.value = ''
         }}
       />
+      <SkippedDialog />
       <RoleDialog
         open={dialog.open}
         role={editing}
         initialStage={dialog.stage}
-        onClose={() => setDialog((d) => ({ ...d, open: false }))}
+        onClose={() => {
+          setDialog((d) => ({ ...d, open: false }))
+          resumeTour('add')
+        }}
         onAskAssistant={(roleId) => {
           setDialog((d) => ({ ...d, open: false }))
           // The chosen role becomes the assistant's context; it stays until the user changes it.
@@ -309,7 +370,34 @@ export function App() {
           setChat({ open: true })
         }}
       />
-      <SettingsDialog open={settings.open} tab={settings.tab} onClose={() => setSettings((s) => ({ ...s, open: false }))} />
+      <SettingsDialog
+        open={settings.open}
+        tab={settings.tab}
+        onClose={() => {
+          setSettings((s) => ({ ...s, open: false }))
+          resumeTour('settings')
+        }}
+        onShowTour={() => {
+          setSettings((s) => ({ ...s, open: false }))
+          showTour()
+        }}
+      />
+      <Onboarding
+        open={tour.open}
+        step={tour.step}
+        onStep={(step) => setTour((t) => ({ ...t, step }))}
+        onClose={closeTour}
+        roleCount={roles?.length ?? 0}
+        onAddRole={() => {
+          setTour((t) => ({ ...t, open: false, resume: 'add' }))
+          addRole()
+        }}
+        onWatchCompanies={() => {
+          setTour((t) => ({ ...t, open: false, resume: 'settings' }))
+          setSettings({ open: true, tab: 'boards' })
+        }}
+        onImportCsv={importCsvFile}
+      />
     </div>
   )
 }

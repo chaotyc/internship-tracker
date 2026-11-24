@@ -43,6 +43,7 @@ export function DataPanel() {
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const confirmId = useId()
   const confirmRef = useRef<HTMLInputElement>(null)
+  const deleteBtnRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     api
@@ -91,6 +92,8 @@ export function DataPanel() {
     setConfirming(false)
     setTyped('')
     setDeleteError(null)
+    // The confirm box goes away; focus returns to the button that opened it.
+    requestAnimationFrame(() => deleteBtnRef.current?.focus())
   }
 
   const platform = status?.platform
@@ -205,7 +208,7 @@ export function DataPanel() {
         <p>Erase every role, your profile, saved answers, chats, settings, API keys and the stored resume from this computer. You can’t undo this.</p>
         {!confirming ? (
           <div className="dp-row">
-            <button type="button" className="btn btn-danger" onClick={() => setConfirming(true)}>
+            <button ref={deleteBtnRef} type="button" className="btn btn-danger" onClick={() => setConfirming(true)}>
               <Icon name="trash" />
               Delete everything…
             </button>

@@ -280,120 +280,123 @@ export function Board({ roles, query, onOpen, onAdd, onMove, focusStage }: Props
   }, [focusStage])
 
   return (
-    <div
-      className={`board${edges.left ? ' fade-left' : ''}${edges.right ? ' fade-right' : ''}${collapsed.has('closed') && !(query && grouped.closed.some((r) => matchesQuery(r, query))) ? ' has-rails' : ''}`}
-      ref={boardRef}
-      role="list"
-      aria-label="Application stages"
-    >
+    <>
+      {/* Outside the list: a list may only contain its items. */}
       <span id="card-keys-hint" className="visually-hidden">
         Enter or Space opens the role. Shift plus left or right arrow moves it to the previous or next stage.
       </span>
       <div className="visually-hidden" aria-live="polite">
         {announce}
       </div>
-      {STAGES.map((s) => {
-        const all = grouped[s.key]
-        const visible = all.filter((r) => matchesQuery(r, query) && r.id !== drag?.id)
-        const isTarget = drag?.stage === s.key
-        // While filtering, a collapsed lane with matches opens so its results are visible.
-        if (collapsed.has(s.key) && !(query && visible.length)) {
+      <div
+        className={`board${edges.left ? ' fade-left' : ''}${edges.right ? ' fade-right' : ''}${collapsed.has('closed') && !(query && grouped.closed.some((r) => matchesQuery(r, query))) ? ' has-rails' : ''}`}
+        ref={boardRef}
+        role="list"
+        aria-label="Application stages"
+      >
+        {STAGES.map((s) => {
+          const all = grouped[s.key]
+          const visible = all.filter((r) => matchesQuery(r, query) && r.id !== drag?.id)
+          const isTarget = drag?.stage === s.key
+          // While filtering, a collapsed lane with matches opens so its results are visible.
+          if (collapsed.has(s.key) && !(query && visible.length)) {
+            return (
+              <section
+                key={s.key}
+                data-col={s.key}
+                className={`col is-collapsed${isTarget ? ' is-target' : ''}`}
+                style={{ ['--stage' as string]: `var(--stage-${s.key})` }}
+                role="listitem"
+              >
+                <button
+                  type="button"
+                  className="lane"
+                  data-stage-body={s.key}
+                  onClick={() => toggleCollapsed(s.key, true)}
+                  aria-label={`${s.label}, ${plural(all.length, 'role')}. Expand`}
+                  title={`Show ${s.label}`}
+                >
+                  <span className="col-dot" />
+                  <span className="lane-count tabular">{query ? `${visible.length}/${all.length}` : all.length}</span>
+                  <span className="lane-label">{s.label}</span>
+                </button>
+              </section>
+            )
+          }
           return (
             <section
-              key={s.key}
               data-col={s.key}
-              className={`col is-collapsed${isTarget ? ' is-target' : ''}`}
+              key={s.key}
+              className={`col${isTarget ? ' is-target' : ''}`}
               style={{ ['--stage' as string]: `var(--stage-${s.key})` }}
+              aria-label={`${s.label}, ${plural(all.length, 'role')}`}
               role="listitem"
             >
-              <button
-                type="button"
-                className="lane"
-                data-stage-body={s.key}
-                onClick={() => toggleCollapsed(s.key, true)}
-                aria-label={`${s.label}, ${plural(all.length, 'role')}. Expand`}
-                title={`Show ${s.label}`}
-              >
+              <header className="col-head">
                 <span className="col-dot" />
-                <span className="lane-count tabular">{query ? `${visible.length}/${all.length}` : all.length}</span>
-                <span className="lane-label">{s.label}</span>
-              </button>
+                <h2>{s.label}</h2>
+                <span className="col-count tabular">{query ? `${visible.length}/${all.length}` : all.length}</span>
+                <span className="col-actions">
+                  {COLLAPSIBLE.includes(s.key) && (
+                    <button
+                      type="button"
+                      className="icon-btn col-add"
+                      onClick={() => toggleCollapsed(s.key, false)}
+                      aria-label={`Collapse ${s.label}`}
+                      title="Collapse"
+                    >
+                      <Icon name="collapse" />
+                    </button>
+                  )}
+                  <button type="button" className="icon-btn col-add" onClick={() => onAdd(s.key)} aria-label={`Add a role to ${s.label}`} title={`Add to ${s.label}`}>
+                    <Icon name="plus" />
+                  </button>
+                </span>
+              </header>
+              <div className="col-body" data-stage-body={s.key}>
+                {visible.map((r, i) => (
+                  <FragmentWithPlaceholder key={r.id} show={isTarget && drag?.index === i} height={drag?.height ?? 0}>
+                    <RoleCard
+                      role={r}
+                      onPointerDown={(e) => startPointer(e, r.id)}
+                      onClick={() => {
+                        if (!suppressClick.current) onOpen(r.id)
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          onOpen(r.id)
+                        }
+                        else if (e.shiftKey && e.key === 'ArrowRight') {
+                          e.preventDefault()
+                          moveByKey(r, 1)
+                        } else if (e.shiftKey && e.key === 'ArrowLeft') {
+                          e.preventDefault()
+                          moveByKey(r, -1)
+                        }
+                      }}
+                    />
+                  </FragmentWithPlaceholder>
+                ))}
+                {isTarget && drag && drag.index >= visible.length && (
+                  <div className="placeholder" style={{ height: drag.height }} />
+                )}
+                {!visible.length && !isTarget && (
+                  <div className="col-empty">{query && all.length ? 'No matches' : emptyCopy(s.key)}</div>
+                )}
+              </div>
             </section>
           )
-        }
-        return (
-          <section
-            data-col={s.key}
-            key={s.key}
-            className={`col${isTarget ? ' is-target' : ''}`}
-            style={{ ['--stage' as string]: `var(--stage-${s.key})` }}
-            aria-label={`${s.label}, ${plural(all.length, 'role')}`}
-            role="listitem"
-          >
-            <header className="col-head">
-              <span className="col-dot" />
-              <h2>{s.label}</h2>
-              <span className="col-count tabular">{query ? `${visible.length}/${all.length}` : all.length}</span>
-              <span className="col-actions">
-                {COLLAPSIBLE.includes(s.key) && (
-                  <button
-                    type="button"
-                    className="icon-btn col-add"
-                    onClick={() => toggleCollapsed(s.key, false)}
-                    aria-label={`Collapse ${s.label}`}
-                    title="Collapse"
-                  >
-                    <Icon name="collapse" />
-                  </button>
-                )}
-                <button type="button" className="icon-btn col-add" onClick={() => onAdd(s.key)} aria-label={`Add a role to ${s.label}`} title={`Add to ${s.label}`}>
-                  <Icon name="plus" />
-                </button>
-              </span>
-            </header>
-            <div className="col-body" data-stage-body={s.key}>
-              {visible.map((r, i) => (
-                <FragmentWithPlaceholder key={r.id} show={isTarget && drag?.index === i} height={drag?.height ?? 0}>
-                  <RoleCard
-                    role={r}
-                    onPointerDown={(e) => startPointer(e, r.id)}
-                    onClick={() => {
-                      if (!suppressClick.current) onOpen(r.id)
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        onOpen(r.id)
-                      }
-                      else if (e.shiftKey && e.key === 'ArrowRight') {
-                        e.preventDefault()
-                        moveByKey(r, 1)
-                      } else if (e.shiftKey && e.key === 'ArrowLeft') {
-                        e.preventDefault()
-                        moveByKey(r, -1)
-                      }
-                    }}
-                  />
-                </FragmentWithPlaceholder>
-              ))}
-              {isTarget && drag && drag.index >= visible.length && (
-                <div className="placeholder" style={{ height: drag.height }} />
-              )}
-              {!visible.length && !isTarget && (
-                <div className="col-empty">{query && all.length ? 'No matches' : emptyCopy(s.key)}</div>
-              )}
-            </div>
-          </section>
-        )
-      })}
-      {ghostRole &&
-        createPortal(
-          <div className="ghost" ref={ghostRef} style={{ width: ghostRole.width }}>
-            <RoleCard role={ghostRole.role} ghost />
-          </div>,
-          document.body,
-        )}
-    </div>
+        })}
+        {ghostRole &&
+          createPortal(
+            <div className="ghost" ref={ghostRef} style={{ width: ghostRole.width }}>
+              <RoleCard role={ghostRole.role} ghost />
+            </div>,
+            document.body,
+          )}
+      </div>
+    </>
   )
 }
 

@@ -187,7 +187,7 @@ function EmptyProfile({ onOpenSettings, onClose }: { onOpenSettings: () => void;
         </span>
         <div className="af-title">
           <strong>Your profile is empty</strong>
-          <p>Autofill uses your saved name, contact details and education. Add them in Settings &gt; Profile, then try again.</p>
+          <p>Autofill uses your saved name, contact details and education. Add them in Settings, under Profile, then try again.</p>
         </div>
         <CloseButton onClose={onClose} />
       </header>
