@@ -1,6 +1,6 @@
 {
   "name": "internship-tracker",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Local-first desktop tracker for internship and job applications, with AI search, a chat assistant and form autofill.",
   "author": "chaotyc",
   "homepage": "https://github.com/chaotyc/internship-tracker#readme",
