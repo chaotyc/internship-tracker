@@ -1,6 +1,6 @@
 /** "Add from a link": read a posting through its board API or its page, then let the AI fill the rest. */
 import { FITS, type Fit, type RoleInput } from '@shared/roles'
-import type { Profile } from '@shared/profile'
+import { DEGREE_LEVELS, ROLE_TYPES, effectiveDegreeLevel, roleTypesOf, type Profile } from '@shared/profile'
 import type { RoleDraft } from '@shared/search'
 import type { AiService } from '../ai/service'
 import { boardName, fetchPosting, parsePostingUrl, type JobPosting } from './boards'
@@ -35,7 +35,10 @@ export function hasProfileContent(p: Profile): boolean {
 /** What the AI sees about the person: preferences, education and resume text. Never contact or demographic details. */
 export function profileForAi(p: Profile, resumeChars = 8000): string {
   const pr = p.preferences
+  const degree = effectiveDegreeLevel(p)
   const lines = [
+    `Looking for: ${roleTypesOf(pr.roleTypes).map((t) => ROLE_TYPES.find((r) => r.value === t)!.label.toLowerCase()).join(', ')}`,
+    degree && `Degree level (has or is working toward): ${DEGREE_LEVELS.find((d) => d.value === degree)!.label}`,
     pr.targetRoles.length && `Target roles: ${pr.targetRoles.join('; ')}`,
     pr.term && `Term: ${pr.term}`,
     pr.locations.length && `Locations: ${pr.locations.join('; ')}${pr.remoteOk ? ' (remote is fine)' : ''}`,

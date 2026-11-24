@@ -1,5 +1,5 @@
 import type { RoleInput } from './roles'
-import type { SearchPreferences, SavedAnswer } from './profile'
+import { DEGREE_LEVELS, ROLE_TYPES, type SearchPreferences, type SavedAnswer } from './profile'
 
 /** Changes the assistant proposes. Nothing applies until the user confirms it in the sidebar. */
 export type ChatAction =
@@ -59,6 +59,8 @@ export function visibleReply(text: string): string {
 }
 
 const PREF_LABELS: Record<string, string> = {
+  roleTypes: 'Role types',
+  degreeLevel: 'Degree level',
   targetRoles: 'Target roles',
   locations: 'Locations',
   remoteOk: 'Open to remote',
@@ -97,7 +99,18 @@ export function describeAction(
     case 'update_preferences': {
       const rows = Object.entries(action.preferences).map(([k, v]) => ({
         label: PREF_LABELS[k] ?? k,
-        value: Array.isArray(v) ? v.join(', ') || '(none)' : typeof v === 'boolean' ? (v ? 'Yes' : 'No') : String(v ?? '') || '(blank)',
+        value:
+          k === 'roleTypes' && Array.isArray(v)
+            ? v.map((t) => ROLE_TYPES.find((r) => r.value === t)?.label ?? String(t)).join(', ')
+            : k === 'degreeLevel'
+              ? (DEGREE_LEVELS.find((d) => d.value === v)?.label ?? 'From your education')
+              : Array.isArray(v)
+                ? v.join(', ') || '(none)'
+                : typeof v === 'boolean'
+                  ? v
+                    ? 'Yes'
+                    : 'No'
+                  : String(v ?? '') || '(blank)',
       }))
       return { title: 'Update what you’re looking for', rows }
     }

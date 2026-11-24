@@ -10,8 +10,8 @@ import { draftFromLink } from './fromLink'
 import { CancelledError } from './http'
 import { refreshRoles } from './refresh'
 import { startScheduler } from './scheduler'
-import { loadSimplifyListings } from './simplify'
-import { loadLastScan, loadOptions, recordReads, saveLastScan, saveOptions, statusOf } from './status'
+import { SIMPLIFY_NEWGRAD_URL, loadSimplifyListings } from './simplify'
+import { loadLastScan, loadOptions, loadReport, recordReads, saveLastScan, saveOptions, saveReport, statusOf } from './status'
 import { SuggestionStore, searchMigrations } from './suggestions'
 import { detectBoard, loadWatchlist, saveWatchlist } from './watchlist'
 
@@ -21,7 +21,9 @@ export const searchFeature: Feature = {
   register(ctx) {
     const suggestions = new SuggestionStore(ctx.store)
     const { settings } = ctx
+    const demo = process.env['TRACKER_DEMO'] === '1'
     const simplifyCache = join(ctx.dataDir, 'search', 'simplify-listings.json')
+    const simplifyNewGradCache = join(ctx.dataDir, 'search', 'simplify-newgrad-listings.json')
     let running: { ctrl: AbortController; scheduled: boolean } | null = null
     const status = () => statusOf(settings, !!running)
     const pushStatus = () => emit('search:statusChanged', status())
@@ -29,6 +31,14 @@ export const searchFeature: Feature = {
     /** One scan of every enabled source. Manual scans report progress; scheduled ones only the result. */
     const scan = async (scheduled: boolean): Promise<Suggestion[]> => {
       if (running) throw new Error(running.scheduled ? 'A scheduled scan is running. Try again in a minute.' : 'Find roles is already running.')
+      // The demo's companies are made up, so its Find roles replays the sample results.
+      if (demo) {
+        seedSearchDemo(settings, suggestions)
+        const list = suggestions.list()
+        emit('search:progress', { phase: 'done', message: 'Demo mode: showing the sample results. Nothing was read from job boards.', done: list.length, total: list.length })
+        pushStatus()
+        return list
+      }
       const ctrl = new AbortController()
       running = { ctrl, scheduled }
       const at = new Date().toISOString()
@@ -49,11 +59,13 @@ export const searchFeature: Feature = {
             if (!scheduled) emit('search:progress', p)
           },
           signal: ctrl.signal,
-          loadSimplify: (signal) => loadSimplifyListings(simplifyCache, { signal }),
+          loadSimplify: (signal, kind) =>
+            kind === 'newgrad' ? loadSimplifyListings(simplifyNewGradCache, { signal, url: SIMPLIFY_NEWGRAD_URL }) : loadSimplifyListings(simplifyCache, { signal }),
         })
         recordReads(settings, out.reads)
         const saved = suggestions.merge(out.suggestions, out.reads)
         saveLastScan(settings, { at, ok: true, summary: out.summary, scheduled })
+        saveReport(settings, out.report)
         emit('search:progress', { phase: 'done', message: out.summary, done: saved.length, total: saved.length })
         return saved
       } catch (err) {
@@ -112,6 +124,17 @@ export const searchFeature: Feature = {
     })
     handle('search:dismissSuggestion', ({ id }) => suggestions.setStatus(id, 'dismissed'))
 
+    handle('search:report', () => loadReport(settings))
+    handle('search:addSkipped', ({ link }) => {
+      const s = loadReport(settings)?.skipped.find((x) => x.link === link)
+      if (!s) throw new Error('That posting is no longer in the last search. Run Find roles again.')
+      const roles = ctx.services.roles
+      return (
+        roles.findByLink(s.link) ??
+        roles.create({ company: s.company, title: s.title, link: s.link, location: s.location, stage: 'saved', source: 'autosearch' })
+      )
+    })
+
     handle('search:fromLink', ({ url }) => {
       if (!/^https?:\/\//i.test(url.trim())) throw new Error('Paste a full link that starts with https://')
       return draftFromLink(url.trim(), { ai: ctx.services.ai, profile: () => ctx.services.profile.get() })
@@ -128,7 +151,6 @@ export const searchFeature: Feature = {
       return refreshing
     })
 
-    const demo = process.env['TRACKER_DEMO'] === '1'
     if (demo) seedSearchDemo(settings, suggestions)
     // The daily scan is opt-in, and never runs in demo or headless (screenshot/test) sessions.
     if (!demo && !isHeadless()) {

@@ -28,8 +28,10 @@ export type SuggestionSource = 'boards' | 'workday' | 'simplify'
 
 /** The community internship list autosearch can use as a local index of links. */
 export const SIMPLIFY_REPO = 'https://github.com/SimplifyJobs/Summer2027-Internships'
+/** The same community's new grad list, read when the user looks for new grad roles. */
+export const SIMPLIFY_NEWGRAD_REPO = 'https://github.com/SimplifyJobs/New-Grad-Positions'
 export const SIMPLIFY_NOTE =
-  'Uses the SimplifyJobs community list on GitHub only as a local index of links. The list has no license, so the app keeps its copy on this computer and never shares it. Suggestions from it say “via SimplifyJobs list”.'
+  'Uses the SimplifyJobs community lists on GitHub (internships, and new grad roles when you look for them) only as a local index of links. The lists have no license, so the app keeps its copy on this computer and never shares it. Suggestions from them say “via SimplifyJobs list”.'
 
 
 export interface Suggestion {
@@ -81,6 +83,44 @@ export interface SearchStatus {
   /** Keyed like Suggestion.sourceKey: "<board>:<slug>" (slug lowercased), or "simplify". */
   boards: Record<string, BoardStatus>
   running: boolean
+}
+
+/** Why Find roles left a posting out. `shortlist` = it fit, but wasn't among the best this run. */
+export type SkipReason = 'type' | 'term' | 'place' | 'excluded' | 'eligibility' | 'keywords' | 'shortlist'
+
+/** In the order "View skipped" lists them: near misses first, unrelated role types last. */
+export const SKIP_REASONS: { key: SkipReason; label: string; summary: string }[] = [
+  { key: 'eligibility', label: 'Eligibility', summary: 'you may not qualify for' },
+  { key: 'place', label: 'Other places', summary: 'in other places' },
+  { key: 'term', label: 'Other terms', summary: 'for another term' },
+  { key: 'keywords', label: 'No keyword match', summary: 'without your keywords' },
+  { key: 'excluded', label: 'Words you skip', summary: 'with words you skip' },
+  { key: 'shortlist', label: 'Below the top 40', summary: 'below the top 40' },
+  { key: 'type', label: 'Other role types', summary: 'other role types' },
+]
+
+export interface SkippedPosting {
+  company: string
+  title: string
+  location: string
+  link: string
+  reason: SkipReason
+  /** Plain detail, e.g. "Mentions “sales” in the title" or a quote from the requirements. */
+  detail: string
+}
+
+/** What the last Find roles run looked at and left out, so nothing disappears silently. */
+export interface ScanReport {
+  at: string
+  /** Postings read from every source. */
+  total: number
+  /** Postings that passed every rule. */
+  matched: number
+  /** Already on the board, added, dismissed or waiting as suggestions. */
+  alreadySeen: number
+  counts: Record<SkipReason, number>
+  /** Up to a cap per reason; `counts` has the full numbers. */
+  skipped: SkippedPosting[]
 }
 
 export interface AutosearchProgress {
@@ -171,6 +211,10 @@ export interface SearchChannels {
   /** Source toggles, the scheduled scan and each board's last check. */
   'search:status': { req: void; res: SearchStatus }
   'search:setOptions': { req: Partial<SearchOptions>; res: SearchStatus }
+  /** What the last Find roles run left out, and why. */
+  'search:report': { req: void; res: ScanReport | null }
+  /** Puts a skipped posting on the board as Saved (or returns the role already there). */
+  'search:addSkipped': { req: { link: string }; res: Role }
 }
 
 export interface SearchEvents {

@@ -52,6 +52,16 @@ describe('parseReply', () => {
     ])
   })
 
+  it('reads role types and degree level, ignoring unknown values', () => {
+    const out = parseReply(fence('{"kind":"update_preferences","preferences":{"roleTypes":["internships","new grad","bogus"],"degreeLevel":"bachelors"}}'))
+    expect(out.actions).toEqual([{ kind: 'update_preferences', preferences: { roleTypes: ['internship', 'newgrad'], degreeLevel: 'bachelors' } }])
+    expect(parseReply(fence('{"kind":"update_preferences","preferences":{"roleTypes":["bogus"],"degreeLevel":"high school"}}')).actions).toEqual([])
+    expect(describeAction({ kind: 'update_preferences', preferences: { roleTypes: ['internship', 'fulltime'], degreeLevel: '' } }).rows).toEqual([
+      { label: 'Role types', value: 'Internships, Any full-time' },
+      { label: 'Degree level', value: 'From your education' },
+    ])
+  })
+
   it('hides an unterminated block at the end', () => {
     expect(parseReply('Here you go.\n```action\n{"kind":"add_r').text).toBe('Here you go.')
   })

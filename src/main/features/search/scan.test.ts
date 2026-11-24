@@ -13,7 +13,7 @@ import type { BoardRef, JobPosting } from './boards'
 import { posting } from './fixtures/mockFetch'
 import { DAY_MS, LAUNCH_DELAY_MS, TICK_MS, scanDue, startScheduler } from './scheduler'
 import type { CachedListing } from './simplify'
-import { loadOptions, recordReads, saveOptions } from './status'
+import { loadOptions, loadReport, recordReads, saveOptions, saveReport } from './status'
 import { SuggestionStore, linkKey, searchMigrations } from './suggestions'
 
 async function store() {
@@ -194,6 +194,20 @@ describe('options and board status', () => {
     expect(failed['greenhouse:acme']).toEqual({ lastOk: '2026-11-20T10:00:00.000Z', error: 'boards-api.greenhouse.io answered 500.', errorAt: '2026-11-21T10:00:00.000Z' })
     const ok = recordReads(settings, [{ key: 'greenhouse:acme', ok: true, error: '' }], new Date('2026-11-22T10:00:00Z'))
     expect(ok['greenhouse:acme']).toEqual({ lastOk: '2026-11-22T10:00:00.000Z', error: '', errorAt: null })
+  })
+
+  it('saves the skipped report and reads back an older or damaged one without breaking', async () => {
+    const settings = new Settings(await store())
+    expect(loadReport(settings)).toBeNull()
+    const row = { company: 'Acme', title: 'ML Intern', location: 'Austin, TX', link: 'https://x.io/1', reason: 'place' as const, detail: 'Not in Bay Area' }
+    const report = { at: '2026-11-20T10:00:00.000Z', total: 3, matched: 1, alreadySeen: 0, counts: { type: 1, term: 0, place: 1, excluded: 0, eligibility: 0, keywords: 0, shortlist: 0 }, skipped: [row] }
+    saveReport(settings, report)
+    expect(loadReport(settings)).toEqual(report)
+    // An older version: no shortlist count, a reason this version doesn't know, a broken row.
+    settings.set('search.lastReport', { at: report.at, total: 2, matched: 0, counts: { place: 2 }, skipped: [row, { ...row, reason: 'gone' }, null] })
+    expect(loadReport(settings)).toMatchObject({ alreadySeen: 0, counts: { place: 2, shortlist: 0 }, skipped: [row] })
+    settings.set('search.lastReport', { skipped: 'nope' })
+    expect(loadReport(settings)).toBeNull()
   })
 })
 

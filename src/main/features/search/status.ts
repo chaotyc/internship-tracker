@@ -1,11 +1,12 @@
 /** Search options (sources, scheduled scan) and what the last scans found, kept in plain settings. */
-import { DEFAULT_SEARCH_OPTIONS, type BoardStatus, type SearchOptions, type SearchStatus, type SuggestionSource } from '@shared/search'
+import { DEFAULT_SEARCH_OPTIONS, SKIP_REASONS, type BoardStatus, type ScanReport, type SearchOptions, type SearchStatus, type SkippedPosting, type SuggestionSource } from '@shared/search'
 import type { Settings } from '../../settings'
 import type { SourceRead } from './autosearch'
 
 const OPTIONS = 'search.options'
 const BOARDS = 'search.boardStatus'
 const LAST_SCAN = 'search.lastScan'
+const REPORT = 'search.lastReport'
 
 const SOURCES: SuggestionSource[] = ['boards', 'workday', 'simplify']
 
@@ -55,4 +56,27 @@ export function recordReads(settings: Settings, reads: Pick<SourceRead, 'key' | 
 
 export function statusOf(settings: Settings, running: boolean): SearchStatus {
   return { options: loadOptions(settings), lastScan: loadLastScan(settings), boards: loadBoardStatus(settings), running }
+}
+
+const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : 0)
+const str = (v: unknown) => (typeof v === 'string' ? v : '')
+
+/**
+ * What the last successful Find roles run left out. Checked field by field, so a report saved by an older
+ * version (other reasons, missing counts) still opens instead of breaking "View skipped".
+ */
+export function loadReport(settings: Settings): ScanReport | null {
+  const v = settings.get<Partial<ScanReport> | null>(REPORT, null)
+  if (!v || typeof v !== 'object' || !Array.isArray(v.skipped) || typeof v.at !== 'string') return null
+  const reasons = new Set<string>(SKIP_REASONS.map((r) => r.key))
+  const raw = (v.counts && typeof v.counts === 'object' ? v.counts : {}) as Record<string, unknown>
+  const counts = Object.fromEntries(SKIP_REASONS.map((r) => [r.key, num(raw[r.key])])) as ScanReport['counts']
+  const skipped = v.skipped
+    .filter((s): s is SkippedPosting => !!s && typeof s === 'object' && typeof s.link === 'string' && reasons.has(s.reason))
+    .map((s) => ({ company: str(s.company), title: str(s.title), location: str(s.location), link: s.link, reason: s.reason, detail: str(s.detail) }))
+  return { at: v.at, total: num(v.total), matched: num(v.matched), alreadySeen: num(v.alreadySeen), counts, skipped }
+}
+
+export function saveReport(settings: Settings, report: ScanReport): void {
+  settings.set(REPORT, report)
 }

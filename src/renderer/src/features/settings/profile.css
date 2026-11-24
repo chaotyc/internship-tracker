@@ -629,3 +629,60 @@
   color: var(--ok);
   font-weight: 500;
 }
+
+/* Role types: three checkable tiles. */
+.pf-types {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.pf-types legend {
+  padding: 0;
+  margin-bottom: 6px;
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.pf-type-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px;
+}
+.pf-type {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  cursor: pointer;
+  line-height: 1.35;
+}
+.pf-type.is-on {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+}
+.pf .field .pf-type input {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  margin: 2px 0 0;
+  accent-color: var(--accent);
+}
+.pf-type strong {
+  display: block;
+  font-weight: 600;
+  font-size: var(--fs-body);
+}
+.pf-type small {
+  display: block;
+  color: var(--ink-3);
+  font-size: var(--fs-meta);
+}
+.pf-types > .hint {
+  display: block;
+  margin-top: 6px;
+}

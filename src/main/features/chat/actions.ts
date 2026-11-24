@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { ACTION_FENCE, type ChatAction } from '@shared/chat'
 import { FITS, STAGES, STAGE_KEYS, type Fit, type RoleInput, type StageKey } from '@shared/roles'
-import type { Profile, SavedAnswer, SearchPreferences } from '@shared/profile'
+import { ROLE_TYPES, degreeLevelValue, roleTypesOf, type Profile, type SavedAnswer, type SearchPreferences } from '@shared/profile'
 import type { Role, RolePatch } from '@shared/roles'
 import { isIsoDate } from '@shared/today'
 
@@ -85,6 +85,15 @@ function toPreferences(v: unknown): Partial<SearchPreferences> | null {
   if ('remoteOk' in o) {
     const b = toBool(o['remoteOk'])
     if (b != null) out.remoteOk = b
+  }
+  if ('roleTypes' in o) {
+    const raw = Array.isArray(o['roleTypes']) ? o['roleTypes'] : typeof o['roleTypes'] === 'string' ? [o['roleTypes']] : []
+    const known = raw.map((x) => String(x).trim().toLowerCase().replace(/[\s_-]+/g, '')).map((x) => (x === 'internships' ? 'internship' : x === 'fulltimeroles' ? 'fulltime' : x))
+    if (known.some((x) => ROLE_TYPES.some((r) => r.value === x))) out.roleTypes = roleTypesOf(known)
+  }
+  if ('degreeLevel' in o && typeof o['degreeLevel'] === 'string') {
+    const d = o['degreeLevel'].trim().toLowerCase()
+    if (d === '' || degreeLevelValue(d)) out.degreeLevel = degreeLevelValue(d)
   }
   return Object.keys(out).length ? out : null
 }

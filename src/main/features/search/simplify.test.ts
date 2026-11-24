@@ -65,7 +65,8 @@ describe('SimplifyJobs listings', () => {
     expect(posts.map((p) => p.id)).toEqual(['a', 'd', 'f'])
     expect(posts[1]!.board).toBe('lever')
     const prefs = { ...EMPTY_PROFILE.preferences, term: 'Summer 2027', locations: ['Bay Area'], keywords: ['photonics', 'optics'] }
-    expect(filterPostings(posts, prefs).kept.map((p) => p.id)).toEqual(['a'])
+    // 'd' has no description yet, so the keyword rule waits until its posting is read.
+    expect(filterPostings(posts, prefs).kept.map((p) => p.id)).toEqual(['a', 'd'])
   })
 })
 

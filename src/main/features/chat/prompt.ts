@@ -1,6 +1,6 @@
 import type { AiMessage } from '@shared/ai'
 import type { ChatMessage } from '@shared/chat'
-import { answersForTrack, resumeForTrack, trackById, type ApplicationTrack, type Profile } from '@shared/profile'
+import { answersForTrack, effectiveDegreeLevel, resumeForTrack, roleTypesOf, trackById, type ApplicationTrack, type Profile } from '@shared/profile'
 import { STAGES, type Role } from '@shared/roles'
 
 export const HISTORY_LIMIT = 30
@@ -53,6 +53,9 @@ export function profileSection(p: Profile, track: ApplicationTrack = trackById(p
 
   const pr = p.preferences
   const prefs: string[] = []
+  prefs.push(`- Role types (roleTypes): ${roleTypesOf(pr.roleTypes).join(', ')}`)
+  const degree = effectiveDegreeLevel(p)
+  prefs.push(`- Degree level (degreeLevel): ${pr.degreeLevel || `not set${degree ? `, so search uses ${degree} from their education` : ''}`}`)
   if (pr.targetRoles.length) prefs.push(`- Target roles: ${pr.targetRoles.join(', ')}`)
   if (pr.locations.length) prefs.push(`- Locations: ${pr.locations.join(', ')}`)
   prefs.push(`- Open to remote: ${pr.remoteOk ? 'yes' : 'no'}`)
@@ -146,7 +149,8 @@ You cannot change anything yourself. To propose a change, end your reply with on
 
 The kinds (JSON only, double quotes, no comments):
 - {"kind": "add_role", "role": {"company": "...", "title": "...", "link": "https://...", "location": "...", "pay": "...", "deadline": "YYYY-MM-DD", "fit": "Strong|Good|Moderate|Weak", "why": "one line on why it fits", "stage": "saved"}} — only company and title are required. Leave out anything you don't know; never invent links, pay or deadlines.
-- {"kind": "update_preferences", "preferences": {...}} — fields: targetRoles (string[]), locations (string[]), remoteOk (boolean), term (string), minPay (string), keywords (string[]), excludeKeywords (string[]), notes (string). Only include fields that change. A list you include replaces the old list, so repeat the existing items the user wants to keep.
+- {"kind": "update_preferences", "preferences": {...}} — fields: roleTypes (any of "internship", "newgrad", "fulltime"), degreeLevel ("bachelors", "masters", "phd", or "" to use their education), targetRoles (string[]), locations (string[]), remoteOk (boolean), term (string), minPay (string), keywords (string[]), excludeKeywords (string[]), notes (string). Only include fields that change. A list you include replaces the old list, so repeat the existing items the user wants to keep.
+  How Find roles uses them: roleTypes, term, locations, excludeKeywords and degreeLevel are hard rules. It skips postings of other types, postings whose title names another term, postings in other places, postings whose title, department or requirements mention an excludeKeywords word, and postings limited to a higher degree than degreeLevel (for example PhD-only roles for an undergraduate). keywords and targetRoles decide what counts as relevant; it matches plurals and common synonyms (ML = machine learning). notes are soft guidance the AI reads when ranking. So "never show me X" belongs in excludeKeywords, "I'm an undergrad" in degreeLevel, and "full-time roles too" in roleTypes.
 - {"kind": "save_answers", "answers": [{"question": "...", "answer": "..."}]} — reusable answers for the user's profile.
 - {"kind": "move_role", "roleId": "<the 8-character id in brackets from the board>", "stage": "saved|applied|interviewing|offer|rejected|closed"}
 - {"kind": "set_next_step", "roleId": "<the 8-character id>", "text": "short imperative, e.g. Finish the take-home", "due": "YYYY-MM-DD or empty", "time": "HH:MM (24h) or empty"} — the one dated thing to do next for a role; it replaces the role's current next step.

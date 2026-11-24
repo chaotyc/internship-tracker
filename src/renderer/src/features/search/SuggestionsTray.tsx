@@ -9,13 +9,18 @@ import { fitFromScore } from './labels'
 import { useEdgeFade } from './useEdgeFade'
 import { useFitText, wordCandidates } from './useFitText'
 import { setSuggestionState, useSuggestionState } from './useSuggestionState'
+import { openSkipped, skippedTotal } from './SkippedDialog'
 import './search.css'
 
 const RANKED_BY: Record<NonNullable<Suggestion['rankedBy']>, string> = { ai: 'AI', keywords: 'keywords' }
 
-/** Where the posting was found, e.g. "SimplifyJobs" or "Greenhouse"; shown in the open button's tooltip. */
-export function sourceName(s: Pick<Suggestion, 'source' | 'board'>): string {
-  return s.source === 'simplify' ? 'SimplifyJobs' : s.board ? BOARD_LABELS[s.board] : ''
+/**
+ * The open button's label: the board the link opens ("Open on Greenhouse"), plus where it was found for
+ * SimplifyJobs entries, whose links go to the company's own posting rather than to SimplifyJobs.
+ */
+export function openLabel(s: Pick<Suggestion, 'source' | 'board'>): string {
+  const base = s.board ? `Open on ${BOARD_LABELS[s.board]}` : 'Open posting'
+  return s.source === 'simplify' ? `${base} (via SimplifyJobs list)` : base
 }
 
 const SEASON = '(?:summer|fall|autumn|winter|spring)'
@@ -67,8 +72,7 @@ function SuggestionCard({ s, busy, act }: { s: Suggestion; busy: boolean; act: (
   const term = titleTerm(s.title)
   const place = [term, s.location, s.pay].filter(Boolean)
   const track = s.trackName ? `${s.trackName} track` : ''
-  const vendor = sourceName(s)
-  const openLabel = vendor ? `Open on ${vendor}` : 'Open posting'
+  const open = openLabel(s)
   const title = useFitText<HTMLAnchorElement>(wordCandidates(displayTitle(s.title)))
   const reasonForms = wordCandidates(s.reason)
   const reason = useFitText<HTMLParagraphElement>(reasonForms)
@@ -132,7 +136,7 @@ function SuggestionCard({ s, busy, act }: { s: Suggestion; busy: boolean; act: (
         <button type="button" className="btn btn-sm btn-ghost" disabled={busy} onClick={() => act(s, 'dismiss')}>
           Dismiss
         </button>
-        <a className="icon-btn sugg-open" href={s.link} target="_blank" rel="noreferrer" aria-label={openLabel} title={openLabel}>
+        <a className="icon-btn sugg-open" href={s.link} target="_blank" rel="noreferrer" aria-label={open} title={open}>
           <Icon name="external" />
         </a>
       </div>
@@ -196,6 +200,7 @@ export function SuggestionsTray({ open, onClose }: { open: boolean; onClose: () 
   const toast = useToast()
   const [items, setItems] = useState<Suggestion[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [skipped, setSkipped] = useState(0)
   const [busy, setBusy] = useState<Set<string>>(new Set())
   const scroller = useRef<HTMLDivElement>(null)
   const trayRef = useRef<HTMLElement>(null)
@@ -230,6 +235,10 @@ export function SuggestionsTray({ open, onClose }: { open: boolean; onClose: () 
         setError(null)
       })
       .catch((e: Error) => setError(e.message))
+    api
+      .invoke('search:report')
+      .then((r) => setSkipped(skippedTotal(r)))
+      .catch(() => setSkipped(0))
   }, [])
 
   useEffect(() => {
@@ -295,6 +304,11 @@ export function SuggestionsTray({ open, onClose }: { open: boolean; onClose: () 
             </button>
           </span>
         )}
+        {skipped > 0 && (
+          <button type="button" className="btn btn-sm btn-ghost tray-skipped" onClick={openSkipped} title="Postings the last Find roles run left out, and why">
+            {skipped} skipped
+          </button>
+        )}
         <button type="button" className="icon-btn tray-close" onClick={onClose} aria-label="Close suggestions" title="Close">
           <Icon name="close" />
         </button>
@@ -317,7 +331,12 @@ export function SuggestionsTray({ open, onClose }: { open: boolean; onClose: () 
       ) : items.length === 0 ? (
         <div className="tray-state">
           <Icon name="check" />
-          <span>Nothing waiting for you. Use Find roles to check the job boards you follow for new internships.</span>
+          <span>Nothing waiting for you. Use Find roles to check the job boards you follow for new roles.</span>
+          {skipped > 0 && (
+            <button type="button" className="btn btn-sm" onClick={openSkipped}>
+              See {skipped} skipped
+            </button>
+          )}
         </div>
       ) : (
         <div

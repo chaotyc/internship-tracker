@@ -3,8 +3,11 @@ import { Icon } from '@renderer/components/Icon'
 import { Switch } from '@renderer/components/Switch'
 import { api } from '@renderer/lib/api'
 import {
+  DEGREE_LEVELS,
   EMPTY_EDUCATION,
   EMPTY_PROFILE,
+  ROLE_TYPES,
+  effectiveDegreeLevel,
   RESUME_EXTENSIONS,
   RESUME_MAX_BYTES,
   validateProfile,
@@ -15,6 +18,8 @@ import {
   type ResumeImport,
   type SavedAnswer,
   type SearchPreferences,
+  type DegreeLevel,
+  type RoleType,
 } from '@shared/profile'
 import { PaneHeader } from './PaneHeader'
 import './profile.css'
@@ -54,7 +59,7 @@ interface FieldProps {
   disabled?: boolean
 }
 
-function TextField({ label, value, onChange, error, onBlur, hint, wide, ...rest }: FieldProps) {
+export function TextField({ label, value, onChange, error, onBlur, hint, wide, ...rest }: FieldProps) {
   const id = useId()
   return (
     <div className={`field${wide ? ' wide' : ''}${error ? ' has-error' : ''}`}>
@@ -181,6 +186,59 @@ function Segmented({ label, hint, value, onChange }: { label: string; hint?: str
           </button>
         ))}
       </div>
+    </div>
+  )
+}
+
+/** Which kinds of roles Find roles keeps. At least one stays on. */
+function RoleTypeField({ value, onChange }: { value: RoleType[]; onChange: (v: RoleType[]) => void }) {
+  const id = useId()
+  const toggle = (t: RoleType, on: boolean) => {
+    const next = on ? [...value, t] : value.filter((x) => x !== t)
+    if (next.length) onChange(ROLE_TYPES.map((r) => r.value).filter((x) => next.includes(x)))
+  }
+  return (
+    <fieldset className="field pf-types" aria-describedby={`${id}-d`}>
+      <legend>Role types</legend>
+      <div className="pf-type-list">
+        {ROLE_TYPES.map((r) => {
+          const on = value.includes(r.value)
+          return (
+            <label key={r.value} className={`pf-type${on ? ' is-on' : ''}`}>
+              <input type="checkbox" checked={on} aria-describedby={on && value.length === 1 ? `${id}-d` : undefined} onChange={(e) => toggle(r.value, e.target.checked)} />
+              <span>
+                <strong>{r.label}</strong>
+                <small>{r.hint}</small>
+              </span>
+            </label>
+          )
+        })}
+      </div>
+      <small id={`${id}-d`} className="hint">
+        Find roles only suggests these; keep at least one. Any full-time includes every level; to leave out senior roles, add “senior” to Skip postings that mention.
+      </small>
+    </fieldset>
+  )
+}
+
+function DegreeLevelField({ profile, onChange }: { profile: Profile; onChange: (v: DegreeLevel | '') => void }) {
+  const id = useId()
+  const fromEducation = effectiveDegreeLevel({ ...profile, preferences: { ...profile.preferences, degreeLevel: '' } })
+  const auto = fromEducation ? `From my education (${DEGREE_LEVELS.find((d) => d.value === fromEducation)!.label})` : 'From my education (none found)'
+  return (
+    <div className="field">
+      <label htmlFor={id}>Degree level</label>
+      <select id={id} value={profile.preferences.degreeLevel} onChange={(e) => onChange(e.target.value as DegreeLevel | '')} aria-describedby={`${id}-d`}>
+        <option value="">{auto}</option>
+        {DEGREE_LEVELS.map((d) => (
+          <option key={d.value} value={d.value}>
+            {d.label}
+          </option>
+        ))}
+      </select>
+      <small id={`${id}-d`} className="hint">
+        The highest degree you have or are working toward. Postings limited to a higher one, like PhD-only roles, are skipped.
+      </small>
     </div>
   )
 }
@@ -374,7 +432,7 @@ export function fullDate(iso: string): string {
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-function ResumeSection({
+export function ResumeSection({
   resume,
   defaultTrack,
   onImported,
@@ -685,7 +743,7 @@ export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<Profile
         <PaneHeader title="Profile" />
         <div className="banner error settings-load-error" role="alert">
           <Icon name="alert" />
-          Couldn't load your profile: {loadError}
+          Couldn’t load your profile: {loadError}
           <button
             type="button"
             className="btn btn-sm"
@@ -895,8 +953,9 @@ export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<Profile
         <Section
           id="prefs"
           title="What you’re looking for"
-          hint="Applies to every track; each track can add its own. Find roles and the assistant use it to rank roles. Press Enter or a comma after each item."
+          hint="Applies to every track; each track can add its own. Find roles skips postings that don’t fit, and the assistant can change these for you. Press Enter or a comma after each item."
         >
+          <RoleTypeField value={draft.preferences.roleTypes} onChange={setPref('roleTypes')} />
           <ChipInput label="Target roles" placeholder="e.g. ML inference intern" values={draft.preferences.targetRoles} onChange={setPref('targetRoles')} />
           <ChipInput label="Locations" placeholder="e.g. San Francisco Bay Area" values={draft.preferences.locations} onChange={setPref('locations')} />
           <Switch
@@ -909,6 +968,7 @@ export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<Profile
             <ChipInput label="Keywords to look for" placeholder="e.g. CUDA, compilers" values={draft.preferences.keywords} onChange={setPref('keywords')} />
             <ChipInput
               label="Skip postings that mention"
+              hint="Checked against the title and the requirements."
               placeholder="e.g. sales"
               values={draft.preferences.excludeKeywords}
               onChange={setPref('excludeKeywords')}
@@ -916,6 +976,7 @@ export function ProfilePanel({ actions, onDirtyChange }: { actions?: Ref<Profile
             />
             <TextField label="Term" placeholder="Summer 2027" value={draft.preferences.term} onChange={setPref('term')} />
             <TextField label="Minimum pay" placeholder="$35/hr" hint="Roles that clearly pay less are ranked lower." value={draft.preferences.minPay} onChange={setPref('minPay')} />
+            <DegreeLevelField profile={draft} onChange={setPref('degreeLevel')} />
           </div>
           <div className="field">
             <label htmlFor="pf-notes">Anything else</label>

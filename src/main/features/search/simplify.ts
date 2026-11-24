@@ -13,6 +13,8 @@ import { parsePostingUrl } from './boards'
 import { CancelledError, HttpError, USER_AGENT, hostOf } from './http'
 
 export const SIMPLIFY_LISTINGS_URL = 'https://raw.githubusercontent.com/SimplifyJobs/Summer2027-Internships/dev/.github/scripts/listings.json'
+/** The same community's list of new grad roles, read when the user looks for them. */
+export const SIMPLIFY_NEWGRAD_URL = 'https://raw.githubusercontent.com/SimplifyJobs/New-Grad-Positions/dev/.github/scripts/listings.json'
 export const SIMPLIFY_SOURCE_KEY = 'simplify'
 
 /** One entry of listings.json, as far as the app reads it. */
@@ -149,7 +151,7 @@ export function termsMatch(terms: string[], wanted: string): boolean {
 }
 
 /** Turns cached entries into postings. Board kind comes from the link when it points at a known board. */
-export function listingsToPostings(items: CachedListing[], wantedTerm: string): JobPosting[] {
+export function listingsToPostings(items: CachedListing[], wantedTerm: string, kind: 'internship' | 'newgrad' = 'internship'): JobPosting[] {
   const out: JobPosting[] = []
   for (const l of items) {
     if (!termsMatch(l.terms, wantedTerm)) continue
@@ -165,7 +167,7 @@ export function listingsToPostings(items: CachedListing[], wantedTerm: string): 
       compensation: '',
       // The list has no descriptions; the category and terms are what it says about the role.
       description: '',
-      department: [l.category, ...l.terms, 'Internship'].filter(Boolean).join(', '),
+      department: [l.category, ...l.terms, kind === 'newgrad' ? 'New grad' : 'Internship'].filter(Boolean).join(', '),
       deadline: '',
     })
   }

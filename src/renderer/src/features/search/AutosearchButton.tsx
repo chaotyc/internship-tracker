@@ -3,6 +3,7 @@ import type { AutosearchProgress } from '@shared/search'
 import { Icon } from '@renderer/components/Icon'
 import { useToast } from '@renderer/components/Toast'
 import { api } from '@renderer/lib/api'
+import { openSkipped, skippedTotal } from './SkippedDialog'
 import { loadSuggestionCount, requestTrayClose, useSuggestionState } from './useSuggestionState'
 import './search.css'
 
@@ -46,11 +47,13 @@ export function AutosearchButton({ onResults }: { onResults: () => void }) {
         return
       }
       const fresh = found.filter((s) => s.status === 'new')
+      const skipped = skippedTotal(await api.invoke('search:report').catch(() => null))
+      const action = skipped ? { label: 'View skipped', run: openSkipped } : undefined
       if (fresh.length) {
         onResults()
-        toast(summary.current || `Found ${fresh.length} role${fresh.length === 1 ? '' : 's'} for you.`, { tone: 'success' })
+        toast(summary.current || `Found ${fresh.length} role${fresh.length === 1 ? '' : 's'} for you.`, { tone: 'success', action })
       } else {
-        toast(summary.current || 'No new roles matched your preferences this time.')
+        toast(summary.current || 'No new roles matched your preferences this time.', { action })
       }
     } catch (e) {
       toast((e as Error).message, { tone: 'error' })
@@ -70,7 +73,7 @@ export function AutosearchButton({ onResults }: { onResults: () => void }) {
     const label = trayOpen ? 'Hide suggested roles' : `Show ${waiting} suggested role${waiting === 1 ? '' : 's'}`
     return (
       <div className="autosearch" role="group" aria-label="Find roles">
-        <button type="button" className="btn autosearch-main" onClick={run} title="Find new internships on the job boards you follow">
+        <button type="button" className="btn autosearch-main" onClick={run} title="Find new roles on the job boards you follow">
           <Icon name="sparkle" />
           Find roles
         </button>

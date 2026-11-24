@@ -21,7 +21,50 @@ export interface Demographics {
   disability: Choice
 }
 
+/** Kinds of roles Find roles looks for. */
+export type RoleType = 'internship' | 'newgrad' | 'fulltime'
+export const ROLE_TYPES: { value: RoleType; label: string; hint: string }[] = [
+  { value: 'internship', label: 'Internships', hint: 'Internships, co-ops, fellowships and residencies' },
+  { value: 'newgrad', label: 'New grad', hint: 'New grad, university grad and entry-level roles' },
+  { value: 'fulltime', label: 'Any full-time', hint: 'Every full-time role, at any level' },
+]
+
+/** Highest degree the applicant has or is working toward; decides which degree-restricted postings fit. */
+export type DegreeLevel = 'bachelors' | 'masters' | 'phd'
+export const DEGREE_LEVELS: { value: DegreeLevel; label: string }[] = [
+  { value: 'bachelors', label: 'Bachelor’s' },
+  { value: 'masters', label: 'Master’s' },
+  { value: 'phd', label: 'PhD' },
+]
+export const DEGREE_RANK: Record<DegreeLevel, number> = { bachelors: 1, masters: 2, phd: 3 }
+
+/** The degree level an education entry names, e.g. "B.S." → bachelors, "MEng" → masters; null when unclear. */
+export function degreeLevelOf(degree: string): DegreeLevel | null {
+  const d = degree.toLowerCase()
+  if (/\bph\.?\s?d\b|doctor|\bd\.?phil\b|\bdoctorate\b/.test(d)) return 'phd'
+  // MSE, MASc, MCS, MPS and MIT's S.M. too.
+  if (/master|\bm\.?\s?(?:s|sc|se|asc|cs|ps|ds|eng|a|ba|phil|res)\b\.?|\bmba\b|\bs\.\s?m\./.test(d)) return 'masters'
+  // BSE, BASc, BCS and MIT's S.B. too.
+  if (/bachelor|undergrad|\bb\.?\s?(?:s|sc|se|asc|cs|a|eng|e|tech|math)\b\.?|\bab\b|\bs\.\s?b\.|associate/.test(d)) return 'bachelors'
+  return null
+}
+
+/** The degree level search uses: the one set in preferences, else the highest in the profile's education. */
+export function effectiveDegreeLevel(p: Pick<Profile, 'education' | 'preferences'>): DegreeLevel | null {
+  if (p.preferences.degreeLevel) return p.preferences.degreeLevel
+  let best: DegreeLevel | null = null
+  for (const e of p.education) {
+    const l = degreeLevelOf(e.degree)
+    if (l && (!best || DEGREE_RANK[l] > DEGREE_RANK[best])) best = l
+  }
+  return best
+}
+
 export interface SearchPreferences {
+  /** Which kinds of roles Find roles keeps; at least one. */
+  roleTypes: RoleType[]
+  /** '' means use the education in the profile. */
+  degreeLevel: DegreeLevel | ''
   /** e.g. "ML inference intern", "photonics intern" */
   targetRoles: string[]
   locations: string[]
@@ -159,6 +202,8 @@ export const EMPTY_PROFILE: Profile = {
   needsSponsorship: null,
   demographics: { gender: '', pronouns: '', hispanicLatino: '', race: '', veteran: '', disability: '' },
   preferences: {
+    roleTypes: ['internship'],
+    degreeLevel: '',
     targetRoles: [],
     locations: [],
     remoteOk: true,
@@ -183,6 +228,8 @@ export interface ProfileStatus {
   resumesDir: string
   demo: boolean
   platform: string
+  /** The app's version, e.g. "0.1.0". */
+  version: string
 }
 
 export interface ResumeImport {
@@ -288,6 +335,8 @@ export function mergeWithDefaults(raw: unknown): Profile {
       disability: str(d['disability']),
     },
     preferences: {
+      roleTypes: roleTypesOf(p['roleTypes']),
+      degreeLevel: degreeLevelValue(p['degreeLevel']),
       targetRoles: strList(p['targetRoles']),
       locations: strList(p['locations']),
       remoteOk: typeof p['remoteOk'] === 'boolean' ? p['remoteOk'] : e.preferences.remoteOk,
@@ -409,6 +458,8 @@ export function normalizeProfile(input: Profile): Profile {
       locations: cleanList(p.preferences.locations),
       keywords: cleanList(p.preferences.keywords),
       excludeKeywords: cleanList(p.preferences.excludeKeywords),
+      roleTypes: roleTypesOf(p.preferences.roleTypes),
+      degreeLevel: degreeLevelValue(p.preferences.degreeLevel),
       term: t(p.preferences.term),
       minPay: t(p.preferences.minPay),
       notes: p.preferences.notes.trim(),
@@ -494,3 +545,14 @@ export function describeErrors(errors: ProfileErrors): string {
   return msgs.length === 1 ? msgs[0]! : `${msgs.length} fields need attention. First: ${msgs[0]}`
 }
 
+
+/** Known role types, deduplicated; internships when none are given. */
+export function roleTypesOf(v: unknown): RoleType[] {
+  const all = ROLE_TYPES.map((r) => r.value)
+  const list = Array.isArray(v) ? v.filter((x): x is RoleType => all.includes(x as RoleType)) : []
+  return list.length ? [...new Set(list)] : ['internship']
+}
+
+export function degreeLevelValue(v: unknown): DegreeLevel | '' {
+  return typeof v === 'string' && DEGREE_LEVELS.some((d) => d.value === v) ? (v as DegreeLevel) : ''
+}

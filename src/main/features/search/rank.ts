@@ -46,7 +46,7 @@ export function bestTrackByKeywords(p: JobPosting, prefs: SearchPreferences, tra
   return best!
 }
 
-const RANK_SYSTEM = `You rank internship postings for one applicant who applies on one or more tracks (each a kind of role with its own resume and keywords). For each posting, pick the track it fits best and score 0-100 for how well the applicant, as that track presents them, fits the posting's requirements, term, location and pay. Give one plain sentence saying why (name concrete overlaps or the main gap). Be calibrated: 85+ only for close matches. The applicant recently dismissed some postings; treat those as examples of what they don't want and score similar postings lower. Reply with JSON: {"ranked":[{"i":<index>,"track":"<track id>","score":<0-100>,"reason":"<one sentence>"}]} covering every index.`
+const RANK_SYSTEM = `You rank job postings (internships, new grad or full-time roles, whichever the applicant is looking for) for one applicant who applies on one or more tracks (each a kind of role with its own resume and keywords). For each posting, pick the track it fits best and score 0-100 for how well the applicant, as that track presents them, fits the posting's requirements, term, location and pay. Give one plain sentence saying why (name concrete overlaps or the main gap). Be calibrated: 85+ only for close matches. The applicant recently dismissed some postings; treat those as examples of what they don't want and score similar postings lower. Add "eligible": false only when the posting clearly can't take this applicant: it is limited to a degree level they don't have and aren't working toward (for example PhD students only, for an undergraduate), or it requires years of full-time experience they can't have. Then the reason must say what rules them out. Reply with JSON: {"ranked":[{"i":<index>,"track":"<track id>","score":<0-100>,"reason":"<one sentence>","eligible":<true|false>}]} covering every index.`
 
 /** The ranking prompt: applicant, tracks with resume excerpts, recent dismissals and each posting's requirements. */
 export function rankPrompt(candidates: Scored[], profile: Profile, tracks: ApplicationTrack[], dismissed: Dismissal[]): string {
@@ -82,7 +82,22 @@ export function rankPrompt(candidates: Scored[], profile: Profile, tracks: Appli
     .join('\n\n')
 }
 
-/** Asks the AI to score the candidates per track in one call. */
+export interface AiRanking {
+  /** Scored by the AI, best first. */
+  ranked: TrackScored[]
+  /** Postings the AI said the applicant can't apply to; `reason` is the AI's, or '' when it gave none. */
+  ineligible: TrackScored[]
+  /** Candidates the AI's reply left out (a cut-off reply, say), with their keyword scores. */
+  unranked: TrackScored[]
+}
+
+/** A list index from the AI: a whole number, or a string of digits. Anything else (null, "", "first") is not one. */
+function indexOf(v: unknown): number {
+  if (typeof v === 'number') return v
+  return typeof v === 'string' && /^\s*\d+\s*$/.test(v) ? Number(v) : NaN
+}
+
+/** Asks the AI to score the candidates per track in one call. Candidates its reply leaves out come back in `unranked`. */
 export async function rankWithAi(
   candidates: Scored[],
   profile: Profile,
@@ -90,28 +105,34 @@ export async function rankWithAi(
   signal: AbortSignal,
   tracks: ApplicationTrack[] = [],
   dismissed: Dismissal[] = [],
-): Promise<{ ranked: TrackScored[] } | { error: string }> {
+): Promise<AiRanking | { error: string }> {
   const ids = new Set(tracks.map((t) => t.id))
   const content = rankPrompt(candidates, profile, tracks, dismissed)
   try {
-    const out = await ai.json<{ ranked?: { i?: unknown; track?: unknown; score?: unknown; reason?: unknown }[] }>(
+    const out = await ai.json<{ ranked?: { i?: unknown; track?: unknown; score?: unknown; reason?: unknown; eligible?: unknown }[] }>(
       { system: RANK_SYSTEM, messages: [{ role: 'user', content }], json: true },
       { signal },
     )
     const ranked: TrackScored[] = []
+    const ineligible: TrackScored[] = []
     const seen = new Set<number>()
-    for (const r of out?.ranked ?? []) {
-      const i = typeof r.i === 'number' ? r.i : Number(r.i)
+    for (const r of Array.isArray(out?.ranked) ? out.ranked : []) {
+      if (!r || typeof r !== 'object') continue
+      const i = indexOf(r.i)
       if (!Number.isInteger(i) || i < 0 || i >= candidates.length || seen.has(i)) continue
       seen.add(i)
       const c = candidates[i]! as TrackScored
-      const score = Math.max(0, Math.min(100, Math.round(Number(r.score) || 0)))
-      const reason = typeof r.reason === 'string' && r.reason.trim() ? r.reason.replace(/\s+/g, ' ').trim().slice(0, 280) : c.reason
+      const n = typeof r.score === 'number' || typeof r.score === 'string' ? Number(r.score) : NaN
+      const score = Math.max(0, Math.min(100, Math.round(Number.isFinite(n) ? n : c.score)))
+      const said = typeof r.reason === 'string' && r.reason.trim() ? r.reason.replace(/\s+/g, ' ').trim().slice(0, 280) : ''
       const track = typeof r.track === 'string' && ids.has(r.track) ? r.track : c.trackId
-      ranked.push({ posting: c.posting, score, reason, ...(track ? { trackId: track } : {}) })
+      const item: TrackScored = { posting: c.posting, score, reason: said || c.reason, ...(track ? { trackId: track } : {}) }
+      if (r.eligible === false || r.eligible === 'false') ineligible.push({ ...item, reason: said })
+      else ranked.push(item)
     }
-    if (!ranked.length) return { error: 'The AI reply had no rankings.' }
-    return { ranked: ranked.sort((a, b) => b.score - a.score) }
+    if (!ranked.length && !ineligible.length) return { error: 'The AI reply had no rankings.' }
+    const unranked = candidates.filter((_, i) => !seen.has(i)) as TrackScored[]
+    return { ranked: ranked.sort((a, b) => b.score - a.score), ineligible, unranked }
   } catch (err) {
     if (signal.aborted) throw new CancelledError()
     return { error: err instanceof Error ? err.message : String(err) }

@@ -966,3 +966,112 @@
     opacity: 1;
   }
 }
+
+/* Skipped postings dialog */
+.skipped-empty {
+  margin: 8px 0;
+  color: var(--ink-2);
+}
+.skipped-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.skipped-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: var(--fs-meta);
+  font-weight: 500;
+}
+.skipped-tab span {
+  color: var(--ink-3);
+}
+.skipped-tab:hover {
+  border-color: var(--line-strong);
+}
+.skipped-tab.is-on {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  color: var(--ink);
+}
+.skipped-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+.skipped-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  min-width: 0;
+}
+.skipped-row + .skipped-row {
+  border-top: 1px solid var(--line);
+}
+.skipped-main {
+  flex: 1;
+  min-width: 0;
+}
+.skipped-title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* The reason quotes the posting; it wraps (up to three lines) so the quote can be read. */
+.skipped-meta {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-wrap: pretty;
+}
+.skipped-title {
+  font-size: var(--fs-body);
+}
+.skipped-title strong {
+  font-weight: 600;
+}
+.skipped-meta {
+  margin-top: 1px;
+  color: var(--ink-3);
+  font-size: var(--fs-meta);
+}
+.skipped-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+.skipped-more {
+  margin: 10px 2px 0;
+  color: var(--ink-3);
+  font-size: var(--fs-meta);
+}
+.tray-skipped {
+  flex: none;
+}
+.watch-skipped {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: var(--fs-meta);
+  font-weight: 500;
+  cursor: pointer;
+}
+.watch-skipped:hover {
+  text-decoration: underline;
+}

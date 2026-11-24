@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type ReactNode } from 'react'
 import {
   BOARD_LABELS,
+  SIMPLIFY_NEWGRAD_REPO,
   SIMPLIFY_NOTE,
   SIMPLIFY_REPO,
   SUGGESTED_COMPANIES,
@@ -19,6 +20,7 @@ import { useToast } from '@renderer/components/Toast'
 import { api } from '@renderer/lib/api'
 import { since } from '@renderer/lib/format'
 import { Monogram } from '@renderer/features/board/RoleCard'
+import { openSkipped } from './SkippedDialog'
 import { PaneHeader } from '@renderer/features/settings/PaneHeader'
 import { boardFailure } from './labels'
 import './search.css'
@@ -68,7 +70,8 @@ export function watchSummary(statuses: Array<BoardStatus | undefined>, now = Dat
  * One board's last check. With `always`, says when it last worked; otherwise only speaks up when the
  * board failed or is stale, since the list header already gives the shared check time.
  */
-function CheckLine({ st, board, off, always = false }: { st?: BoardStatus; board: string; off: boolean; always?: boolean }) {
+function CheckLine({ st, board, off, always = false, label }: { st?: BoardStatus; board: string; off: boolean; always?: boolean; label?: string }) {
+  const pre = label ? `${label}: ` : ''
   if (off) return <span className="watch-check">Source turned off</span>
   if (st?.error) {
     const fail = boardFailure(board, st.error)
@@ -80,9 +83,9 @@ function CheckLine({ st, board, off, always = false }: { st?: BoardStatus; board
       </span>
     )
   }
-  if (isFresh(st)) return always ? <span className="watch-check">Checked {since(st.lastOk)}</span> : null
-  if (st?.lastOk) return <span className="watch-check stale">Last checked {since(st.lastOk)}</span>
-  return always ? <span className="watch-check">Not checked yet</span> : null
+  if (isFresh(st)) return always ? <span className="watch-check">{pre}Checked {since(st.lastOk)}</span> : null
+  if (st?.lastOk) return <span className="watch-check stale">{pre}Last checked {since(st.lastOk)}</span>
+  return always ? <span className="watch-check">{pre}Not checked yet</span> : null
 }
 
 /** A switch row. `children` sit under the hint, outside the label, so links and buttons there don't flip the switch. */
@@ -113,6 +116,10 @@ function SimplifyDetails() {
           {SIMPLIFY_DETAIL}{' '}
           <a href={SIMPLIFY_REPO} target="_blank" rel="noreferrer">
             {SIMPLIFY_REPO.replace(/^https:\/\//, '')}
+          </a>
+          {' and '}
+          <a href={SIMPLIFY_NEWGRAD_REPO} target="_blank" rel="noreferrer">
+            {SIMPLIFY_NEWGRAD_REPO.replace(/^https:\/\//, '')}
           </a>
         </p>
       )}
@@ -330,7 +337,7 @@ export function WatchlistPanel() {
               checked={sources.workday}
               onChange={(v) => setSource('workday', v)}
               label="Workday"
-              hint="Workday careers sites on your list, searched for “intern” and your target roles. Two requests at a time per site."
+              hint="Workday careers sites on your list, searched for the kinds of role you want (“intern”, “new grad”) and your target roles. Two requests at a time per site."
             />
             <SourceSwitch
               checked={sources.simplify}
@@ -339,7 +346,16 @@ export function WatchlistPanel() {
               hint={SIMPLIFY_LEAD}
             >
               <SimplifyDetails />
-              {sources.simplify && <CheckLine st={status.boards['simplify']} board="SimplifyJobs" off={false} always />}
+              {sources.simplify &&
+                (status.boards['simplify-newgrad'] ? (
+                  // Both lists have been read: say how each one went.
+                  <>
+                    <CheckLine st={status.boards['simplify']} board="SimplifyJobs internships" off={false} always label="Internship list" />
+                    <CheckLine st={status.boards['simplify-newgrad']} board="SimplifyJobs new grad" off={false} always label="New grad list" />
+                  </>
+                ) : (
+                  <CheckLine st={status.boards['simplify']} board="SimplifyJobs" off={false} always />
+                ))}
             </SourceSwitch>
           </ul>
         </section>
@@ -362,6 +378,11 @@ export function WatchlistPanel() {
                     ? `Last scan ${status.lastScan.ok ? '' : 'failed '}${since(status.lastScan.at)}${status.lastScan.scheduled ? '' : ' (manual)'}: ${status.lastScan.summary}`
                     : 'No scans yet.'}
               </span>
+              {status.lastScan?.ok && !status.running && (
+                <button type="button" className="watch-skipped" onClick={openSkipped}>
+                  View skipped postings
+                </button>
+              )}
             </SourceSwitch>
           </ul>
         </section>
