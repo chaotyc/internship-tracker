@@ -13,7 +13,7 @@ labels: bug
 2.
 
 **Version and system**
-- App version (Settings, or the installer name):
+- App version (shown at the bottom of the menu in **Settings**, or under **Help → About**):
 - OS and version:
 - AI connection in use (Claude Code, Codex, Gemini CLI, or an API key), if relevant:
 

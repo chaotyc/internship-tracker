@@ -2,7 +2,9 @@
 // board, once per view, and checks that each view renders. Saves a screenshot of each
 // view to release/smoke/. Exits non-zero if any view fails.
 //
-// Usage: npm run dist -- --dir && node scripts/smoke.mjs [views...]
+// Usage: npm run dist:dir && npm run smoke [-- view ...]
+//   views (default: all of these): board today suggestions role chat settings
+//          settings-ai onboarding onboarding-ai skipped
 // Linux without a display: run under xvfb-run.
 //
 // SMOKE_EXPECT_KEYCHAIN=ok|unavailable also checks the OS keychain (encrypt and
@@ -16,13 +18,15 @@ const root = resolve(import.meta.dirname, '..')
 const release = join(root, 'release')
 const outDir = join(release, 'smoke')
 const expectKeychain = process.env['SMOKE_EXPECT_KEYCHAIN'] ?? ''
-const views = process.argv.slice(2).length ? process.argv.slice(2) : ['board', 'today', 'suggestions', 'role', 'chat', 'settings', 'settings-ai']
+const views = process.argv.slice(2).length ? process.argv.slice(2) : ['board', 'today', 'suggestions', 'role', 'chat', 'settings', 'settings-ai', 'onboarding', 'onboarding-ai', 'skipped']
 
 function findApp() {
-  if (!existsSync(release)) throw new Error('No release/ folder. Build first: npm run dist -- --dir')
+  if (!existsSync(release)) throw new Error('No release/ folder. Build first: npm run dist:dir')
   const dirs = readdirSync(release)
   if (process.platform === 'darwin') {
-    const dir = dirs.find((d) => d === `mac-${process.arch}`) ?? dirs.find((d) => d.startsWith('mac'))
+    // electron-builder names the Intel build's folder plain "mac".
+    const own = process.arch === 'x64' ? 'mac' : `mac-${process.arch}`
+    const dir = dirs.find((d) => d === own) ?? dirs.find((d) => d.startsWith('mac'))
     if (dir) return join(release, dir, 'Internship Tracker.app', 'Contents', 'MacOS', 'Internship Tracker')
   } else if (process.platform === 'win32') {
     const dir = dirs.find((d) => d.startsWith('win') && d.endsWith('unpacked'))
