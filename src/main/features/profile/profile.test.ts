@@ -294,6 +294,11 @@ describe('resume text extraction', () => {
   it('makes stored file names safe', () => {
     expect(safeFileName('../../etc/passwd.txt')).toBe('passwd.txt')
     expect(safeFileName('C:\\Users\\me\\cv:1.pdf')).toBe('cv_1.pdf')
+    // Windows device names and trailing dots would not make a real file there.
+    expect(safeFileName('CON.pdf')).toBe('_CON.pdf')
+    expect(safeFileName('nul')).toBe('_nul')
+    expect(safeFileName('console.pdf')).toBe('console.pdf')
+    expect(safeFileName('resume.pdf. ')).toBe('resume.pdf')
   })
 })
 
@@ -304,7 +309,7 @@ describe('buildExport', () => {
     secrets.set('ai.anthropic', 'sk-ant-SECRET-123')
     settings.set('ai', { provider: 'claude', apiKey: 'sk-ant-SECRET-123', model: 'x' })
     settings.set('openaiToken', 'tok-SECRET-456')
-    settings.set('watchlist', ['etched', 'matx'])
+    settings.set('watchlist', ['vectorline', 'tessellate'])
     store.migrate([
       { id: 't-chats', sql: 'CREATE TABLE chats (id TEXT, body TEXT, meta TEXT, blob BLOB)' },
       { id: 't-sugg', sql: 'CREATE TABLE suggestions (id TEXT, title TEXT)' },
@@ -318,7 +323,7 @@ describe('buildExport', () => {
     expect(out['roles']).toEqual([{ id: 'r1', company: 'Acme' }])
     expect((out['profile'] as Profile).email).toBe('jordan@example.com')
     expect((out['profile'] as Profile).answers).toHaveLength(1)
-    expect(out['settings']).toEqual({ ai: { provider: 'claude', model: 'x' }, watchlist: ['etched', 'matx'] })
+    expect(out['settings']).toEqual({ ai: { provider: 'claude', model: 'x' }, watchlist: ['vectorline', 'tessellate'] })
     const tables = out['tables'] as Record<string, unknown[]>
     expect(Object.keys(tables).sort()).toEqual(['chats', 'suggestions'])
     expect(tables['chats']).toEqual([{ id: 'c1', body: 'hello', meta: { n: 1 } }])

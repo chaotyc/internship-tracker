@@ -40,13 +40,13 @@ describe('Workday URLs', () => {
   })
 
   it('becomes board and posting refs with a tenant.wdN/site slug', () => {
-    const url = 'https://prismatic.wd5.myworkdayjobs.com/en-US/LITE/job/San-Jose/Optics-Intern_202463'
-    expect(parsePostingUrl(url)).toEqual({ board: 'workday', slug: 'prismatic.wd5/LITE', id: 'San-Jose/Optics-Intern_202463' })
-    expect(parseBoardUrl(url)).toEqual({ board: 'workday', slug: 'prismatic.wd5/LITE' })
-    expect(parseBoardUrl('https://prismatic.wd5.myworkdayjobs.com/LITE')).toEqual({ board: 'workday', slug: 'prismatic.wd5/LITE' })
-    expect(parsePostingUrl('https://prismatic.wd5.myworkdayjobs.com/LITE')).toBeNull()
-    expect(parseWorkdaySlug('prismatic.wd5/LITE')).toEqual({ tenant: 'prismatic', dc: 5, site: 'LITE' })
-    expect(boardUrl({ board: 'workday', slug: 'prismatic.wd5/LITE' })).toBe('https://prismatic.wd5.myworkdayjobs.com/LITE')
+    const url = 'https://lumentum.wd5.myworkdayjobs.com/en-US/LITE/job/San-Jose/Optics-Intern_202463'
+    expect(parsePostingUrl(url)).toEqual({ board: 'workday', slug: 'lumentum.wd5/LITE', id: 'San-Jose/Optics-Intern_202463' })
+    expect(parseBoardUrl(url)).toEqual({ board: 'workday', slug: 'lumentum.wd5/LITE' })
+    expect(parseBoardUrl('https://lumentum.wd5.myworkdayjobs.com/LITE')).toEqual({ board: 'workday', slug: 'lumentum.wd5/LITE' })
+    expect(parsePostingUrl('https://lumentum.wd5.myworkdayjobs.com/LITE')).toBeNull()
+    expect(parseWorkdaySlug('lumentum.wd5/LITE')).toEqual({ tenant: 'lumentum', dc: 5, site: 'LITE' })
+    expect(boardUrl({ board: 'workday', slug: 'lumentum.wd5/LITE' })).toBe('https://lumentum.wd5.myworkdayjobs.com/LITE')
   })
 
   it('finds a Workday site linked from a careers page', () => {

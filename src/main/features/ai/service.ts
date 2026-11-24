@@ -27,6 +27,13 @@ export interface AiService {
   status(): Promise<ProviderStatus[]>
 }
 
+/**
+ * Model names as the providers spell them ("claude-sonnet-4-5", "gpt-5-codex",
+ * "gemini-2.5-pro", "opus[1m]"). Anything else is refused before it reaches a CLI's
+ * argument list, so a model name can never be read as a flag or a shell command.
+ */
+export const MODEL_NAME = /^[A-Za-z0-9][A-Za-z0-9._:/@[\]-]{0,199}$/
+
 const NOT_SET_UP = 'No AI connection is set up yet. Open Settings, then AI connections.'
 const SETTINGS_KEY = 'ai.settings'
 const keyName = (id: ProviderId) => `ai.key.${id}`
@@ -150,6 +157,7 @@ export class AiServiceImpl implements AiService {
     }
     const model = (req.model ?? '').trim() || this.modelFor(id, settings)
     if (info.kind === 'api' && !model) throw new Error(`${info.label} needs a model name. Add one in Settings, then AI connections.`)
+    if (model && !MODEL_NAME.test(model)) throw new Error(`“${model.slice(0, 60)}” isn't a model name ${info.label} accepts. Check it in Settings, then AI connections.`)
 
     const timeoutMs = req.timeoutMs ?? (req.webSearch ? 6 * 60_000 : 3 * 60_000)
     let text: string

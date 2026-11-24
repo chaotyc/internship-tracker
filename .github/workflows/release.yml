@@ -1,20 +1,48 @@
 name: Release
 
-# Push a tag like v1.0.0. The checks and smoke tests run first; then each system's
+# Push a tag like v0.1.0. The checks and smoke tests run first; then each system's
 # installers are built and attached to a draft GitHub release. Review it and publish.
 on:
   push:
     tags: ['v*']
 
+# Read-only by default; only the jobs that create or fill the draft release may write.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   test:
     uses: ./.github/workflows/ci.yml
 
-  build:
+  # One draft release for the tag, made before the parallel builds so they don't each
+  # create their own. Also stops if the tag doesn't match the version in package.json.
+  draft:
     needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Tag matches package.json
+        run: |
+          version="v$(node -p "require('./package.json').version")"
+          if [ "$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $version"
+            exit 1
+          fi
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1 ||
+            gh release create "$GITHUB_REF_NAME" --draft --verify-tag --title "$GITHUB_REF_NAME" --notes "See CHANGELOG.md."
+
+  build:
+    needs: draft
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -27,11 +55,13 @@ jobs:
             target: --linux
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # No dependency cache for release builds: what ships is installed fresh from the lockfile.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
-          cache: npm
       - run: npm ci
       - run: npm run build
       - run: npx electron-builder ${{ matrix.target }} --publish always

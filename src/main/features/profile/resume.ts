@@ -76,7 +76,13 @@ export async function extractResumeText(data: Uint8Array, fileName: string): Pro
 /** Safe file name for our copy: keeps the user's name (applications show it) minus path tricks. */
 export function safeFileName(fileName: string): string {
   const base = basename(fileName.replace(/\\/g, '/'))
-  const clean = base.replace(/[\u0000-\u001f<>:"/\\|?*]/g, '_').replace(/^\.+/, '').trim()
+  const clean = base
+    .replace(/[\u0000-\u001f<>:"/\\|?*]/g, '_')
+    .replace(/^\.+/, '')
+    .trim()
+    // Windows drops trailing dots and spaces, and treats CON, NUL, COM1... as devices, not files.
+    .replace(/[. ]+$/, '')
+    .replace(/^(con|prn|aux|nul|com[0-9¹²³]|lpt[0-9¹²³])(\.|$)/i, '_$1$2')
   return clean || `resume.${extOf(fileName)}`
 }
 

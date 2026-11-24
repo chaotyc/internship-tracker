@@ -1,15 +1,17 @@
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { app, dialog, shell, type OpenDialogOptions, type SaveDialogOptions } from 'electron'
+import { app, dialog, session, shell, type OpenDialogOptions, type SaveDialogOptions } from 'electron'
 import { RESUME_EXTENSIONS, RESUME_MAX_BYTES, type ProfileStatus } from '@shared/profile'
 import type { Feature, FeatureContext } from '../../context'
+import { PARTITION as APPLICATION_PARTITION } from '../autofill/window'
 import { emit, handle } from '../../ipc'
 import { assignDemoTracks, seedDemoProfile } from './demo'
 import { buildExport } from './export'
 import { clearResumeFolder, ResumeError } from './resume'
 import { EncryptedProfileService } from './service'
 import { TrackManager } from './tracks'
+import { APP_VERSION } from '../../version'
 
 const isDemo = () => process.env['TRACKER_DEMO'] === '1'
 
@@ -106,11 +108,19 @@ export const profileFeature: Feature = {
       return { path: res.filePath }
     })
 
-    handle('profile:deleteAll', () => {
+    handle('profile:deleteAll', async () => {
       // Every table (roles, chats, settings, encrypted secrets) is emptied and written to disk now.
       ctx.secrets.clear()
       ctx.store.wipe()
       clearResumeFolder(resumesDir)
+      // Sign-ins, cookies and drafts that application sites kept in the autofill window's session.
+      try {
+        const applications = session.fromPartition(APPLICATION_PARTITION)
+        await applications.clearStorageData()
+        await applications.clearCache()
+      } catch (err) {
+        console.error('[profile] could not clear the application window data:', err)
+      }
       emit('profile:changed', {})
       emit('roles:changed', { ids: [] })
     })
@@ -128,6 +138,7 @@ export const profileFeature: Feature = {
       databasePath: isDemo() ? null : databasePath,
       resumesDir,
       demo: isDemo(),
+      version: APP_VERSION,
       platform: process.platform,
     }))
 

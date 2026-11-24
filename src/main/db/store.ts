@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, writeSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import initSqlJs, { type Database, type SqlValue } from 'sql.js'
 
@@ -23,6 +23,8 @@ export class Store {
     private readonly file: string | null,
   ) {
     this.db.run('PRAGMA foreign_keys = ON')
+    // Deleted rows (a removed chat, an erased profile) are overwritten, not left in free pages.
+    this.db.run('PRAGMA secure_delete = ON')
   }
 
   all<T = Record<string, unknown>>(sql: string, params: Params = []): T[] {
@@ -72,32 +74,56 @@ export class Store {
     }
   }
 
-  /** Writes now. Call on quit. */
+  /**
+   * Writes now. Call on quit. The file is replaced atomically (write a temp file,
+   * fsync it, rename over), so a crash or power cut leaves the old or the new copy,
+   * never a half-written one.
+   */
   flush(): void {
     if (this.timer) clearTimeout(this.timer)
     this.timer = null
     if (!this.file) return
-    mkdirSync(dirname(this.file), { recursive: true })
+    mkdirSync(dirname(this.file), { recursive: true, mode: 0o700 })
     const tmp = this.file + '.tmp'
-    writeFileSync(tmp, Buffer.from(this.db.export()), { mode: 0o600 })
+    const data = this.db.export()
+    const fd = openSync(tmp, 'w', 0o600)
+    try {
+      let off = 0
+      while (off < data.byteLength) off += writeSync(fd, data, off, data.byteLength - off)
+      fsyncSync(fd)
+    } finally {
+      closeSync(fd)
+    }
     renameSync(tmp, this.file)
   }
 
-  /** Drops every row from every table except migrations. */
+  /**
+   * Drops every row from every table except migrations, then compacts the file so
+   * the deleted rows can't be recovered from free pages, and writes it now.
+   */
   wipe(): void {
     const tables = this.all<{ name: string }>(
       "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name != '_migrations'",
     )
     this.tx(() => {
-      for (const t of tables) this.db.run(`DELETE FROM "${t.name}"`)
+      for (const t of tables) this.db.run(`DELETE FROM "${t.name.replace(/"/g, '""')}"`)
     })
+    this.db.run('VACUUM')
     this.flush()
   }
 
   private schedulePersist(): void {
     if (!this.file) return
     if (this.timer) clearTimeout(this.timer)
-    this.timer = setTimeout(() => this.flush(), 250)
+    this.timer = setTimeout(() => {
+      try {
+        this.flush()
+      } catch (err) {
+        // A full disk or a locked file: keep the data in memory and try again shortly.
+        console.error('[store] save failed, retrying:', err)
+        if (!this.timer) this.timer = setTimeout(() => this.schedulePersist(), 5000)
+      }
+    }, 250)
   }
 }
 

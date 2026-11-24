@@ -75,6 +75,11 @@
       "!**/node_modules/**/{CHANGELOG,HISTORY,README}*"
     ],
     "asar": true,
+    "electronFuses": {
+      "runAsNode": false,
+      "enableNodeCliInspectArguments": false,
+      "onlyLoadAppFromAsar": true
+    },
     "mac": {
       "category": "public.app-category.productivity",
       "icon": "build/icon.png",

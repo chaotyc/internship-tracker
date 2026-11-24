@@ -1,6 +1,8 @@
 import { writeFileSync } from 'node:fs'
 import { app, safeStorage, type BrowserWindow } from 'electron'
+import { removeThrowawayDir } from './headless'
 import { insecureLinuxBackend } from './secrets'
+import { APP_VERSION } from './version'
 
 /**
  * Smoke test for packaged builds (TRACKER_SMOKE=1, used by scripts/smoke.mjs in CI).
@@ -24,10 +26,15 @@ const READY: Record<string, string> = {
   chat: '.chat-composer',
   add: '.dialog',
   role: '.dialog',
+  skipped: '.skipped-row',
+  onboarding: '.onb-step',
+  // The AI step is ready once the CLI check has come back.
+  'onboarding-ai': '.onb-cli',
 }
 
 function readySelector(view: string): string {
   if (view.startsWith('settings')) return '.settings'
+  if (view.startsWith('onboarding') && !READY[view]) return '.onb-step'
   return READY[view] ?? '#root > *'
 }
 
@@ -109,7 +116,7 @@ export function runSmoke(win: BrowserWindow, opts: { view: string }): void {
       view,
       platform: process.platform,
       arch: process.arch,
-      version: app.getVersion(),
+      version: APP_VERSION,
       found,
       keychain,
       storageBackend,
@@ -118,6 +125,7 @@ export function runSmoke(win: BrowserWindow, opts: { view: string }): void {
       ms: Date.now() - started,
     }
     process.stdout.write(`SMOKE ${JSON.stringify(result)}\n`)
+    removeThrowawayDir()
     app.exit(ok ? 0 : 1)
   }
 

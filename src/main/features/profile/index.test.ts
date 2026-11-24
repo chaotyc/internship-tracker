@@ -228,7 +228,7 @@ describe('profile IPC', () => {
     const roles = { list: () => roleRows, update: (id: string, patch: { trackId: string }) => Object.assign(roleRows.find((r) => r.id === id)!, patch) }
     const { call } = await boot(roles)
     // Roles are seeded after features register.
-    roleRows.push({ id: 'r1', company: 'Lumora Photonics', trackId: '' }, { id: 'r2', company: 'Vectorline', trackId: '' })
+    roleRows.push({ id: 'r1', company: 'Lumora Photonics', trackId: '' }, { id: 'r2', company: 'Vectorline Silicon', trackId: '' })
     const p = (await call('profile:get')) as { tracks: { id: string; name: string; resume: { storedPath: string; text: string } }[] }
     expect(p.tracks.map((t) => t.name)).toEqual(['ML inference', 'Photonics hardware'])
     expect(p.tracks.every((t) => t.resume.text && !t.resume.storedPath.startsWith(join(dir, 'data')))).toBe(true)

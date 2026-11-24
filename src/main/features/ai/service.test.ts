@@ -2,9 +2,9 @@ import { EventEmitter } from 'node:events'
 import { PassThrough, Writable } from 'node:stream'
 import type { ChildProcess, SpawnOptions } from 'node:child_process'
 import { describe, expect, it } from 'vitest'
-import type { ProviderId } from '@shared/ai'
-import { PresenceCache, childPath, parseVersion, resolveBinary, runCli, searchDirs, type CliHost } from './cli-runner'
-import { AiServiceImpl, chooseProvider, normalizeSettings } from './service'
+import { activeProvider, type ProviderId } from '@shared/ai'
+import { PresenceCache, childPath, parseVersion, resolveBinary, runCli, searchDirs, windowsCommandLine, type CliHost } from './cli-runner'
+import { AiServiceImpl, MODEL_NAME, chooseProvider, normalizeSettings } from './service'
 
 /* ------------------------------------ fakes ------------------------------------ */
 
@@ -173,6 +173,45 @@ describe('runCli', () => {
     const host = fakeHost({ files: [], replies: { slow: () => ({ hang: true }) } })
     await expect(runCli({ bin: '/bin/slow', args: [], timeoutMs: 20 }, host)).rejects.toThrow(/No reply after/)
   })
+
+  it('quotes every part of a Windows batch-file command line, so spaces, empty arguments and & stay intact', async () => {
+    const host = { ...fakeHost({ files: [] }), platform: 'win32' as NodeJS.Platform }
+    await runCli({ bin: 'C:\\Users\\R&D User\\npm\\codex.cmd', args: ['--cd', 'C:\\Temp\\a b', '--tools', ''], timeoutMs: 1000 }, host).catch(() => {})
+    const call = host.calls[0]!
+    expect(call.options.shell).toBe(true)
+    expect(call.args).toEqual([])
+    expect(call.command).toBe('"C:\\Users\\R&D User\\npm\\codex.cmd" "--cd" "C:\\Temp\\a b" "--tools" ""')
+  })
+
+  it('starts other binaries directly, without a shell', async () => {
+    const host = { ...fakeHost({ files: [] }), platform: 'win32' as NodeJS.Platform }
+    await runCli({ bin: 'C:\\bin\\claude.exe', args: ['--model', 'a b'], timeoutMs: 1000 }, host).catch(() => {})
+    expect(host.calls[0]!.options.shell).toBe(false)
+    expect(host.calls[0]!.args).toEqual(['--model', 'a b'])
+  })
+
+  it('refuses characters cmd.exe expands even inside quotes', () => {
+    expect(() => windowsCommandLine('x.cmd', ['%PATH%'])).toThrow()
+    expect(() => windowsCommandLine('x.cmd', ['a"b'])).toThrow()
+    expect(() => windowsCommandLine('x.cmd', ['line\nbreak'])).toThrow()
+  })
+})
+
+describe('model names', () => {
+  it('accepts provider model names and refuses flags or shell syntax', () => {
+    for (const ok of ['sonnet', 'claude-opus-5-5', 'gpt-5-codex', 'gemini-2.5-pro', 'opus[1m]', 'models/gemini-pro', 'us.anthropic.claude:0']) expect(MODEL_NAME.test(ok)).toBe(true)
+    for (const bad of ['--dangerously-skip-permissions', '-m', 'a b', 'x & calc', 'x;rm', '"q"', '$(id)', '']) expect(MODEL_NAME.test(bad)).toBe(false)
+  })
+
+  it('never hands a CLI a model that could be read as a flag', async () => {
+    const host = fakeHost({
+      files: ['/opt/homebrew/bin/claude'],
+      replies: { claude: (args) => (args[0] === '--version' ? { stdout: '2.1.327 (Claude Code)' } : { stdout: CLAUDE_OUT }) },
+    })
+    const ai = new AiServiceImpl({ ...memoryDeps({ settings: { defaultProvider: null, models: { 'claude-cli': '--dangerously-skip-permissions' } } }), host })
+    await expect(ai.complete({ messages: [{ role: 'user', content: 'Hi' }] })).rejects.toThrow(/isn't a model name/)
+    expect(host.calls.some((c) => c.args.includes('--print'))).toBe(false)
+  })
 })
 
 describe('chooseProvider', () => {
@@ -276,5 +315,15 @@ describe('AiServiceImpl', () => {
     expect(() => ai.setKey('openai-api', 'two words')).toThrow(/doesn't look like/)
     ai.clearKey('openai-api')
     expect(deps.keys.has('ai.key.openai-api')).toBe(false)
+  })
+})
+
+describe('activeProvider', () => {
+  const st = (ids: ProviderId[]) => (['claude-cli', 'codex-cli', 'anthropic-api', 'openai-api'] as ProviderId[]).map((id) => ({ id, available: ids.includes(id) }))
+  it('uses the saved default while it is available, else the first available in order', () => {
+    expect(activeProvider(st(['codex-cli', 'openai-api']), 'openai-api')).toBe('openai-api')
+    expect(activeProvider(st(['codex-cli', 'openai-api']), 'claude-cli')).toBe('codex-cli')
+    expect(activeProvider(st(['openai-api', 'claude-cli']), null)).toBe('claude-cli')
+    expect(activeProvider(st([]), 'claude-cli')).toBeNull()
   })
 })

@@ -18,21 +18,21 @@ describe('parseGreenhouseLink', () => {
   })
 
   it('accepts the embedded form and normalizes it to job-boards', () => {
-    expect(parseGreenhouseLink('https://boards.greenhouse.io/embed/job_app?for=brightline&token=6866538002')).toEqual({
+    expect(parseGreenhouseLink('https://boards.greenhouse.io/embed/job_app?for=databricks&token=6866538002')).toEqual({
       kind: 'embed',
-      board: 'brightline',
+      board: 'databricks',
       jobId: '6866538002',
-      formUrl: 'https://job-boards.greenhouse.io/embed/job_app?for=brightline&token=6866538002',
+      formUrl: 'https://job-boards.greenhouse.io/embed/job_app?for=databricks&token=6866538002',
     })
   })
 
   it('accepts company pages that embed Greenhouse with gh_jid', () => {
-    expect(parseGreenhouseLink('https://brightline.com/company/careers/open-positions/job?gh_jid=6866538002')).toEqual({
+    expect(parseGreenhouseLink('https://databricks.com/company/careers/open-positions/job?gh_jid=6866538002')).toEqual({
       kind: 'company',
       board: null,
       jobId: '6866538002',
-      pageUrl: 'https://brightline.com/company/careers/open-positions/job?gh_jid=6866538002',
-      boardGuesses: ['brightline'],
+      pageUrl: 'https://databricks.com/company/careers/open-positions/job?gh_jid=6866538002',
+      boardGuesses: ['databricks'],
     })
     expect(parseGreenhouseLink('https://stripe.com/jobs/search?gh_jid=8353516')).toMatchObject({ kind: 'company', jobId: '8353516' })
   })
@@ -54,7 +54,7 @@ describe('parseGreenhouseLink', () => {
 
 describe('board resolution helpers', () => {
   it('guesses board tokens from a company host', () => {
-    expect(boardGuesses('www.brightline.com')).toEqual(['brightline'])
+    expect(boardGuesses('www.databricks.com')).toEqual(['databricks'])
     expect(boardGuesses('careers.acme-robotics.co.uk')).toEqual(['acme-robotics', 'acmerobotics'])
   })
 

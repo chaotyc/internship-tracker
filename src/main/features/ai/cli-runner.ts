@@ -88,6 +88,22 @@ export function childPath(host: CliHost): string {
   return searchDirs(host).join(host.platform === 'win32' ? ';' : delimiter)
 }
 
+/**
+ * Windows runs npm-installed CLIs (codex.cmd, gemini.cmd, claude.cmd) through cmd.exe,
+ * which does no quoting of its own: a space in the user's temp folder would split an
+ * argument, an empty argument would vanish, and `&` or `|` would start another command.
+ * So the whole command line is built here with every part double-quoted. Characters
+ * that cmd.exe still interprets inside quotes are refused rather than escaped.
+ */
+export function windowsCommandLine(bin: string, args: string[]): string {
+  return [bin, ...args]
+    .map((a) => {
+      if (/["%!\r\n\0]/.test(a)) throw new Error(`Can't pass ${JSON.stringify(a)} to a command on Windows.`)
+      return `"${a}"`
+    })
+    .join(' ')
+}
+
 export interface RunOptions {
   bin: string
   args: string[]
@@ -132,13 +148,17 @@ export function runCli(opts: RunOptions, host: CliHost = nodeHost): Promise<RunR
     }
     let child: ChildProcess
     try {
-      child = host.spawn(opts.bin, opts.argsFor ? opts.argsFor(dir) : opts.args, {
+      const args = opts.argsFor ? opts.argsFor(dir) : opts.args
+      // Batch files only run through cmd.exe; everything else is started directly, with no shell.
+      const viaCmd = host.platform === 'win32' && /\.(cmd|bat)$/i.test(opts.bin)
+      const options: SpawnOptions = {
         cwd: dir,
         env: { ...host.env, PATH: childPath(host), NO_COLOR: '1', TERM: 'dumb' },
         stdio: ['pipe', 'pipe', 'pipe'],
         windowsHide: true,
-        shell: host.platform === 'win32' && /\.(cmd|bat)$/i.test(opts.bin),
-      })
+        shell: viaCmd,
+      }
+      child = viaCmd ? host.spawn(windowsCommandLine(opts.bin, args), [], options) : host.spawn(opts.bin, args, options)
     } catch (err) {
       cleanup()
       return reject(err)
